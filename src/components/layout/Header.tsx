@@ -10,9 +10,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 const Header = () => {
+  const location = useLocation();
+  const navItems = [
+    { to: "/", label: "Dashboard" },
+    { to: "/transactions", label: "Transactions" },
+    { to: "#", label: "Accounts" },
+    { to: "#", label: "Budgets" },
+    { to: "#", label: "Reports" },
+  ];
+
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
       <Sheet>
@@ -31,36 +41,18 @@ const Header = () => {
               <Package className="h-6 w-6" />
               <span className="">Finance Inc</span>
             </Link>
-            <Link
-              to="#"
-              className="mx-[-0.65rem] flex items-center gap-4 rounded-xl bg-muted px-3 py-2 text-foreground hover:text-foreground"
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="#"
-              className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-            >
-              Transactions
-            </Link>
-            <Link
-              to="#"
-              className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-            >
-              Accounts
-            </Link>
-            <Link
-              to="#"
-              className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-            >
-              Budgets
-            </Link>
-            <Link
-              to="#"
-              className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-            >
-              Reports
-            </Link>
+            {navItems.map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={cn(
+                  "mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground",
+                  location.pathname === item.to && "bg-muted text-foreground"
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </SheetContent>
       </Sheet>

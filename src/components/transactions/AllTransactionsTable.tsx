@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -14,13 +8,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { allTransactions } from "@/data/mockData";
-import { Button } from "@/components/ui/button";
-import { ArrowUpRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { allTransactions, Transaction } from "@/data/mockData";
+import TransactionDetailsModal from "./TransactionDetailsModal";
 
-const RecentTransactions = () => {
-  const recentTransactions = allTransactions.slice(0, 6);
+const AllTransactionsTable = () => {
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleRowClick = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedTransaction(null), 300);
+  };
 
   const statusVariant = {
     Completed: "default",
@@ -29,44 +32,34 @@ const RecentTransactions = () => {
   } as const;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center">
-        <div className="grid gap-2">
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>
-            Your most recent transactions.
-          </CardDescription>
-        </div>
-        <Button asChild size="sm" className="ml-auto gap-1">
-          <Link to="/transactions">
-            View All
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
-        </Button>
-      </CardHeader>
-      <CardContent>
+    <>
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Transaction</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead className="hidden sm:table-cell">Status</TableHead>
+              <TableHead className="hidden md:table-cell">Date</TableHead>
               <TableHead className="text-right">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {recentTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
+            {allTransactions.map((transaction) => (
+              <TableRow key={transaction.id} onClick={() => handleRowClick(transaction)} className="cursor-pointer hover:bg-muted/50">
                 <TableCell>
                   <div className="font-medium">{transaction.name}</div>
                   <div className="hidden text-sm text-muted-foreground md:inline">
-                    {transaction.date}
+                    {transaction.method}
                   </div>
                 </TableCell>
+                <TableCell>{transaction.category}</TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant={statusVariant[transaction.status]}>
                     {transaction.status}
                   </Badge>
                 </TableCell>
+                <TableCell className="hidden md:table-cell">{transaction.date}</TableCell>
                 <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
                   {transaction.amount.toLocaleString("en-US", {
                     style: "currency",
@@ -77,9 +70,14 @@ const RecentTransactions = () => {
             ))}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
+      </div>
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+      />
+    </>
   );
 };
 
-export default RecentTransactions;
+export default AllTransactionsTable;

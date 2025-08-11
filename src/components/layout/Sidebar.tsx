@@ -1,9 +1,20 @@
 import { Bell, Home, LineChart, Package, ShoppingCart, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { allTransactions } from "@/data/mockData";
+import { cn } from "@/lib/utils";
 
 const Sidebar = () => {
+  const location = useLocation();
+  const navItems = [
+    { to: "/", icon: Home, label: "Dashboard" },
+    { to: "/transactions", icon: ShoppingCart, label: "Transactions", badge: allTransactions.length },
+    { to: "#", icon: Package, label: "Accounts" },
+    { to: "#", icon: Users, label: "Budgets" },
+    { to: "#", icon: LineChart, label: "Reports" },
+  ];
+
   return (
     <div className="hidden border-r bg-muted/40 md:block">
       <div className="flex h-full max-h-screen flex-col gap-2">
@@ -19,44 +30,24 @@ const Sidebar = () => {
         </div>
         <div className="flex-1">
           <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-            <Link
-              to="#"
-              className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 text-primary transition-all hover:text-primary"
-            >
-              <Home className="h-4 w-4" />
-              Dashboard
-            </Link>
-            <Link
-              to="#"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              Transactions
-              <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                6
-              </Badge>
-            </Link>
-            <Link
-              to="#"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-            >
-              <Package className="h-4 w-4" />
-              Accounts
-            </Link>
-            <Link
-              to="#"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-            >
-              <Users className="h-4 w-4" />
-              Budgets
-            </Link>
-            <Link
-              to="#"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-            >
-              <LineChart className="h-4 w-4" />
-              Reports
-            </Link>
+            {navItems.map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                  location.pathname === item.to && "bg-muted text-primary"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+                {item.badge && (
+                  <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                    {item.badge}
+                  </Badge>
+                )}
+              </Link>
+            ))}
           </nav>
         </div>
       </div>
