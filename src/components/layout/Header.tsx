@@ -1,4 +1,4 @@
-import { CircleUser, Menu, Package, Search } from "lucide-react";
+import { CircleUser, Menu, Package, Search, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,6 +21,7 @@ const Header = () => {
     { to: "#", label: "Accounts" },
     { to: "#", label: "Budgets" },
     { to: "#", label: "Reports" },
+    { to: "/settings", label: "Settings" },
   ];
 
   return (
@@ -78,7 +79,9 @@ const Header = () => {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>My Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Settings</DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/settings">Settings</Link>
+          </DropdownMenuItem>
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem>Logout</DropdownMenuItem>

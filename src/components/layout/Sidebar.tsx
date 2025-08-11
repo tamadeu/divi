@@ -1,4 +1,4 @@
-import { Bell, Home, LineChart, Package, ShoppingCart, Users } from "lucide-react";
+import { Bell, Home, LineChart, Package, Settings, ShoppingCart, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
@@ -13,6 +13,7 @@ const Sidebar = () => {
     { to: "#", icon: Package, label: "Accounts" },
     { to: "#", icon: Users, label: "Budgets" },
     { to: "#", icon: LineChart, label: "Reports" },
+    { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
   return (
