@@ -23,23 +23,23 @@ const RecentTransactions = () => {
   const recentTransactions = allTransactions.slice(0, 6);
 
   const statusVariant = {
-    Completed: "default",
-    Pending: "secondary",
-    Failed: "destructive",
+    "Concluído": "default",
+    "Pendente": "secondary",
+    "Falhou": "destructive",
   } as const;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center">
         <div className="grid gap-2">
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle>Transações Recentes</CardTitle>
           <CardDescription>
-            Your most recent transactions.
+            Suas transações mais recentes.
           </CardDescription>
         </div>
         <Button asChild size="sm" className="ml-auto gap-1">
           <Link to="/transactions">
-            View All
+            Ver Todas
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </Button>
@@ -48,9 +48,9 @@ const RecentTransactions = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Transaction</TableHead>
+              <TableHead>Transação</TableHead>
               <TableHead className="hidden sm:table-cell">Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -68,9 +68,9 @@ const RecentTransactions = () => {
                   </Badge>
                 </TableCell>
                 <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
-                  {transaction.amount.toLocaleString("en-US", {
+                  {transaction.amount.toLocaleString("pt-BR", {
                     style: "currency",
-                    currency: "USD",
+                    currency: "BRL",
                   })}
                 </TableCell>
               </TableRow>

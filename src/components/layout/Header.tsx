@@ -16,12 +16,12 @@ import { cn } from "@/lib/utils";
 const Header = () => {
   const location = useLocation();
   const navItems = [
-    { to: "/", label: "Dashboard" },
-    { to: "/transactions", label: "Transactions" },
-    { to: "#", label: "Accounts" },
-    { to: "#", label: "Budgets" },
-    { to: "#", label: "Reports" },
-    { to: "/settings", label: "Settings" },
+    { to: "/", label: "Painel" },
+    { to: "/transactions", label: "Transações" },
+    { to: "#", label: "Contas" },
+    { to: "#", label: "Orçamentos" },
+    { to: "#", label: "Relatórios" },
+    { to: "/settings", label: "Configurações" },
   ];
 
   return (
@@ -30,7 +30,7 @@ const Header = () => {
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="shrink-0 md:hidden">
             <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
+            <span className="sr-only">Alternar menu de navegação</span>
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col">
@@ -63,7 +63,7 @@ const Header = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search transactions..."
+              placeholder="Buscar transações..."
               className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
             />
           </div>
@@ -73,18 +73,18 @@ const Header = () => {
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="icon" className="rounded-full">
             <CircleUser className="h-5 w-5" />
-            <span className="sr-only">Toggle user menu</span>
+            <span className="sr-only">Alternar menu de usuário</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link to="/settings">Settings</Link>
+            <Link to="/settings">Configurações</Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>Support</DropdownMenuItem>
+          <DropdownMenuItem>Suporte</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Logout</DropdownMenuItem>
+          <DropdownMenuItem>Sair</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

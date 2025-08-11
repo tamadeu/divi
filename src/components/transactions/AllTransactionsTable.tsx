@@ -26,9 +26,9 @@ const AllTransactionsTable = () => {
   };
 
   const statusVariant = {
-    Completed: "default",
-    Pending: "secondary",
-    Failed: "destructive",
+    "Concluído": "default",
+    "Pendente": "secondary",
+    "Falhou": "destructive",
   } as const;
 
   return (
@@ -37,11 +37,11 @@ const AllTransactionsTable = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Transaction</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead>Transação</TableHead>
+              <TableHead>Categoria</TableHead>
               <TableHead className="hidden sm:table-cell">Status</TableHead>
-              <TableHead className="hidden md:table-cell">Date</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="hidden md:table-cell">Data</TableHead>
+              <TableHead className="text-right">Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -61,9 +61,9 @@ const AllTransactionsTable = () => {
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{transaction.date}</TableCell>
                 <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
-                  {transaction.amount.toLocaleString("en-US", {
+                  {transaction.amount.toLocaleString("pt-BR", {
                     style: "currency",
-                    currency: "USD",
+                    currency: "BRL",
                   })}
                 </TableCell>
               </TableRow>

@@ -17,12 +17,12 @@ const TransactionsPage = () => {
         <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
           <div className="flex items-center">
-            <h1 className="text-lg font-semibold md:text-2xl">Transactions</h1>
+            <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
           </div>
           <Card>
             <CardHeader>
-              <CardTitle>All Transactions</CardTitle>
-              <CardDescription>A complete list of your transactions. Click a row to see details.</CardDescription>
+              <CardTitle>Todas as Transações</CardTitle>
+              <CardDescription>Uma lista completa de suas transações. Clique em uma linha para ver os detalhes.</CardDescription>
             </CardHeader>
             <CardContent>
               <AllTransactionsTable />

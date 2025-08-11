@@ -8,20 +8,20 @@ import { showSuccess } from "@/utils/toast"
 export function ProfileForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    showSuccess("Profile updated successfully!");
+    showSuccess("Perfil atualizado com sucesso!");
   };
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">Nome</Label>
         <Input id="name" defaultValue="Alex Doe" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" type="email" defaultValue="alex.doe@example.com" />
       </div>
-      <Button type="submit">Save Changes</Button>
+      <Button type="submit">Salvar Alterações</Button>
     </form>
   )
 }

@@ -9,9 +9,9 @@ export function ThemeOptions() {
   return (
     <Tabs defaultValue={theme} onValueChange={setTheme} className="w-[400px]">
       <TabsList>
-        <TabsTrigger value="light">Light</TabsTrigger>
-        <TabsTrigger value="dark">Dark</TabsTrigger>
-        <TabsTrigger value="system">System</TabsTrigger>
+        <TabsTrigger value="light">Claro</TabsTrigger>
+        <TabsTrigger value="dark">Escuro</TabsTrigger>
+        <TabsTrigger value="system">Sistema</TabsTrigger>
       </TabsList>
     </Tabs>
   )

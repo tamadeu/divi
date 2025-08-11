@@ -8,12 +8,12 @@ import { cn } from "@/lib/utils";
 const Sidebar = () => {
   const location = useLocation();
   const navItems = [
-    { to: "/", icon: Home, label: "Dashboard" },
-    { to: "/transactions", icon: ShoppingCart, label: "Transactions", badge: allTransactions.length },
-    { to: "#", icon: Package, label: "Accounts" },
-    { to: "#", icon: Users, label: "Budgets" },
-    { to: "#", icon: LineChart, label: "Reports" },
-    { to: "/settings", icon: Settings, label: "Settings" },
+    { to: "/", icon: Home, label: "Painel" },
+    { to: "/transactions", icon: ShoppingCart, label: "Transações", badge: allTransactions.length },
+    { to: "#", icon: Package, label: "Contas" },
+    { to: "#", icon: Users, label: "Orçamentos" },
+    { to: "#", icon: LineChart, label: "Relatórios" },
+    { to: "/settings", icon: Settings, label: "Configurações" },
   ];
 
   return (
@@ -26,7 +26,7 @@ const Sidebar = () => {
           </Link>
           <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
             <Bell className="h-4 w-4" />
-            <span className="sr-only">Toggle notifications</span>
+            <span className="sr-only">Alternar notificações</span>
           </Button>
         </div>
         <div className="flex-1">

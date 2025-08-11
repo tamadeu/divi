@@ -14,30 +14,30 @@ const Index = () => {
         <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
           <div className="flex items-center">
-            <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+            <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
-              title="Total Balance"
-              value={summaryData.totalBalance.toLocaleString("en-US", {
+              title="Saldo Total"
+              value={summaryData.totalBalance.toLocaleString("pt-BR", {
                 style: "currency",
-                currency: "USD",
+                currency: "BRL",
               })}
               icon={DollarSign}
             />
             <SummaryCard
-              title="Monthly Income"
-              value={summaryData.monthlyIncome.toLocaleString("en-US", {
+              title="Renda Mensal"
+              value={summaryData.monthlyIncome.toLocaleString("pt-BR", {
                 style: "currency",
-                currency: "USD",
+                currency: "BRL",
               })}
               icon={TrendingUp}
             />
             <SummaryCard
-              title="Monthly Expenses"
-              value={summaryData.monthlyExpenses.toLocaleString("en-US", {
+              title="Despesas Mensais"
+              value={summaryData.monthlyExpenses.toLocaleString("pt-BR", {
                 style: "currency",
-                currency: "USD",
+                currency: "BRL",
               })}
               icon={TrendingDown}
             />

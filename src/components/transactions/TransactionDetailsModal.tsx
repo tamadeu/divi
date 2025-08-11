@@ -20,31 +20,31 @@ const TransactionDetailsModal = ({ transaction, isOpen, onClose }: TransactionDe
   if (!transaction) return null;
 
   const statusVariant = {
-    Completed: "default",
-    Pending: "secondary",
-    Failed: "destructive",
+    "Concluído": "default",
+    "Pendente": "secondary",
+    "Falhou": "destructive",
   } as const;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Transaction Details</DialogTitle>
-          <DialogDescription>Detailed view of your transaction.</DialogDescription>
+          <DialogTitle>Detalhes da Transação</DialogTitle>
+          <DialogDescription>Visão detalhada da sua transação.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right text-sm font-medium text-muted-foreground">Name</span>
+            <span className="text-right text-sm font-medium text-muted-foreground">Nome</span>
             <span className="col-span-3 font-semibold">{transaction.name}</span>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right text-sm font-medium text-muted-foreground">Amount</span>
+            <span className="text-right text-sm font-medium text-muted-foreground">Valor</span>
             <span className={`col-span-3 font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
-              {transaction.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+              {transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </span>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right text-sm font-medium text-muted-foreground">Date</span>
+            <span className="text-right text-sm font-medium text-muted-foreground">Data</span>
             <span className="col-span-3">{transaction.date}</span>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -54,20 +54,20 @@ const TransactionDetailsModal = ({ transaction, isOpen, onClose }: TransactionDe
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right text-sm font-medium text-muted-foreground">Category</span>
+            <span className="text-right text-sm font-medium text-muted-foreground">Categoria</span>
             <span className="col-span-3">{transaction.category}</span>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right text-sm font-medium text-muted-foreground">Method</span>
+            <span className="text-right text-sm font-medium text-muted-foreground">Método</span>
             <span className="col-span-3">{transaction.method}</span>
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
-            <span className="text-right text-sm font-medium text-muted-foreground pt-1">Description</span>
+            <span className="text-right text-sm font-medium text-muted-foreground pt-1">Descrição</span>
             <p className="col-span-3 text-sm">{transaction.description}</p>
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

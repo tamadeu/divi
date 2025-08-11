@@ -18,13 +18,13 @@ const SettingsPage = () => {
         <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
           <div className="flex items-center">
-            <h1 className="text-lg font-semibold md:text-2xl">Settings</h1>
+            <h1 className="text-lg font-semibold md:text-2xl">Configurações</h1>
           </div>
           <div className="grid gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription>Update your personal information.</CardDescription>
+                <CardTitle>Perfil</CardTitle>
+                <CardDescription>Atualize suas informações pessoais.</CardDescription>
               </CardHeader>
               <CardContent>
                 <ProfileForm />
@@ -32,8 +32,8 @@ const SettingsPage = () => {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Appearance</CardTitle>
-                <CardDescription>Customize the look and feel of the application.</CardDescription>
+                <CardTitle>Aparência</CardTitle>
+                <CardDescription>Personalize a aparência do aplicativo.</CardDescription>
               </CardHeader>
               <CardContent>
                 <ThemeOptions />

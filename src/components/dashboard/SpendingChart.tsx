@@ -18,8 +18,8 @@ const SpendingChart = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Spending by Category</CardTitle>
-        <CardDescription>Your spending breakdown for the current month.</CardDescription>
+        <CardTitle>Gastos por Categoria</CardTitle>
+        <CardDescription>Análise de seus gastos no mês atual.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full">
@@ -41,9 +41,9 @@ const SpendingChart = () => {
               </Pie>
               <Tooltip
                 formatter={(value: number) =>
-                  value.toLocaleString("en-US", {
+                  value.toLocaleString("pt-BR", {
                     style: "currency",
-                    currency: "USD",
+                    currency: "BRL",
                   })
                 }
               />
