@@ -18,7 +18,7 @@ const Header = () => {
   const navItems = [
     { to: "/", label: "Painel" },
     { to: "/transactions", label: "Transações" },
-    { to: "#", label: "Contas" },
+    { to: "/accounts", label: "Contas" },
     { to: "#", label: "Orçamentos" },
     { to: "#", label: "Relatórios" },
     { to: "/settings", label: "Configurações" },
@@ -48,7 +48,7 @@ const Header = () => {
                 to={item.to}
                 className={cn(
                   "mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground",
-                  location.pathname === item.to && "bg-muted text-foreground"
+                  location.pathname.startsWith(item.to) && item.to !== "/" || location.pathname === item.to ? "bg-muted text-foreground" : ""
                 )}
               >
                 {item.label}

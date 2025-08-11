@@ -10,7 +10,7 @@ const Sidebar = () => {
   const navItems = [
     { to: "/", icon: Home, label: "Painel" },
     { to: "/transactions", icon: ShoppingCart, label: "Transações", badge: allTransactions.length },
-    { to: "#", icon: Package, label: "Contas" },
+    { to: "/accounts", icon: Package, label: "Contas" },
     { to: "#", icon: Users, label: "Orçamentos" },
     { to: "#", icon: LineChart, label: "Relatórios" },
     { to: "/settings", icon: Settings, label: "Configurações" },
@@ -37,7 +37,7 @@ const Sidebar = () => {
                 to={item.to}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                  location.pathname === item.to && "bg-muted text-primary"
+                  location.pathname.startsWith(item.to) && item.to !== "/" || location.pathname === item.to ? "bg-muted text-primary" : ""
                 )}
               >
                 <item.icon className="h-4 w-4" />
