@@ -19,8 +19,8 @@ const Header = () => {
     { to: "/", label: "Painel" },
     { to: "/transactions", label: "Transações" },
     { to: "/accounts", label: "Contas" },
-    { to: "#", label: "Orçamentos" },
-    { to: "#", label: "Relatórios" },
+    { to: "/budgets", label: "Orçamentos" },
+    { to: "/reports", label: "Relatórios" },
     { to: "/settings", label: "Configurações" },
   ];
 

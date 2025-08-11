@@ -9,6 +9,8 @@ import TransactionsPage from "./pages/Transactions";
 import SettingsPage from "./pages/Settings";
 import AccountsPage from "./pages/Accounts";
 import AccountDetailPage from "./pages/AccountDetail";
+import BudgetsPage from "./pages/Budgets";
+import ReportsPage from "./pages/Reports";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/accounts" element={<AccountsPage />} />
             <Route path="/accounts/:accountId" element={<AccountDetailPage />} />
+            <Route path="/budgets" element={<BudgetsPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

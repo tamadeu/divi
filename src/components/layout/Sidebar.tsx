@@ -11,8 +11,8 @@ const Sidebar = () => {
     { to: "/", icon: Home, label: "Painel" },
     { to: "/transactions", icon: ShoppingCart, label: "Transações", badge: allTransactions.length },
     { to: "/accounts", icon: Package, label: "Contas" },
-    { to: "#", icon: Users, label: "Orçamentos" },
-    { to: "#", icon: LineChart, label: "Relatórios" },
+    { to: "/budgets", icon: Users, label: "Orçamentos" },
+    { to: "/reports", icon: LineChart, label: "Relatórios" },
     { to: "/settings", icon: Settings, label: "Configurações" },
   ];
 
