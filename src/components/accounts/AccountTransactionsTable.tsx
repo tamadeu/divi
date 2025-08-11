@@ -11,9 +11,10 @@ import { Transaction } from "@/data/mockData";
 
 interface AccountTransactionsTableProps {
   transactions: Transaction[];
+  onRowClick: (transaction: Transaction) => void;
 }
 
-const AccountTransactionsTable = ({ transactions }: AccountTransactionsTableProps) => {
+const AccountTransactionsTable = ({ transactions, onRowClick }: AccountTransactionsTableProps) => {
   const statusVariant = {
     "Concluído": "default",
     "Pendente": "secondary",
@@ -33,7 +34,7 @@ const AccountTransactionsTable = ({ transactions }: AccountTransactionsTableProp
         </TableHeader>
         <TableBody>
           {transactions.map((transaction) => (
-            <TableRow key={transaction.id}>
+            <TableRow key={transaction.id} onClick={() => onRowClick(transaction)} className="cursor-pointer hover:bg-muted/50">
               <TableCell>
                 <div className="font-medium">{transaction.name}</div>
                 <div className="text-sm text-muted-foreground">{transaction.date}</div>
