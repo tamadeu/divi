@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -42,7 +42,8 @@ import { cn } from "@/lib/utils";
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
-  amount: z.coerce.number().refine(val => val !== 0, "O valor não pode ser zero."),
+  type: z.enum(["income", "expense"], { required_error: "O tipo é obrigatório." }),
+  amount: z.coerce.number().positive("O valor deve ser um número positivo."),
   date: z.date({ required_error: "A data é obrigatória." }),
   account_id: z.string({ required_error: "Selecione uma conta."}).uuid("Selecione uma conta válida."),
   category_id: z.string({ required_error: "Selecione uma categoria."}).uuid("Selecione uma categoria válida."),
@@ -71,8 +72,35 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
       date: new Date(),
       status: "Concluído",
       description: "",
+      type: "expense",
     },
   });
+
+  const transactionType = form.watch("type");
+
+  const filteredCategories = useMemo(() => {
+    if (!transactionType) return [];
+    return categories.filter(c => c.type === transactionType);
+  }, [categories, transactionType]);
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        name: "",
+        amount: 0,
+        date: new Date(),
+        status: "Concluído",
+        description: "",
+        type: "expense",
+      });
+    }
+  }, [isOpen, form]);
+
+  useEffect(() => {
+    if (transactionType) {
+      form.setValue('category_id', '');
+    }
+  }, [transactionType, form]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -100,10 +128,17 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
       return;
     }
 
+    const amountToSave = values.type === 'expense' ? -Math.abs(values.amount) : Math.abs(values.amount);
+
     const { error: transactionError } = await supabase.from("transactions").insert({
-      ...values,
-      user_id: user.id,
+      name: values.name,
+      amount: amountToSave,
       date: values.date.toISOString(),
+      account_id: values.account_id,
+      category_id: values.category_id,
+      status: values.status,
+      description: values.description,
+      user_id: user.id,
     });
 
     if (transactionError) {
@@ -115,7 +150,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
     if (values.status === 'Concluído') {
       const selectedAccount = accounts.find(acc => acc.id === values.account_id);
       if (selectedAccount) {
-        const newBalance = selectedAccount.balance + values.amount;
+        const newBalance = selectedAccount.balance + amountToSave;
         const { error: accountError } = await supabase
           .from("accounts")
           .update({ balance: newBalance })
@@ -129,7 +164,6 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
 
     showSuccess("Transação adicionada com sucesso!");
     onTransactionAdded();
-    form.reset();
     onClose();
     setIsSubmitting(false);
   };
@@ -145,7 +179,28 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Transação</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um tipo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="expense">Despesa</SelectItem>
+                      <SelectItem value="income">Renda</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -164,7 +219,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor (use negativo para despesas)</FormLabel>
+                    <FormLabel>Valor</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="0.00" {...field} />
                     </FormControl>
@@ -238,14 +293,14 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                        {filteredCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />
