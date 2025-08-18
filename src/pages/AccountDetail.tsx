@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
-import { accountsData, allTransactions, Transaction } from "@/data/mockData";
+import { allTransactions, Transaction } from "@/data/mockData";
 import NotFound from "./NotFound";
 import {
   Card,
@@ -30,12 +30,18 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { supabase } from "@/integrations/supabase/client";
+import { Account } from "@/types/database";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ITEMS_PER_PAGE = 5;
 
 const AccountDetailPage = () => {
   const { accountId } = useParams<{ accountId: string }>();
-  const account = accountsData.find((acc) => acc.id === accountId);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // As transações ainda são estáticas, vamos focar em corrigir os detalhes da conta primeiro.
   const accountTransactions = allTransactions.filter(
     (trans) => trans.accountId === accountId
   );
@@ -47,6 +53,31 @@ const AccountDetailPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const fetchAccount = async () => {
+      if (!accountId) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("id", accountId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching account details:", error);
+        setAccount(null);
+      } else {
+        setAccount(data);
+      }
+      setLoading(false);
+    };
+
+    fetchAccount();
+  }, [accountId]);
 
   const uniqueCategories = useMemo(() => {
     const categories = new Set(accountTransactions.map((t) => t.category));
@@ -91,6 +122,43 @@ const AccountDetailPage = () => {
       setCurrentPage(page);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+        <Sidebar />
+        <div className="flex flex-col">
+          <Header />
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10" />
+              <Skeleton className="h-8 w-48" />
+            </div>
+            <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-4 w-60" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-10 w-56" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-48 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   if (!account) {
     return <NotFound />;
