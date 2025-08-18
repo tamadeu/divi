@@ -37,6 +37,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category } from "@/types/database";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 const transactionSchema = z.object({
@@ -189,7 +190,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "PPP", { locale: require('date-fns/locale/pt-BR') })
+                            format(field.value, "PPP", { locale: ptBR })
                           ) : (
                             <span>Escolha uma data</span>
                           )}
