@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { useSession } from "@/contexts/SessionContext";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,58 +9,68 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import { showError, showSuccess } from "@/utils/toast";
 import { Package } from "lucide-react";
-import { showError } from "@/utils/toast";
 
-const LoginPage = () => {
-  const { session, loading: sessionLoading } = useSession();
+const SignUpPage = () => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
     });
 
     if (error) {
       showError(error.message);
+    } else {
+      showSuccess("Cadastro realizado! Verifique seu e-mail para confirmar a conta.");
+      navigate("/login");
     }
-    // On success, the SessionProvider will handle the redirect
     setLoading(false);
   };
 
-  if (sessionLoading) {
-    return null; // Or a loading spinner
-  }
-
-  if (session) {
-    return <Navigate to="/" replace />;
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
-      <Card className="w-full max-w-sm">
+      <Card className="mx-auto max-w-sm">
         <CardHeader className="text-center">
-          <div className="flex justify-center items-center gap-2 mb-4">
+           <div className="flex justify-center items-center gap-2 mb-4">
             <Package className="h-8 w-8" />
             <h1 className="text-2xl font-bold">Finance Inc</h1>
           </div>
-          <CardTitle className="text-2xl">Bem-vindo de volta!</CardTitle>
+          <CardTitle className="text-2xl">Criar uma conta</CardTitle>
           <CardDescription>
-            Entre com seus dados para acessar sua conta.
+            Insira seus dados abaixo para se cadastrar
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleSignUp}>
             <div className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="first-name">Nome</Label>
+                  <Input id="first-name" placeholder="Alex" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="last-name">Sobrenome</Label>
+                  <Input id="last-name" placeholder="Doe" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </div>
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -77,25 +87,14 @@ const LoginPage = () => {
                 <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
+                {loading ? "Criando conta..." : "Criar conta"}
               </Button>
             </div>
           </form>
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Ou continue com
-              </span>
-            </div>
-          </div>
-          <GoogleAuthButton />
           <div className="mt-4 text-center text-sm">
-            Não tem uma conta?{" "}
-            <Link to="/signup" className="underline">
-              Cadastre-se
+            Já tem uma conta?{" "}
+            <Link to="/login" className="underline">
+              Entrar
             </Link>
           </div>
         </CardContent>
@@ -104,4 +103,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default SignUpPage;

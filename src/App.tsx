@@ -11,6 +11,7 @@ import BudgetsPage from "./pages/Budgets";
 import ReportsPage from "./pages/Reports";
 import SettingsPage from "./pages/Settings";
 import LoginPage from "./pages/Login";
+import SignUpPage from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
 import { Skeleton } from "./components/ui/skeleton";
 
@@ -37,6 +38,7 @@ function AppRoutes() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/accounts" element={<AccountsPage />} />
