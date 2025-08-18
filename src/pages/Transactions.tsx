@@ -28,6 +28,9 @@ import {
 } from "@/components/ui/pagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -35,49 +38,50 @@ const TransactionsPage = () => {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("transactions")
-        .select(`
-          id,
-          account_id,
-          date,
-          name,
-          amount,
-          status,
-          description,
-          category:categories (name)
-        `)
-        .eq("user_id", user.id)
-        .order("date", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching transactions:", error);
-      } else {
-        const formattedData = data.map((t: any) => ({
-          ...t,
-          category: t.category?.name || "Sem categoria",
-        }));
-        setAllTransactions(formattedData);
-      }
+  const fetchTransactions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       setLoading(false);
-    };
+      return;
+    }
 
+    const { data, error } = await supabase
+      .from("transactions")
+      .select(`
+        id,
+        account_id,
+        date,
+        name,
+        amount,
+        status,
+        description,
+        category:categories (name)
+      `)
+      .eq("user_id", user.id)
+      .order("date", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching transactions:", error);
+    } else {
+      const formattedData = data.map((t: any) => ({
+        ...t,
+        category: t.category?.name || "Sem categoria",
+      }));
+      setAllTransactions(formattedData);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    setLoading(true);
     fetchTransactions();
   }, []);
 
@@ -111,11 +115,11 @@ const TransactionsPage = () => {
 
   const handleRowClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    setIsModalOpen(true);
+    setIsDetailsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closeDetailsModal = () => {
+    setIsDetailsModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
@@ -132,6 +136,13 @@ const TransactionsPage = () => {
         <div className="flex flex-col">
           <Header />
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
+            <div className="flex items-center justify-between">
+              <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
+              <Button size="sm" className="gap-1" onClick={() => setIsAddModalOpen(true)}>
+                <PlusCircle className="h-4 w-4" />
+                Nova Transação
+              </Button>
+            </div>
             <Card>
               <CardHeader>
                 <CardTitle>Todas as Transações</CardTitle>
@@ -245,8 +256,13 @@ const TransactionsPage = () => {
       </div>
       <TransactionDetailsModal
         transaction={selectedTransaction}
-        isOpen={isModalOpen}
-        onClose={closeModal}
+        isOpen={isDetailsModalOpen}
+        onClose={closeDetailsModal}
+      />
+      <AddTransactionModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onTransactionAdded={fetchTransactions}
       />
     </>
   );
