@@ -1,11 +1,21 @@
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { useSession } from "@/contexts/SessionContext";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import { Package } from "lucide-react";
 
 const LoginPage = () => {
-  const { session } = useSession();
+  const { session, loading } = useSession();
+
+  if (loading) {
+    return null; // Or a loading spinner
+  }
 
   if (session) {
     return <Navigate to="/" replace />;
@@ -13,15 +23,21 @@ const LoginPage = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
-      <div className="w-full max-w-md p-8">
-        <h1 className="mb-6 text-center text-2xl font-bold">Bem-vindo ao Finance Inc</h1>
-        <Auth
-          supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
-          providers={["google", "github"]}
-          theme="light"
-        />
-      </div>
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <Package className="h-8 w-8" />
+            <h1 className="text-2xl font-bold">Finance Inc</h1>
+          </div>
+          <CardTitle className="text-2xl">Bem-vindo de volta!</CardTitle>
+          <CardDescription>
+            Entre com sua conta Google para continuar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GoogleAuthButton />
+        </CardContent>
+      </Card>
     </div>
   );
 };

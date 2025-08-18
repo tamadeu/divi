@@ -19,6 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import NavLinks from "./NavLinks";
+import { supabase } from "@/integrations/supabase/client";
+import { showError, showSuccess } from "@/utils/toast";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,6 +31,16 @@ const Header = () => {
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
+    }
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showError("Erro ao sair. Tente novamente.");
+    } else {
+      showSuccess("Você saiu com sucesso!");
+      navigate('/login');
     }
   };
 
@@ -78,10 +90,10 @@ const Header = () => {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Configurações</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate('/settings')}>Configurações</DropdownMenuItem>
           <DropdownMenuItem>Suporte</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Sair</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleLogout}>Sair</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
