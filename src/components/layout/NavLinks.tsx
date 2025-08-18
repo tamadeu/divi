@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Home,
@@ -8,18 +9,49 @@ import {
   Settings,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { allTransactions } from "@/data/mockData";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const NavLinks = () => {
   const location = useLocation();
+  const [transactionCount, setTransactionCount] = useState(0);
+
+  useEffect(() => {
+    const fetchTransactionCount = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { count, error } = await supabase
+          .from("transactions")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        if (error) {
+          console.error("Error fetching transaction count:", error);
+        } else {
+          setTransactionCount(count || 0);
+        }
+      }
+    };
+
+    const subscription = supabase
+      .channel('transactions-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchTransactionCount)
+      .subscribe();
+
+    fetchTransactionCount();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
   const navItems = [
     { to: "/", icon: Home, label: "Painel" },
     {
       to: "/transactions",
       icon: ShoppingCart,
       label: "Transações",
-      badge: allTransactions.length,
+      badge: transactionCount,
     },
     { to: "/accounts", icon: Package, label: "Contas" },
     { to: "/budgets", icon: Users, label: "Orçamentos" },
@@ -45,11 +77,11 @@ const NavLinks = () => {
           >
             <item.icon className="h-4 w-4" />
             {item.label}
-            {item.badge && (
+            {item.badge && item.badge > 0 ? (
               <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
                 {item.badge}
               </Badge>
-            )}
+            ) : null}
           </Link>
         );
       })}

@@ -71,7 +71,7 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
               </TableCell>
             </TableRow>
           )}
-        </Body>
+        </TableBody>
       </Table>
     </div>
   );

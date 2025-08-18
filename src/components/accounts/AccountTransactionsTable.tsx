@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction } from "@/data/mockData";
+import { Transaction } from "@/types/database";
 
 interface AccountTransactionsTableProps {
   transactions: Transaction[];
@@ -37,7 +37,7 @@ const AccountTransactionsTable = ({ transactions, onRowClick }: AccountTransacti
             <TableRow key={transaction.id} onClick={() => onRowClick(transaction)} className="cursor-pointer hover:bg-muted/50">
               <TableCell>
                 <div className="font-medium">{transaction.name}</div>
-                <div className="text-sm text-muted-foreground">{transaction.date}</div>
+                <div className="text-sm text-muted-foreground">{new Date(transaction.date).toLocaleDateString("pt-BR")}</div>
               </TableCell>
               <TableCell>{transaction.category}</TableCell>
               <TableCell className="hidden sm:table-cell">
