@@ -13,6 +13,7 @@ import SettingsPage from "./pages/Settings";
 import LoginPage from "./pages/Login";
 import SignUpPage from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
+import CategoriesPage from "./pages/Categories";
 import { Skeleton } from "./components/ui/skeleton";
 
 const ProtectedRoute = () => {
@@ -45,6 +46,7 @@ function AppRoutes() {
           <Route path="/accounts/:accountId" element={<AccountDetailPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/budgets" element={<BudgetsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />

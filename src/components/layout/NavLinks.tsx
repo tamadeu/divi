@@ -7,6 +7,7 @@ import {
   Users,
   LineChart,
   Settings,
+  Tags,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ const NavLinks = () => {
       badge: transactionCount,
     },
     { to: "/accounts", icon: Package, label: "Contas" },
+    { to: "/categories", icon: Tags, label: "Categorias" },
     { to: "/budgets", icon: Users, label: "Orçamentos" },
     { to: "/reports", icon: LineChart, label: "Relatórios" },
     { to: "/settings", icon: Settings, label: "Configurações" },
