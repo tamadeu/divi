@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
-import { allTransactions, Transaction } from "@/data/mockData";
 import NotFound from "./NotFound";
 import {
   Card,
@@ -31,7 +30,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { supabase } from "@/integrations/supabase/client";
-import { Account } from "@/types/database";
+import { Account, Transaction } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ITEMS_PER_PAGE = 5;
@@ -39,12 +38,8 @@ const ITEMS_PER_PAGE = 5;
 const AccountDetailPage = () => {
   const { accountId } = useParams<{ accountId: string }>();
   const [account, setAccount] = useState<Account | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // As transações ainda são estáticas, vamos focar em corrigir os detalhes da conta primeiro.
-  const accountTransactions = allTransactions.filter(
-    (trans) => trans.accountId === accountId
-  );
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,41 +50,70 @@ const AccountDetailPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const fetchAccount = async () => {
+    const fetchAccountData = async () => {
       if (!accountId) {
         setLoading(false);
         return;
       }
+      setLoading(true);
 
-      const { data, error } = await supabase
+      // Fetch account details
+      const { data: accountData, error: accountError } = await supabase
         .from("accounts")
         .select("*")
         .eq("id", accountId)
         .single();
 
-      if (error) {
-        console.error("Error fetching account details:", error);
+      if (accountError) {
+        console.error("Error fetching account details:", accountError);
         setAccount(null);
       } else {
-        setAccount(data);
+        setAccount(accountData);
       }
+
+      // Fetch account transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from("transactions")
+        .select(`
+          id,
+          account_id,
+          date,
+          name,
+          amount,
+          status,
+          description,
+          category:categories (name)
+        `)
+        .eq("account_id", accountId)
+        .order("date", { ascending: false });
+
+      if (transactionsError) {
+        console.error("Error fetching transactions:", transactionsError);
+      } else {
+        const formattedData = transactionsData.map((t: any) => ({
+          ...t,
+          category: t.category?.name || "Sem categoria",
+        }));
+        setTransactions(formattedData);
+      }
+
       setLoading(false);
     };
 
-    fetchAccount();
+    fetchAccountData();
   }, [accountId]);
 
   const uniqueCategories = useMemo(() => {
-    const categories = new Set(accountTransactions.map((t) => t.category));
+    const categories = new Set(transactions.map((t) => t.category));
     return Array.from(categories).sort();
-  }, [accountTransactions]);
+  }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
-    return accountTransactions.filter((transaction) => {
+    return transactions.filter((transaction) => {
       const searchMatch =
         searchQuery.toLowerCase() === "" ||
         transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.description.toLowerCase().includes(searchQuery.toLowerCase());
+        transaction.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
       const statusMatch =
         statusFilter === "all" || transaction.status === statusFilter;
@@ -98,7 +122,7 @@ const AccountDetailPage = () => {
 
       return searchMatch && statusMatch && categoryMatch;
     });
-  }, [accountTransactions, searchQuery, statusFilter, categoryFilter]);
+  }, [transactions, searchQuery, statusFilter, categoryFilter]);
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -14,13 +15,56 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { allTransactions } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Transaction } from "@/types/database";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const RecentTransactions = () => {
-  const recentTransactions = allTransactions.slice(0, 6);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentTransactions = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("transactions")
+        .select(`
+          id,
+          account_id,
+          date,
+          name,
+          amount,
+          status,
+          description,
+          category:categories (name)
+        `)
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .limit(6);
+
+      if (error) {
+        console.error("Error fetching recent transactions:", error);
+      } else {
+        const formattedData = data.map((t: any) => ({
+          ...t,
+          category: t.category?.name || "Sem categoria",
+        }));
+        setTransactions(formattedData);
+      }
+      setLoading(false);
+    };
+
+    fetchRecentTransactions();
+  }, []);
 
   const statusVariant = {
     "Concluído": "default",
@@ -45,38 +89,47 @@ const RecentTransactions = () => {
         </Button>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Transação</TableHead>
-              <TableHead className="hidden sm:table-cell">Status</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recentTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell>
-                  <div className="font-medium">{transaction.name}</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    {transaction.date}
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <Badge variant={statusVariant[transaction.status]}>
-                    {transaction.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
-                  {transaction.amount.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </TableCell>
+        {loading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Transação</TableHead>
+                <TableHead className="hidden sm:table-cell">Status</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {transactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>
+                    <div className="font-medium">{transaction.name}</div>
+                    <div className="hidden text-sm text-muted-foreground md:inline">
+                      {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <Badge variant={statusVariant[transaction.status]}>
+                      {transaction.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
+                    {transaction.amount.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );

@@ -7,7 +7,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Transaction } from "@/data/mockData";
+import { Transaction } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
 
 interface TransactionDetailsModalProps {
@@ -45,7 +45,7 @@ const TransactionDetailsModal = ({ transaction, isOpen, onClose }: TransactionDe
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <span className="text-right text-sm font-medium text-muted-foreground">Data</span>
-            <span className="col-span-3">{transaction.date}</span>
+            <span className="col-span-3">{new Date(transaction.date).toLocaleDateString("pt-BR")}</span>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <span className="text-right text-sm font-medium text-muted-foreground">Status</span>
@@ -56,10 +56,6 @@ const TransactionDetailsModal = ({ transaction, isOpen, onClose }: TransactionDe
           <div className="grid grid-cols-4 items-center gap-4">
             <span className="text-right text-sm font-medium text-muted-foreground">Categoria</span>
             <span className="col-span-3">{transaction.category}</span>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right text-sm font-medium text-muted-foreground">Método</span>
-            <span className="col-span-3">{transaction.method}</span>
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <span className="text-right text-sm font-medium text-muted-foreground pt-1">Descrição</span>

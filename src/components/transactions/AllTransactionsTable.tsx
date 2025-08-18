@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction } from "@/data/mockData";
+import { Transaction } from "@/types/database";
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
@@ -28,7 +28,6 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
           <TableRow>
             <TableHead>Transação</TableHead>
             <TableHead>Categoria</TableHead>
-            <TableHead className="hidden sm:table-cell">Método</TableHead>
             <TableHead className="hidden sm:table-cell">Status</TableHead>
             <TableHead className="text-right">Valor</TableHead>
           </TableRow>
@@ -44,13 +43,10 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
                 <TableCell>
                   <div className="font-medium">{transaction.name}</div>
                   <div className="text-sm text-muted-foreground">
-                    {transaction.date}
+                    {new Date(transaction.date).toLocaleDateString("pt-BR")}
                   </div>
                 </TableCell>
                 <TableCell>{transaction.category}</TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  {transaction.method}
-                </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant={statusVariant[transaction.status]}>
                     {transaction.status}
@@ -70,12 +66,12 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={4} className="h-24 text-center">
                 Nenhuma transação encontrada.
               </TableCell>
             </TableRow>
           )}
-        </TableBody>
+        </Body>
       </Table>
     </div>
   );
