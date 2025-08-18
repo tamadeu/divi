@@ -37,12 +37,6 @@ export const summaryData = {
   monthlyExpenses: -2345.8,
 };
 
-export const accountsData: Account[] = [
-  { id: "acc_1", name: "Conta Principal", bank: "Banco Digital", type: "Conta Corrente", balance: 8540.75 },
-  { id: "acc_2", name: "Cartão Platinum", bank: "Banco Digital", type: "Cartão de Crédito", balance: -1302.49 },
-  { id: "acc_3", name: "Reserva de Emergência", bank: "Invest Corretora", type: "Poupança", balance: 5302.24 },
-];
-
 export const allTransactions: Transaction[] = [
   { id: "txn_1", accountId: "acc_2", date: "2024-07-29", name: "Starbucks", amount: -12.5, status: "Concluído", category: "Alimentação", method: "Cartão de Crédito", description: "Café da manhã" },
   { id: "txn_2", accountId: "acc_1", date: "2024-07-29", name: "Depósito de Salário", amount: 2600.0, status: "Concluído", category: "Renda", method: "Depósito Direto", description: "Salário quinzenal" },
