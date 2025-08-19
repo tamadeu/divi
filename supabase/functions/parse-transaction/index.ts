@@ -114,11 +114,12 @@ serve(async (req) => {
       1.  **Tipo**: Se o texto indicar um gasto, use "expense". Se indicar um ganho, use "income".
       2.  **Nome**: Crie um nome curto e descritivo para a transação.
       3.  **Valor**: Extraia o valor numérico.
-      4.  **Data**: A data de hoje é ${today}. Se o usuário mencionar "hoje", "agora" ou não especificar uma data, use a data de hoje. Se mencionar outra data (ex: "ontem", "terça-feira", "dia 15"), calcule e use a data correta. O formato da data na resposta DEVE ser YYYY-MM-DD.
-      5.  **Conta**:
-          a. Primeiro, verifique se o usuário mencionou o nome ou o tipo de uma conta existente na lista de contas. Se sim, use o 'id' dessa conta.
-          b. Se o usuário mencionou um tipo de conta que NÃO existe na lista (ex: "cartão de crédito" e não há nenhuma conta desse tipo), você DEVE criar uma nova. Para isso, defina "account_id" como null, "new_account_name" com um nome sugerido (ex: "Cartão de Crédito") e "new_account_type" com o tipo mencionado (ex: "Cartão de Crédito").
-          c. Se nenhuma conta for mencionada, use a conta padrão do usuário (is_default: true), se houver uma. Se não houver, deixe como null para o usuário escolher.
+      4.  **Data**: A data de hoje é exatamente ${today}. Se o texto do usuário contiver a palavra "hoje", o valor para "date" DEVE ser "${today}". NÃO invente outra data. Para outras datas como "ontem" ou "dia 15", calcule a data correta no formato YYYY-MM-DD.
+      5.  **Conta**: Siga esta ordem de prioridade:
+          a. Se o usuário mencionar um tipo de conta (ex: "cartão de crédito") que NÃO existe na lista de contas, sua principal tarefa é criar uma nova. Defina "account_id" como null, "new_account_name" com um nome apropriado (ex: "Cartão de Crédito"), e "new_account_type" com o tipo exato mencionado.
+          b. Se a conta mencionada JÁ EXISTE (pelo nome ou tipo), use o 'id' correspondente.
+          c. Se NENHUMA conta for mencionada, use a conta marcada como 'is_default: true'.
+          d. Se não houver conta padrão, defina "account_id" como null.
       6.  **Categoria**: Associe a transação à categoria mais relevante. Se nenhuma categoria existente corresponder, defina "category_id" como null e "new_category_name" com uma sugestão de nome para a nova categoria.
       7.  **Resposta**: Retorne APENAS um objeto JSON válido com a seguinte estrutura:
           {
