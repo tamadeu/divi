@@ -1,27 +1,142 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { showSuccess } from "@/utils/toast"
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { showError, showSuccess } from "@/utils/toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const profileSchema = z.object({
+  first_name: z.string().min(1, "O nome é obrigatório."),
+  last_name: z.string().min(1, "O sobrenome é obrigatório."),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfileForm() {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    showSuccess("Perfil atualizado com sucesso!");
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+    },
+  });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setEmail(user.email || "");
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+        } else if (profile) {
+          form.reset({
+            first_name: profile.first_name || "",
+            last_name: profile.last_name || "",
+          });
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchProfile();
+  }, [form]);
+
+  const handleSubmit = async (values: ProfileFormValues) => {
+    setIsSubmitting(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("Usuário não encontrado.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        first_name: values.first_name,
+        last_name: values.last_name,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      showError("Erro ao atualizar perfil: " + error.message);
+    } else {
+      showSuccess("Perfil atualizado com sucesso!");
+    }
+    setIsSubmitting(false);
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+    );
+  }
+
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="space-y-2">
-        <Label htmlFor="name">Nome</Label>
-        <Input id="name" defaultValue="Alex Doe" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" defaultValue="alex.doe@example.com" />
-      </div>
-      <Button type="submit">Salvar Alterações</Button>
-    </form>
-  )
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+              <FormItem>
+                <Label>Nome</Label>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="last_name"
+            render={({ field }) => (
+              <FormItem>
+                <Label>Sobrenome</Label>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" value={email} readOnly disabled />
+        </div>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+        </Button>
+      </form>
+    </Form>
+  );
 }
