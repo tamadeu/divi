@@ -99,40 +99,48 @@ serve(async (req) => {
     const today = new Date().toISOString().split('T')[0];
 
     const basePrompt = `
-      A data de hoje é ${today}.
-      Você é um assistente financeiro especialista em extrair dados de texto.
-      Analise o texto do usuário e extraia as seguintes informações para uma transação financeira.
+      Você é um assistente financeiro que preenche um formulário JSON a partir de um texto.
       O texto do usuário é: "${text}"
+      A data de hoje é: ${today}.
 
-      As contas disponíveis para este usuário são:
-      ${JSON.stringify(accounts)}
+      **REGRA MAIS IMPORTANTE:** Se o texto contiver "hoje", a data no JSON DEVE ser "${today}". Esta regra é inquebrável.
 
-      As categorias disponíveis são:
-      ${JSON.stringify(categories)}
+      **Contas disponíveis:**
+      ${JSON.stringify(accounts, null, 2)}
 
-      Regras:
-      1.  **Tipo**: Se o texto indicar um gasto, use "expense". Se indicar um ganho, use "income".
-      2.  **Nome**: Crie um nome curto e descritivo para a transação.
-      3.  **Valor**: Extraia o valor numérico.
-      4.  **Data**: A data de hoje é exatamente ${today}. Se o texto do usuário contiver a palavra "hoje", o valor para "date" DEVE ser "${today}". NÃO invente outra data. Para outras datas como "ontem" ou "dia 15", calcule a data correta no formato YYYY-MM-DD.
-      5.  **Conta**: Siga esta ordem de prioridade:
-          a. Se o usuário mencionar um tipo de conta (ex: "cartão de crédito") que NÃO existe na lista de contas, sua principal tarefa é criar uma nova. Defina "account_id" como null, "new_account_name" com um nome apropriado (ex: "Cartão de Crédito"), e "new_account_type" com o tipo exato mencionado.
-          b. Se a conta mencionada JÁ EXISTE (pelo nome ou tipo), use o 'id' correspondente.
-          c. Se NENHUMA conta for mencionada, use a conta marcada como 'is_default: true'.
-          d. Se não houver conta padrão, defina "account_id" como null.
-      6.  **Categoria**: Associe a transação à categoria mais relevante. Se nenhuma categoria existente corresponder, defina "category_id" como null e "new_category_name" com uma sugestão de nome para a nova categoria.
-      7.  **Resposta**: Retorne APENAS um objeto JSON válido com a seguinte estrutura:
-          {
-            "name": "string",
-            "amount": number,
-            "type": "income" | "expense",
-            "date": "YYYY-MM-DD",
-            "account_id": "uuid" | null,
-            "category_id": "uuid" | null,
-            "new_account_name": "string" | null,
-            "new_account_type": "string" | null,
-            "new_category_name": "string" | null
-          }
+      **Categorias disponíveis:**
+      ${JSON.stringify(categories, null, 2)}
+
+      **Sua Tarefa:**
+      Preencha o seguinte formulário JSON com base no texto do usuário e nas listas acima.
+
+      **Formulário JSON (preencha os valores):**
+      {
+        "name": "...",
+        "amount": 0,
+        "type": "expense",
+        "date": "YYYY-MM-DD",
+        "account_id": null,
+        "category_id": null,
+        "new_account_name": null,
+        "new_account_type": null,
+        "new_category_name": null
+      }
+
+      **Instruções para preenchimento:**
+      1.  **name**: Um nome curto para a transação (ex: "Uber", "Salário").
+      2.  **amount**: O valor numérico, sempre positivo.
+      3.  **type**: "expense" para gastos, "income" para ganhos.
+      4.  **date**: Siga a **REGRA MAIS IMPORTANTE**. Se outra data for mencionada, use-a.
+      5.  **account_id**:
+          - Se o usuário mencionar uma conta que **existe** na lista, use o "id" dela.
+          - Se o usuário mencionar um tipo de conta (ex: "cartão de crédito") que **não existe** na lista, deixe "account_id" como \`null\` e preencha "new_account_name" e "new_account_type".
+          - Se nenhuma conta for mencionada, use a conta padrão (\`is_default: true\`).
+      6.  **category_id**:
+          - Use o "id" da categoria mais apropriada da lista.
+          - Se nenhuma for adequada, deixe "category_id" como \`null\` e preencha "new_category_name".
+
+      Retorne APENAS o objeto JSON preenchido.
     `
     
     let parsedData = null;
