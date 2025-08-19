@@ -42,7 +42,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" })
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" })
 
     const prompt = `
       Você é um assistente financeiro especialista em extrair dados de texto.
