@@ -462,7 +462,10 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                           <TabsTrigger value="Concluído" disabled={isFutureDate}>
                             Concluído
                           </TabsTrigger>
-                          <TabsTrigger value="Pendente">
+                          <TabsTrigger
+                            value="Pendente"
+                            className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground"
+                          >
                             Pendente
                           </TabsTrigger>
                         </TabsList>
