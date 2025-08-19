@@ -7,8 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
-import { Transaction } from "@/types/database";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SummaryData {
   total_balance: number;
@@ -21,6 +22,7 @@ const Dashboard = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
+  const isMobile = useIsMobile();
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -97,15 +99,44 @@ const Dashboard = () => {
           </Button>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {loading ? (
-          <>
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </>
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+      ) : (
+        isMobile ? (
+          <Carousel className="w-full">
+            <CarouselContent className="-ml-4">
+              <CarouselItem className="pl-4 basis-full">
+                <SummaryCard
+                  title="Saldo Total"
+                  value={formatCurrency(summary?.total_balance)}
+                  icon={DollarSign}
+                  variant="default"
+                />
+              </CarouselItem>
+              <CarouselItem className="pl-4 basis-full">
+                <SummaryCard
+                  title="Renda Mensal"
+                  value={formatCurrency(summary?.monthly_income)}
+                  icon={TrendingUp}
+                  variant="income"
+                />
+              </CarouselItem>
+              <CarouselItem className="pl-4 basis-full">
+                <SummaryCard
+                  title="Despesas Mensais"
+                  value={formatCurrency(Math.abs(summary?.monthly_expenses || 0))}
+                  icon={TrendingDown}
+                  variant="expense"
+                />
+              </CarouselItem>
+            </CarouselContent>
+          </Carousel>
         ) : (
-          <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
               title="Saldo Total"
               value={formatCurrency(summary?.total_balance)}
@@ -124,9 +155,9 @@ const Dashboard = () => {
               icon={TrendingDown}
               variant="expense"
             />
-          </>
-        )}
-      </div>
+          </div>
+        )
+      )}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <RecentTransactions transactions={transactions} loading={loading} />
