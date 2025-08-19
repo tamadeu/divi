@@ -27,6 +27,7 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
         <TableHeader>
           <TableRow>
             <TableHead>Transação</TableHead>
+            <TableHead className="hidden md:table-cell">Conta</TableHead>
             <TableHead>Categoria</TableHead>
             <TableHead className="hidden sm:table-cell">Status</TableHead>
             <TableHead className="text-right">Valor</TableHead>
@@ -45,6 +46,16 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
                   <div className="text-sm text-muted-foreground">
                     {new Date(transaction.date).toLocaleDateString("pt-BR")}
                   </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {transaction.account ? (
+                    <>
+                      <div className="font-medium">{transaction.account.name}</div>
+                      <div className="text-sm text-muted-foreground">{transaction.account.type}</div>
+                    </>
+                  ) : (
+                    "N/A"
+                  )}
                 </TableCell>
                 <TableCell>{transaction.category}</TableCell>
                 <TableCell className="hidden sm:table-cell">
@@ -66,7 +77,7 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center">
+              <TableCell colSpan={5} className="h-24 text-center">
                 Nenhuma transação encontrada.
               </TableCell>
             </TableRow>

@@ -42,6 +42,7 @@ const TransactionsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [accountTypeFilter, setAccountTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchTransactions = async () => {
@@ -61,7 +62,8 @@ const TransactionsPage = () => {
         amount,
         status,
         description,
-        category:categories (name)
+        category:categories (name),
+        account:accounts (name, type)
       `)
       .eq("user_id", user.id)
       .order("date", { ascending: false });
@@ -72,6 +74,7 @@ const TransactionsPage = () => {
       const formattedData = data.map((t: any) => ({
         ...t,
         category: t.category?.name || "Sem categoria",
+        account: t.account,
       }));
       setAllTransactions(formattedData);
     }
@@ -99,10 +102,13 @@ const TransactionsPage = () => {
         statusFilter === "all" || transaction.status === statusFilter;
       const categoryMatch =
         categoryFilter === "all" || transaction.category === categoryFilter;
+      
+      const accountTypeMatch =
+        accountTypeFilter === "all" || transaction.account?.type === accountTypeFilter;
 
-      return searchMatch && statusMatch && categoryMatch;
+      return searchMatch && statusMatch && categoryMatch && accountTypeMatch;
     });
-  }, [allTransactions, searchQuery, statusFilter, categoryFilter]);
+  }, [allTransactions, searchQuery, statusFilter, categoryFilter, accountTypeFilter]);
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
@@ -154,7 +160,7 @@ const TransactionsPage = () => {
             <Skeleton className="h-64 w-full" />
           ) : (
             <>
-              <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <Input
                   placeholder="Pesquisar por nome ou descrição..."
                   value={searchQuery}
@@ -162,7 +168,7 @@ const TransactionsPage = () => {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="flex-grow"
+                  className="lg:col-span-2"
                 />
                 <Select
                   value={statusFilter}
@@ -171,7 +177,7 @@ const TransactionsPage = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectTrigger>
                     <SelectValue placeholder="Filtrar por status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -188,7 +194,7 @@ const TransactionsPage = () => {
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectTrigger>
                     <SelectValue placeholder="Filtrar por categoria" />
                   </SelectTrigger>
                   <SelectContent>
@@ -198,6 +204,25 @@ const TransactionsPage = () => {
                         {cat}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+                 <Select
+                  value={accountTypeFilter}
+                  onValueChange={(value) => {
+                    setAccountTypeFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por tipo de conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Tipos de Conta</SelectItem>
+                    <SelectItem value="Conta Corrente">Conta Corrente</SelectItem>
+                    <SelectItem value="Poupança">Poupança</SelectItem>
+                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="Investimento">Investimento</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

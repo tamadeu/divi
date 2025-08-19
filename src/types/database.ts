@@ -27,6 +27,10 @@ export type Transaction = {
   description: string | null;
   category: string | null; // Categoria pode ser nula para transferências
   transfer_id?: string | null;
+  account?: {
+    name: string;
+    type: string;
+  } | null;
 };
 
 export type Budget = {
