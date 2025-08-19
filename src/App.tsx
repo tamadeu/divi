@@ -17,6 +17,8 @@ import SignUpPage from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
 import CategoriesPage from "./pages/Categories";
 import { Skeleton } from "./components/ui/skeleton";
+import ForgotPasswordPage from "./pages/ForgotPassword";
+import ResetPasswordPage from "./pages/ResetPassword";
 
 const ProtectedRoute = () => {
   const { session, loading } = useSession();
@@ -42,6 +44,8 @@ function AppRoutes() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/accounts" element={<AccountsPage />} />

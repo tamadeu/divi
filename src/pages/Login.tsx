@@ -73,7 +73,15 @@ const LoginPage = () => {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="password">Senha</Label>
+                <div className="flex items-center">
+                  <Label htmlFor="password">Senha</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="ml-auto inline-block text-sm underline"
+                  >
+                    Esqueceu a senha?
+                  </Link>
+                </div>
                 <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
