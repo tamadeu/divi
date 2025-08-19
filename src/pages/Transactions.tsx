@@ -27,7 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, ArrowRightLeft } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 
 const ITEMS_PER_PAGE = 10;
@@ -37,7 +37,7 @@ const TransactionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const { openAddTransactionModal } = useModal();
+  const { openAddTransactionModal, openAddTransferModal } = useModal();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -84,8 +84,8 @@ const TransactionsPage = () => {
   }, []);
 
   const uniqueCategories = useMemo(() => {
-    const categories = new Set(allTransactions.map((t) => t.category));
-    return Array.from(categories).sort();
+    const categories = new Set(allTransactions.map((t) => t.category).filter(Boolean));
+    return Array.from(categories).sort() as string[];
   }, [allTransactions]);
 
   const filteredTransactions = useMemo(() => {
@@ -129,12 +129,18 @@ const TransactionsPage = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
-        <Button size="sm" className="gap-1" onClick={() => openAddTransactionModal(fetchTransactions)}>
-          <PlusCircle className="h-4 w-4" />
-          Nova Transação
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(fetchTransactions)}>
+            <ArrowRightLeft className="h-4 w-4" />
+            Transferência
+          </Button>
+          <Button size="sm" className="gap-1" onClick={() => openAddTransactionModal(fetchTransactions)}>
+            <PlusCircle className="h-4 w-4" />
+            Nova Transação
+          </Button>
+        </div>
       </div>
       <Card>
         <CardHeader>

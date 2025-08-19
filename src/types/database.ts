@@ -25,7 +25,8 @@ export type Transaction = {
   amount: number;
   status: "Concluído" | "Pendente" | "Falhou";
   description: string | null;
-  category: string;
+  category: string | null; // Categoria pode ser nula para transferências
+  transfer_id?: string | null;
 };
 
 export type Budget = {

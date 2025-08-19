@@ -17,6 +17,11 @@ interface ModalContextType {
   openAddCategoryModal: (onSuccess?: SuccessCallback) => void;
   closeAddCategoryModal: () => void;
   onCategoryAdded: SuccessCallback;
+
+  isAddTransferModalOpen: boolean;
+  openAddTransferModal: (onSuccess?: SuccessCallback) => void;
+  closeAddTransferModal: () => void;
+  onTransferAdded: SuccessCallback;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -31,6 +36,9 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [isAddCategoryModalOpen, setAddCategoryModalOpen] = useState(false);
   const [onCategoryAdded, setOnCategoryAdded] = useState<SuccessCallback>(() => () => {});
 
+  const [isAddTransferModalOpen, setAddTransferModalOpen] = useState(false);
+  const [onTransferAdded, setOnTransferAdded] = useState<SuccessCallback>(() => () => {});
+
   const openAddTransactionModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload()) => {
     setOnTransactionAdded(() => onSuccess);
     setAddTransactionModalOpen(true);
@@ -44,6 +52,11 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const openAddCategoryModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload()) => {
     setOnCategoryAdded(() => onSuccess);
     setAddCategoryModalOpen(true);
+  }, []);
+
+  const openAddTransferModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload()) => {
+    setOnTransferAdded(() => onSuccess);
+    setAddTransferModalOpen(true);
   }, []);
 
   const value = {
@@ -61,6 +74,11 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     openAddCategoryModal,
     closeAddCategoryModal: () => setAddCategoryModalOpen(false),
     onCategoryAdded,
+
+    isAddTransferModalOpen,
+    openAddTransferModal,
+    closeAddTransferModal: () => setAddTransferModalOpen(false),
+    onTransferAdded,
   };
 
   return (

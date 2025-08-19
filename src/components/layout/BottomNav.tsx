@@ -16,7 +16,7 @@ interface BottomNavProps {
 
 const BottomNav = ({ onMenuClick }: BottomNavProps) => {
   const location = useLocation();
-  const { openAddTransactionModal, openAddAccountModal, openAddCategoryModal } = useModal();
+  const { openAddTransactionModal, openAddAccountModal, openAddCategoryModal, openAddTransferModal } = useModal();
 
   const navItems = [
     { to: "/", icon: Home, label: "Painel" },
@@ -50,6 +50,7 @@ const BottomNav = ({ onMenuClick }: BottomNavProps) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" side="top" className="mb-2">
               <DropdownMenuItem onClick={() => openAddTransactionModal()}>Nova Transação</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openAddTransferModal()}>Nova Transferência</DropdownMenuItem>
               <DropdownMenuItem onClick={() => openAddAccountModal()}>Nova Conta</DropdownMenuItem>
               <DropdownMenuItem onClick={() => openAddCategoryModal()}>Nova Categoria</DropdownMenuItem>
             </DropdownMenuContent>

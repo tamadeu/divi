@@ -10,6 +10,7 @@ import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
+import AddTransferModal from "@/components/transfers/AddTransferModal";
 
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -23,6 +24,9 @@ const Layout = () => {
     isAddCategoryModalOpen,
     closeAddCategoryModal,
     onCategoryAdded,
+    isAddTransferModalOpen,
+    closeAddTransferModal,
+    onTransferAdded,
   } = useModal();
 
   return (
@@ -70,6 +74,11 @@ const Layout = () => {
         isOpen={isAddCategoryModalOpen}
         onClose={closeAddCategoryModal}
         onCategoryAdded={onCategoryAdded}
+      />
+      <AddTransferModal
+        isOpen={isAddTransferModalOpen}
+        onClose={closeAddTransferModal}
+        onTransferAdded={onTransferAdded}
       />
     </>
   );
