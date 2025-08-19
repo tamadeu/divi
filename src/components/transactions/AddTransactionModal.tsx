@@ -36,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category } from "@/types/database";
 import { CalendarIcon, PlusCircle } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import AddAccountModal from "../accounts/AddAccountModal";
@@ -71,6 +71,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [isNamePopoverOpen, setIsNamePopoverOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isFutureDate, setIsFutureDate] = useState(false);
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -86,6 +88,21 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
 
   const transactionType = form.watch("type");
   const nameValue = form.watch("name");
+  const transactionDate = form.watch("date");
+
+  useEffect(() => {
+    if (transactionDate) {
+      const today = startOfDay(new Date());
+      const selectedDate = startOfDay(transactionDate);
+
+      if (selectedDate > today) {
+        setIsFutureDate(true);
+        form.setValue("status", "Pendente", { shouldValidate: true });
+      } else {
+        setIsFutureDate(false);
+      }
+    }
+  }, [transactionDate, form]);
 
   const filteredCategories = useMemo(() => {
     if (!transactionType) return [];
@@ -341,7 +358,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Data</FormLabel>
-                    <Popover>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -364,7 +381,10 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setIsCalendarOpen(false);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -431,7 +451,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isFutureDate}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um status" />
@@ -442,6 +466,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                         <SelectItem value="Pendente">Pendente</SelectItem>
                       </SelectContent>
                     </Select>
+                    {isFutureDate && (
+                      <p className="text-xs text-muted-foreground pt-1">
+                        Transações futuras são definidas como pendentes.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
