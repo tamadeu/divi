@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -35,10 +35,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category } from "@/types/database";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import AddCategoryModal from "../categories/AddCategoryModal";
 
 const transferSchema = z.object({
   from_account_id: z.string().uuid("Selecione uma conta de origem."),
@@ -64,6 +65,7 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<Category[]>([]);
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
@@ -74,25 +76,26 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
     },
   });
 
+  const fetchData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
+    setAccounts(accountsData || []);
+
+    const { data: categoriesData } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("type", "income");
+    setIncomeCategories(categoriesData || []);
+  }, []);
+
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
-      setAccounts(accountsData || []);
-
-      const { data: categoriesData } = await supabase
-        .from("categories")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("type", "income");
-      setIncomeCategories(categoriesData || []);
-    };
     if (isOpen) {
       fetchData();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchData]);
 
   const handleSubmit = async (values: TransferFormValues) => {
     setIsSubmitting(true);
@@ -175,140 +178,155 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Nova Transferência Entre Contas</DialogTitle>
-          <DialogDescription>
-            Mova dinheiro de uma conta para outra.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nova Transferência Entre Contas</DialogTitle>
+            <DialogDescription>
+              Mova dinheiro de uma conta para outra.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="from_account_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>De</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Conta de Origem" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="to_account_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Para</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Conta de Destino" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
-                name="from_account_id"
+                name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>De</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Conta de Origem" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="to_account_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Para</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Conta de Destino" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="category_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Categoria da Entrada</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormLabel>Valor</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria de receita" />
-                      </SelectTrigger>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {incomeCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Data</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                        >
-                          {field.value ? format(field.value, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Adicione uma nota..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Transferindo..." : "Confirmar Transferência"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria da Entrada</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma categoria de receita" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {incomeCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                          >
+                            {field.value ? format(field.value, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição (Opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Adicione uma nota..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Transferindo..." : "Confirmar Transferência"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      <AddCategoryModal
+        isOpen={isAddCategoryModalOpen}
+        onClose={() => setIsAddCategoryModalOpen(false)}
+        onCategoryAdded={() => {
+          fetchData();
+          setIsAddCategoryModalOpen(false);
+        }}
+      />
+    </>
   );
 };
 
