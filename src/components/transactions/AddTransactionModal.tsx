@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
@@ -275,16 +275,26 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                     <FormItem>
                       <FormLabel>Nome</FormLabel>
                       <Popover open={isNamePopoverOpen && filteredNameSuggestions.length > 0} onOpenChange={setIsNamePopoverOpen}>
-                        <PopoverTrigger asChild>
+                        <PopoverAnchor asChild>
                           <FormControl>
                             <Input
                               placeholder={transactionType === 'expense' ? "Ex: Uber" : "Ex: Salário"}
                               {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                if (e.target.value) {
+                                  setIsNamePopoverOpen(true);
+                                }
+                              }}
+                              onBlur={() => {
+                                setTimeout(() => setIsNamePopoverOpen(false), 150);
+                                field.onBlur();
+                              }}
                               onFocus={() => setIsNamePopoverOpen(true)}
                               autoComplete="off"
                             />
                           </FormControl>
-                        </PopoverTrigger>
+                        </PopoverAnchor>
                         <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-[--radix-popover-trigger-width] p-0" align="start">
                           <Command>
                             <CommandList>
@@ -331,7 +341,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                   <FormItem className="flex flex-col">
                     <FormLabel>Data</FormLabel>
                     <Popover>
-                      <PopoverTrigger asChild>
+                      <PopoverAnchor asChild>
                         <FormControl>
                           <Button
                             variant={"outline"}
@@ -348,7 +358,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
-                      </PopoverTrigger>
+                      </PopoverAnchor>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
