@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import Sidebar from "@/components/layout/Sidebar";
 import {
   Card,
   CardContent,
@@ -82,37 +80,29 @@ const SearchResultsPage = () => {
 
   return (
     <>
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <Sidebar />
-        <div className="flex flex-col">
-          <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Resultados da Busca</CardTitle>
-                <CardDescription>
-                  {loading
-                    ? "Buscando..."
-                    : searchResults.length > 0
-                    ? `Exibindo ${searchResults.length} resultado(s) para `
-                    : `Nenhum resultado encontrado para `}
-                  <span className="font-semibold">"{query}"</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <Skeleton className="h-64 w-full" />
-                ) : (
-                  <AllTransactionsTable
-                    transactions={searchResults}
-                    onRowClick={handleRowClick}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </main>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Resultados da Busca</CardTitle>
+          <CardDescription>
+            {loading
+              ? "Buscando..."
+              : searchResults.length > 0
+              ? `Exibindo ${searchResults.length} resultado(s) para `
+              : `Nenhum resultado encontrado para `}
+            <span className="font-semibold">"{query}"</span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : (
+            <AllTransactionsTable
+              transactions={searchResults}
+              onRowClick={handleRowClick}
+            />
+          )}
+        </CardContent>
+      </Card>
       <TransactionDetailsModal
         transaction={selectedTransaction}
         isOpen={isModalOpen}

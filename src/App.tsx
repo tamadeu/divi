@@ -1,7 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider, useSession } from "@/contexts/SessionContext";
+import { ModalProvider } from "@/contexts/ModalContext";
+import Layout from "@/components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import AccountsPage from "./pages/Accounts";
 import AccountDetailPage from "./pages/AccountDetail";
@@ -31,7 +33,7 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  return <Layout />;
 };
 
 function AppRoutes() {
@@ -61,7 +63,9 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <SessionProvider>
-        <AppRoutes />
+        <ModalProvider>
+          <AppRoutes />
+        </ModalProvider>
       </SessionProvider>
       <Toaster />
     </ThemeProvider>

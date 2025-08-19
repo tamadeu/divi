@@ -1,21 +1,19 @@
 import { useState, useEffect } from "react";
-import Header from "@/components/layout/Header";
-import Sidebar from "@/components/layout/Sidebar";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Category } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
 import CategoriesTable from "@/components/categories/CategoriesTable";
-import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import EditCategoryModal from "@/components/categories/EditCategoryModal";
 import DeleteCategoryAlert from "@/components/categories/DeleteCategoryAlert";
 import { showError, showSuccess } from "@/utils/toast";
+import { useModal } from "@/contexts/ModalContext";
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const { openAddCategoryModal } = useModal();
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
@@ -57,35 +55,22 @@ const CategoriesPage = () => {
 
   return (
     <>
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <Sidebar />
-        <div className="flex flex-col">
-          <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold md:text-2xl">Categorias</h1>
-              <Button size="sm" className="gap-1" onClick={() => setIsAddModalOpen(true)}>
-                <PlusCircle className="h-4 w-4" />
-                Nova Categoria
-              </Button>
-            </div>
-            {loading ? (
-              <Skeleton className="h-64 w-full" />
-            ) : (
-              <CategoriesTable
-                categories={categories}
-                onEdit={(category) => setEditingCategory(category)}
-                onDelete={(category) => setDeletingCategory(category)}
-              />
-            )}
-          </main>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold md:text-2xl">Categorias</h1>
+        <Button size="sm" className="gap-1" onClick={() => openAddCategoryModal(fetchCategories)}>
+          <PlusCircle className="h-4 w-4" />
+          Nova Categoria
+        </Button>
       </div>
-      <AddCategoryModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onCategoryAdded={fetchCategories}
-      />
+      {loading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : (
+        <CategoriesTable
+          categories={categories}
+          onEdit={(category) => setEditingCategory(category)}
+          onDelete={(category) => setDeletingCategory(category)}
+        />
+      )}
       <EditCategoryModal
         isOpen={!!editingCategory}
         onClose={() => setEditingCategory(null)}

@@ -1,12 +1,10 @@
-import { useState, useEffect } from "react";
-import Header from "@/components/layout/Header";
-import Sidebar from "@/components/layout/Sidebar";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import SpendingChart from "@/components/dashboard/SpendingChart";
 import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from "react";
 
 interface SummaryData {
   total_balance: number;
@@ -44,55 +42,49 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <Sidebar />
-      <div className="flex flex-col">
-        <Header />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-          <div className="flex items-center">
-            <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loading ? (
-              <>
-                <Skeleton className="h-24" />
-                <Skeleton className="h-24" />
-                <Skeleton className="h-24" />
-              </>
-            ) : (
-              <>
-                <SummaryCard
-                  title="Saldo Total"
-                  value={formatCurrency(summary?.total_balance)}
-                  icon={DollarSign}
-                  variant="default"
-                />
-                <SummaryCard
-                  title="Renda Mensal"
-                  value={formatCurrency(summary?.monthly_income)}
-                  icon={TrendingUp}
-                  variant="income"
-                />
-                <SummaryCard
-                  title="Despesas Mensais"
-                  value={formatCurrency(summary?.monthly_expenses)}
-                  icon={TrendingDown}
-                  variant="expense"
-                />
-              </>
-            )}
-          </div>
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <RecentTransactions />
-            </div>
-            <div className="lg:col-span-2">
-              <SpendingChart />
-            </div>
-          </div>
-        </main>
+    <>
+      <div className="flex items-center">
+        <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
       </div>
-    </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          <>
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </>
+        ) : (
+          <>
+            <SummaryCard
+              title="Saldo Total"
+              value={formatCurrency(summary?.total_balance)}
+              icon={DollarSign}
+              variant="default"
+            />
+            <SummaryCard
+              title="Renda Mensal"
+              value={formatCurrency(summary?.monthly_income)}
+              icon={TrendingUp}
+              variant="income"
+            />
+            <SummaryCard
+              title="Despesas Mensais"
+              value={formatCurrency(summary?.monthly_expenses)}
+              icon={TrendingDown}
+              variant="expense"
+            />
+          </>
+        )}
+      </div>
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <RecentTransactions />
+        </div>
+        <div className="lg:col-span-2">
+          <SpendingChart />
+        </div>
+      </div>
+    </>
   );
 };
 

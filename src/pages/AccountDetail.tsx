@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import Sidebar from "@/components/layout/Sidebar";
 import NotFound from "./NotFound";
 import {
   Card,
@@ -57,7 +55,6 @@ const AccountDetailPage = () => {
       }
       setLoading(true);
 
-      // Fetch account details
       const { data: accountData, error: accountError } = await supabase
         .from("accounts")
         .select("*")
@@ -71,7 +68,6 @@ const AccountDetailPage = () => {
         setAccount(accountData);
       }
 
-      // Fetch account transactions
       const { data: transactionsData, error: transactionsError } = await supabase
         .from("transactions")
         .select(`
@@ -149,38 +145,32 @@ const AccountDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <Sidebar />
-        <div className="flex flex-col">
-          <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-10 w-10" />
-              <Skeleton className="h-8 w-48" />
-            </div>
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-40" />
-                  <Skeleton className="h-4 w-60" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-10 w-56" />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-4 w-64" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-48 w-full" />
-                </CardContent>
-              </Card>
-            </div>
-          </main>
+      <>
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-8 w-48" />
         </div>
-      </div>
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-4 w-60" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-10 w-56" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-48 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
@@ -190,140 +180,132 @@ const AccountDetailPage = () => {
 
   return (
     <>
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <Sidebar />
-        <div className="flex flex-col">
-          <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-            <div className="flex items-center gap-4">
-              <Button asChild variant="outline" size="icon">
-                <Link to="/accounts">
-                  <ArrowLeft className="h-4 w-4" />
-                </Link>
-              </Button>
-              <h1 className="text-lg font-semibold md:text-2xl">{account.name}</h1>
+      <div className="flex items-center gap-4">
+        <Button asChild variant="outline" size="icon">
+          <Link to="/accounts">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <h1 className="text-lg font-semibold md:text-2xl">{account.name}</h1>
+      </div>
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalhes da Conta</CardTitle>
+            <CardDescription>{account.bank} - {account.type}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              Saldo:{" "}
+              {account.balance.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
             </div>
-            <div className="grid gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detalhes da Conta</CardTitle>
-                  <CardDescription>{account.bank} - {account.type}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">
-                    Saldo:{" "}
-                    {account.balance.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Transações da Conta</CardTitle>
-                  <CardDescription>
-                    Uma lista de transações para esta conta.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                    <Input
-                      placeholder="Pesquisar transações..."
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="flex-grow"
-                    />
-                    <Select
-                      value={statusFilter}
-                      onValueChange={(value) => {
-                        setStatusFilter(value);
-                        setCurrentPage(1);
-                      }}
-                    >
-                      <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filtrar por status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos Status</SelectItem>
-                        <SelectItem value="Concluído">Concluído</SelectItem>
-                        <SelectItem value="Pendente">Pendente</SelectItem>
-                        <SelectItem value="Falhou">Falhou</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={categoryFilter}
-                      onValueChange={(value) => {
-                        setCategoryFilter(value);
-                        setCurrentPage(1);
-                      }}
-                    >
-                      <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filtrar por categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas Categorias</SelectItem>
-                        {uniqueCategories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <AccountTransactionsTable
-                    transactions={paginatedTransactions}
-                    onRowClick={handleRowClick}
-                  />
-                  {totalPages > 1 && (
-                    <div className="mt-4">
-                      <Pagination>
-                        <PaginationContent>
-                          <PaginationItem>
-                            <PaginationPrevious
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handlePageChange(currentPage - 1);
-                              }}
-                              className={
-                                currentPage === 1
-                                  ? "pointer-events-none opacity-50"
-                                  : ""
-                              }
-                            />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <span className="px-4 text-sm">
-                              Página {currentPage} de {totalPages}
-                            </span>
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationNext
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handlePageChange(currentPage + 1);
-                              }}
-                              className={
-                                currentPage === totalPages
-                                  ? "pointer-events-none opacity-50"
-                                  : ""
-                              }
-                            />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Transações da Conta</CardTitle>
+            <CardDescription>
+              Uma lista de transações para esta conta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <Input
+                placeholder="Pesquisar transações..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="flex-grow"
+              />
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Status</SelectItem>
+                  <SelectItem value="Concluído">Concluído</SelectItem>
+                  <SelectItem value="Pendente">Pendente</SelectItem>
+                  <SelectItem value="Falhou">Falhou</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={categoryFilter}
+                onValueChange={(value) => {
+                  setCategoryFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filtrar por categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Categorias</SelectItem>
+                  {uniqueCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </main>
-        </div>
+            <AccountTransactionsTable
+              transactions={paginatedTransactions}
+              onRowClick={handleRowClick}
+            />
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(currentPage - 1);
+                        }}
+                        className={
+                          currentPage === 1
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <span className="px-4 text-sm">
+                        Página {currentPage} de {totalPages}
+                      </span>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(currentPage + 1);
+                        }}
+                        className={
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
       <TransactionDetailsModal
         transaction={selectedTransaction}
