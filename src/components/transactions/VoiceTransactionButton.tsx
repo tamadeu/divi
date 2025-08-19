@@ -35,19 +35,8 @@ const VoiceTransactionButton = () => {
       showSuccess("Processando sua transação...");
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Usuário não autenticado.");
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("ai_provider")
-          .eq("id", user.id)
-          .single();
-
-        const provider = profile?.ai_provider || 'gemini';
-
         const { data, error } = await supabase.functions.invoke('parse-transaction', {
-          body: { text: transcript, provider },
+          body: { text: transcript },
         });
 
         if (error) throw error;

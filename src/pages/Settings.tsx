@@ -1,7 +1,6 @@
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { ThemeOptions } from "@/components/settings/ThemeOptions";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
-import { AiProviderOptions } from "@/components/settings/AiProviderOptions";
 import {
   Card,
   CardContent,
@@ -33,15 +32,6 @@ const SettingsPage = () => {
           </CardHeader>
           <CardContent>
             <ThemeOptions />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Inteligência Artificial</CardTitle>
-            <CardDescription>Escolha o modelo de IA para processamento de voz.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AiProviderOptions />
           </CardContent>
         </Card>
         <Card>
