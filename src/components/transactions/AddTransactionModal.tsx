@@ -141,7 +141,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
 
       const filteredNames = data
         .filter(t => (transactionType === 'expense' ? t.amount < 0 : t.amount > 0))
-        .map(t => t.name);
+        .map(t => t.name)
+        .filter(name => !name.toLowerCase().startsWith('transferência'));
 
       const uniqueNames = [...new Set(filteredNames)];
       setNameSuggestions(uniqueNames);
