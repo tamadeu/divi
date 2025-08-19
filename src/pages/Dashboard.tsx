@@ -1,12 +1,48 @@
+import { useState, useEffect } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import SpendingChart from "@/components/dashboard/SpendingChart";
-import { summaryData } from "@/data/mockData";
 import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface SummaryData {
+  total_balance: number;
+  monthly_income: number;
+  monthly_expenses: number;
+}
 
 const Dashboard = () => {
+  const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('get_dashboard_summary');
+      
+      if (error) {
+        console.error("Error fetching summary data:", error);
+        setSummary({ total_balance: 0, monthly_income: 0, monthly_expenses: 0 });
+      } else if (data && data.length > 0) {
+        setSummary(data[0]);
+      }
+      setLoading(false);
+    };
+
+    fetchSummary();
+  }, []);
+
+  const formatCurrency = (value: number | undefined) => {
+    if (typeof value !== 'number') return "R$ 0,00";
+    return value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  };
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar />
@@ -17,33 +53,34 @@ const Dashboard = () => {
             <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <SummaryCard
-              title="Saldo Total"
-              value={summaryData.totalBalance.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
-              icon={DollarSign}
-              variant="default"
-            />
-            <SummaryCard
-              title="Renda Mensal"
-              value={summaryData.monthlyIncome.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
-              icon={TrendingUp}
-              variant="income"
-            />
-            <SummaryCard
-              title="Despesas Mensais"
-              value={summaryData.monthlyExpenses.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
-              icon={TrendingDown}
-              variant="expense"
-            />
+            {loading ? (
+              <>
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+              </>
+            ) : (
+              <>
+                <SummaryCard
+                  title="Saldo Total"
+                  value={formatCurrency(summary?.total_balance)}
+                  icon={DollarSign}
+                  variant="default"
+                />
+                <SummaryCard
+                  title="Renda Mensal"
+                  value={formatCurrency(summary?.monthly_income)}
+                  icon={TrendingUp}
+                  variant="income"
+                />
+                <SummaryCard
+                  title="Despesas Mensais"
+                  value={formatCurrency(summary?.monthly_expenses)}
+                  icon={TrendingDown}
+                  variant="expense"
+                />
+              </>
+            )}
           </div>
           <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
             <div className="lg:col-span-3">

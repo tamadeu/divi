@@ -14,12 +14,6 @@ export type MonthlySummary = {
   expenses: number;
 };
 
-export const summaryData = {
-  totalBalance: 12540.5,
-  monthlyIncome: 5200.0,
-  monthlyExpenses: -2345.8,
-};
-
 export const spendingData = [
   { name: "Supermercado", value: 400, fill: "hsl(var(--chart-1))" },
   { name: "Contas", value: 300, fill: "hsl(var(--chart-2))" },
