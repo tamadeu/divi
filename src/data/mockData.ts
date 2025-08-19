@@ -14,15 +14,6 @@ export type MonthlySummary = {
   expenses: number;
 };
 
-export const spendingData = [
-  { name: "Supermercado", value: 400, fill: "hsl(var(--chart-1))" },
-  { name: "Contas", value: 300, fill: "hsl(var(--chart-2))" },
-  { name: "Transporte", value: 300, fill: "hsl(var(--chart-3))" },
-  { name: "Lazer", value: 200, fill: "hsl(var(--chart-4))" },
-  { name: "Saúde", value: 278, fill: "hsl(var(--chart-5))" },
-  { name: "Outros", value: 189, fill: "hsl(var(--chart-6))" },
-];
-
 export const budgetsData: Budget[] = [
   { id: "bud_1", category: "Alimentação", budgeted: 500, spent: 87.5 },
   { id: "bud_2", category: "Transporte", budgeted: 150, spent: 45.3 },
