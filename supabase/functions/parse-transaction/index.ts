@@ -7,6 +7,63 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to call Gemini API
+async function callGemini(prompt: string, apiKey: string) {
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" })
+  const result = await model.generateContent(prompt)
+  const response = await result.response
+  const responseText = response.text().replace(/```json/g, '').replace(/```/g, '').trim()
+  return JSON.parse(responseText)
+}
+
+// Helper function to call OpenAI API
+async function callOpenAI(prompt: string, apiKey: string) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: "json_object" },
+    }),
+  })
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`OpenAI API error: ${response.statusText} - ${errorBody}`);
+  }
+  const data = await response.json()
+  return JSON.parse(data.choices[0].message.content)
+}
+
+// Helper function to call Anthropic API
+async function callAnthropic(prompt: string, apiKey: string) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  })
+   if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Anthropic API error: ${response.statusText} - ${errorBody}`);
+  }
+  const data = await response.json()
+  const responseText = data.content[0].text.replace(/```json/g, '').replace(/```/g, '').trim()
+  return JSON.parse(responseText)
+}
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -20,31 +77,20 @@ serve(async (req) => {
     )
 
     const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Usuário não autenticado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!user) throw new Error('Usuário não autenticado')
 
     const { text } = await req.json()
-    if (!text) {
-      return new Response(JSON.stringify({ error: 'Texto não fornecido' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!text) throw new Error('Texto não fornecido')
 
     const { data: accounts, error: accountsError } = await supabaseClient.from('accounts').select('id, name, type')
     const { data: categories, error: categoriesError } = await supabaseClient.from('categories').select('id, name, type')
-
-    if (accountsError || categoriesError) {
-      throw new Error('Erro ao buscar contas ou categorias')
-    }
+    if (accountsError || categoriesError) throw new Error('Erro ao buscar contas ou categorias')
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    if (!geminiApiKey) {
-      return new Response(JSON.stringify({ error: 'Chave da API do Gemini não configurada' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
 
-    const genAI = new GoogleGenerativeAI(geminiApiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" })
-
-    const prompt = `
+    const basePrompt = `
       Você é um assistente financeiro especialista em extrair dados de texto.
       Analise o texto do usuário e extraia as seguintes informações para uma transação financeira: nome, valor, tipo (income ou expense), data, categoria e conta.
       O texto do usuário é: "${text}"
@@ -74,16 +120,46 @@ serve(async (req) => {
             "new_category_name": "string" | null
           }
     `
-
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const responseText = response.text().replace(/```json/g, '').replace(/```/g, '').trim()
     
-    const parsedData = JSON.parse(responseText)
+    let parsedData = null;
+
+    // 1. Try Gemini
+    if (geminiApiKey) {
+      try {
+        console.log("Tentando com Gemini...");
+        parsedData = await callGemini(basePrompt, geminiApiKey);
+      } catch (error) {
+        console.error("Erro com Gemini:", error.message);
+      }
+    }
+
+    // 2. Try OpenAI if Gemini failed
+    if (!parsedData && openaiApiKey) {
+      try {
+        console.log("Tentando com OpenAI...");
+        parsedData = await callOpenAI(basePrompt, openaiApiKey);
+      } catch (error) {
+        console.error("Erro com OpenAI:", error.message);
+      }
+    }
+
+    // 3. Try Anthropic if both failed
+    if (!parsedData && anthropicApiKey) {
+      try {
+        console.log("Tentando com Anthropic...");
+        parsedData = await callAnthropic(basePrompt, anthropicApiKey);
+      } catch (error) {
+        console.error("Erro com Anthropic:", error.message);
+      }
+    }
+
+    if (!parsedData) {
+      throw new Error("Todos os provedores de IA falharam em processar a solicitação.");
+    }
 
     // Lógica para criar nova conta/categoria se necessário
     if (parsedData.category_id === null && parsedData.new_category_name) {
-      const { data: newCategory, error } = await supabaseClient
+      const { data: newCategory } = await supabaseClient
         .from('categories')
         .insert({ name: parsedData.new_category_name, type: parsedData.type, user_id: user.id })
         .select('id')
@@ -92,16 +168,9 @@ serve(async (req) => {
     }
 
     if (parsedData.account_id === null && parsedData.new_account_name) {
-      const { data: newAccount, error } = await supabaseClient
+      const { data: newAccount } = await supabaseClient
         .from('accounts')
-        .insert({ 
-          name: parsedData.new_account_name, 
-          type: 'Outro', 
-          bank: 'Desconhecido', 
-          balance: 0, 
-          user_id: user.id,
-          is_default: false
-        })
+        .insert({ name: parsedData.new_account_name, type: 'Outro', bank: 'Desconhecido', balance: 0, user_id: user.id, is_default: false })
         .select('id')
         .single()
       if (newAccount) parsedData.account_id = newAccount.id
