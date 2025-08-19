@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -107,7 +107,7 @@ export function ProfileForm() {
             name="first_name"
             render={({ field }) => (
               <FormItem>
-                <Label>Nome</Label>
+                <FormLabel>Nome</FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
@@ -120,7 +120,7 @@ export function ProfileForm() {
             name="last_name"
             render={({ field }) => (
               <FormItem>
-                <Label>Sobrenome</Label>
+                <FormLabel>Sobrenome</FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
