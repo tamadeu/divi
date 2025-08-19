@@ -12,9 +12,11 @@ import {
   Pie,
   Cell,
   Tooltip,
+  Legend,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SpendingData {
   name: string;
@@ -34,6 +36,7 @@ const COLORS = [
 const SpendingChart = () => {
   const [data, setData] = useState<SpendingData[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchSpendingData = async () => {
@@ -74,13 +77,15 @@ const SpendingChart = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={100}
-                  fill="#8884d8"
+                  outerRadius={isMobile ? 80 : 100}
+                  innerRadius={isMobile ? 50 : 60}
+                  paddingAngle={2}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  nameKey="name"
+                  label={isMobile ? false : ({ percent }) => `${(percent * 100).toFixed(0)}%`}
                 >
-                  {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  {data.map((entry) => (
+                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -91,6 +96,7 @@ const SpendingChart = () => {
                     })
                   }
                 />
+                {!isMobile && <Legend iconSize={12} />}
               </PieChart>
             </ResponsiveContainer>
           ) : (
