@@ -27,3 +27,20 @@ export type Transaction = {
   description: string | null;
   category: string;
 };
+
+export type Budget = {
+  id: string;
+  user_id: string;
+  category_id: string;
+  amount: number;
+  month: string; // date string
+  created_at: string;
+};
+
+export type BudgetWithSpending = {
+  id: string;
+  category_id: string;
+  category_name: string;
+  budgeted_amount: number;
+  spent_amount: number;
+};

@@ -1,14 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Budget } from "@/data/mockData";
+import { BudgetWithSpending } from "@/types/database";
 
 interface BudgetItemProps {
-  budget: Budget;
+  budget: BudgetWithSpending;
 }
 
 const BudgetItem = ({ budget }: BudgetItemProps) => {
-  const progress = (budget.spent / budget.budgeted) * 100;
-  const remaining = budget.budgeted - budget.spent;
+  const progress = (budget.spent_amount / budget.budgeted_amount) * 100;
+  const remaining = budget.budgeted_amount - budget.spent_amount;
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -16,16 +16,16 @@ const BudgetItem = ({ budget }: BudgetItemProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{budget.category}</CardTitle>
+        <CardTitle>{budget.category_name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <Progress value={progress} />
         <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Gasto: {formatCurrency(budget.spent)}</span>
+          <span>Gasto: {formatCurrency(budget.spent_amount)}</span>
           <span>Restante: {formatCurrency(remaining)}</span>
         </div>
         <div className="text-right text-sm font-medium">
-          Orçamento Total: {formatCurrency(budget.budgeted)}
+          Orçamento Total: {formatCurrency(budget.budgeted_amount)}
         </div>
       </CardContent>
     </Card>
