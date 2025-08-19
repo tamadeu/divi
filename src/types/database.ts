@@ -6,6 +6,7 @@ export type Account = {
   type: string;
   balance: number;
   created_at: string;
+  is_default: boolean;
 };
 
 export type Category = {

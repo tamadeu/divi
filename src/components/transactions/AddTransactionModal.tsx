@@ -122,6 +122,15 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
     }
   }, [transactionType, form]);
 
+  useEffect(() => {
+    if (accounts.length > 0 && transactionType === 'expense') {
+      const defaultAccount = accounts.find(acc => acc.is_default);
+      if (defaultAccount) {
+        form.setValue('account_id', defaultAccount.id);
+      }
+    }
+  }, [accounts, transactionType, form]);
+
   const handleSubmit = async (values: TransactionFormValues) => {
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -278,7 +287,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                     <FormItem>
                       <FormLabel>Conta</FormLabel>
                       <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione uma conta" />
