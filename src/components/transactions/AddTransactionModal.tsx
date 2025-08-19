@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
@@ -341,7 +341,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                   <FormItem className="flex flex-col">
                     <FormLabel>Data</FormLabel>
                     <Popover>
-                      <PopoverAnchor asChild>
+                      <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant={"outline"}
@@ -358,7 +358,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
-                      </PopoverAnchor>
+                      </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
