@@ -41,6 +41,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import AddAccountModal from "../accounts/AddAccountModal";
 import AddCategoryModal from "../categories/AddCategoryModal";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -67,6 +69,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
+  const [isNamePopoverOpen, setIsNamePopoverOpen] = useState(false);
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -81,6 +85,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
   });
 
   const transactionType = form.watch("type");
+  const nameValue = form.watch("name");
 
   const filteredCategories = useMemo(() => {
     if (!transactionType) return [];
@@ -115,6 +120,42 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
       fetchData();
     }
   }, [isOpen, form, fetchData]);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!isOpen || !transactionType) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('name, amount')
+        .eq('user_id', user.id)
+        .limit(500);
+
+      if (error) {
+        console.error("Error fetching transaction names:", error);
+        return;
+      }
+
+      const filteredNames = data
+        .filter(t => (transactionType === 'expense' ? t.amount < 0 : t.amount > 0))
+        .map(t => t.name);
+
+      const uniqueNames = [...new Set(filteredNames)];
+      setNameSuggestions(uniqueNames);
+    };
+
+    fetchSuggestions();
+  }, [isOpen, transactionType]);
+
+  const filteredNameSuggestions = useMemo(() => {
+    if (!nameValue) return [];
+    return nameSuggestions.filter(s =>
+      s.toLowerCase().includes(nameValue.toLowerCase()) && s.toLowerCase() !== nameValue.toLowerCase()
+    );
+  }, [nameValue, nameSuggestions]);
 
   useEffect(() => {
     if (transactionType) {
@@ -197,18 +238,31 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de Transação</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="expense">Despesa</SelectItem>
-                        <SelectItem value="income">Renda</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Tabs
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          form.setValue("name", "");
+                        }}
+                        className="w-full"
+                      >
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger
+                            value="expense"
+                            className="data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground"
+                          >
+                            Despesa
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="income"
+                            className="data-[state=active]:bg-green-600 data-[state=active]:text-primary-foreground"
+                          >
+                            Renda
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -220,9 +274,38 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nome</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Salário" {...field} />
-                      </FormControl>
+                      <Popover open={isNamePopoverOpen && filteredNameSuggestions.length > 0} onOpenChange={setIsNamePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Input
+                              placeholder={transactionType === 'expense' ? "Ex: Uber" : "Ex: Salário"}
+                              {...field}
+                              onFocus={() => setIsNamePopoverOpen(true)}
+                              autoComplete="off"
+                            />
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandList>
+                              <CommandGroup>
+                                {filteredNameSuggestions.map((suggestion) => (
+                                  <CommandItem
+                                    key={suggestion}
+                                    value={suggestion}
+                                    onSelect={() => {
+                                      form.setValue("name", suggestion, { shouldValidate: true });
+                                      setIsNamePopoverOpen(false);
+                                    }}
+                                  >
+                                    {suggestion}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
