@@ -25,3 +25,6 @@ New columns should have default values or be nullable
 Don't remove or rename existing tables, columns, or constraints
 Don't change data types in ways that break existing code
 The goal is to avoid breaking any systems that rely on the current database structure while still allowing new features to be added.
+
+Security:
+Always go according the owasp 
