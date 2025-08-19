@@ -94,7 +94,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
     const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
     setAccounts(accountsData || []);
 
-    const { data: categoriesData } = await supabase.from("categories").select("*").eq("user_id", user.id);
+    const { data: categoriesData } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true });
     setCategories(categoriesData || []);
   }, []);
 
@@ -373,8 +377,12 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
-        onCategoryAdded={() => {
-          fetchData();
+        onCategoryAdded={(newCategory) => {
+          fetchData().then(() => {
+            if (newCategory) {
+              form.setValue('category_id', newCategory.id, { shouldValidate: true });
+            }
+          });
           setIsAddCategoryModalOpen(false);
         }}
       />

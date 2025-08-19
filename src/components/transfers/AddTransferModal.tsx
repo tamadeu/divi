@@ -87,7 +87,8 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       .from("categories")
       .select("*")
       .eq("user_id", user.id)
-      .eq("type", "income");
+      .eq("type", "income")
+      .order("name", { ascending: true });
     setIncomeCategories(categoriesData || []);
   }, []);
 
@@ -321,8 +322,12 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
-        onCategoryAdded={() => {
-          fetchData();
+        onCategoryAdded={(newCategory) => {
+          fetchData().then(() => {
+            if (newCategory) {
+              form.setValue('category_id', newCategory.id, { shouldValidate: true });
+            }
+          });
           setIsAddCategoryModalOpen(false);
         }}
       />

@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
+import { Category } from "@/types/database";
 
 const categorySchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -42,7 +43,7 @@ type CategoryFormValues = z.infer<typeof categorySchema>;
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCategoryAdded: () => void;
+  onCategoryAdded: (newCategory?: Category) => void;
 }
 
 const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded }: AddCategoryModalProps) => {
@@ -62,13 +63,17 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded }: AddCategoryModal
       return;
     }
 
-    const { error } = await supabase.from("categories").insert({ ...values, user_id: user.id });
+    const { data: newCategory, error } = await supabase
+      .from("categories")
+      .insert({ ...values, user_id: user.id })
+      .select()
+      .single();
 
     if (error) {
       showError("Erro ao adicionar categoria: " + error.message);
     } else {
       showSuccess("Categoria adicionada com sucesso!");
-      onCategoryAdded();
+      onCategoryAdded(newCategory);
       form.reset();
       onClose();
     }
