@@ -22,15 +22,15 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
   } as const;
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Transação</TableHead>
-            <TableHead className="hidden md:table-cell">Conta</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead className="hidden sm:table-cell">Status</TableHead>
-            <TableHead className="text-right">Valor</TableHead>
+            <TableHead className="min-w-[150px]">Transação</TableHead>
+            <TableHead className="hidden lg:table-cell">Conta</TableHead>
+            <TableHead className="hidden sm:table-cell">Categoria</TableHead>
+            <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead className="text-right min-w-[100px]">Valor</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -41,13 +41,16 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
                 onClick={() => onRowClick(transaction)}
                 className="cursor-pointer hover:bg-muted/50"
               >
-                <TableCell>
+                <TableCell className="min-w-[150px]">
                   <div className="font-medium">{transaction.name}</div>
                   <div className="text-sm text-muted-foreground">
                     {new Date(transaction.date).toLocaleDateString("pt-BR")}
                   </div>
+                  <div className="text-xs text-muted-foreground sm:hidden">
+                    {transaction.category}
+                  </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell className="hidden lg:table-cell">
                   {transaction.account ? (
                     <>
                       <div className="font-medium">{transaction.account.name}</div>
@@ -57,21 +60,28 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell>{transaction.category}</TableCell>
-                <TableCell className="hidden sm:table-cell">
+                <TableCell className="hidden sm:table-cell">{transaction.category}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   <Badge variant={statusVariant[transaction.status]}>
                     {transaction.status}
                   </Badge>
                 </TableCell>
                 <TableCell
-                  className={`text-right font-semibold ${
+                  className={`text-right font-semibold min-w-[100px] ${
                     transaction.amount > 0 ? "text-green-500" : "text-red-500"
                   }`}
                 >
-                  {transaction.amount.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
+                  <div>
+                    {transaction.amount.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </div>
+                  <div className="text-xs md:hidden">
+                    <Badge variant={statusVariant[transaction.status]} className="text-xs">
+                      {transaction.status}
+                    </Badge>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
