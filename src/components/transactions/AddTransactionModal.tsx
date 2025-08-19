@@ -100,6 +100,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
         form.setValue("status", "Pendente", { shouldValidate: true });
       } else {
         setIsFutureDate(false);
+        form.setValue("status", "Concluído", { shouldValidate: true });
       }
     }
   }, [transactionDate, form]);
@@ -451,21 +452,22 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isFutureDate}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Concluído">Concluído</SelectItem>
-                        <SelectItem value="Pendente">Pendente</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Tabs
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        className="w-full"
+                      >
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="Concluído" disabled={isFutureDate}>
+                            Concluído
+                          </TabsTrigger>
+                          <TabsTrigger value="Pendente">
+                            Pendente
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </FormControl>
                     {isFutureDate && (
                       <p className="text-xs text-muted-foreground pt-1">
                         Transações futuras são definidas como pendentes.
