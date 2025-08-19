@@ -84,7 +84,7 @@ serve(async (req) => {
     const { text } = await req.json()
     if (!text) throw new Error('Nenhum texto foi recebido para análise.')
 
-    const { data: accounts, error: accountsError } = await supabaseClient.from('accounts').select('id, name, type')
+    const { data: accounts, error: accountsError } = await supabaseClient.from('accounts').select('id, name, type, is_default')
     const { data: categories, error: categoriesError } = await supabaseClient.from('categories').select('id, name, type')
     if (accountsError || categoriesError) throw new Error('Não foi possível carregar suas contas e categorias.')
 
@@ -95,22 +95,43 @@ serve(async (req) => {
     if (!geminiApiKey && !openaiApiKey && !anthropicApiKey) {
       throw new Error("A funcionalidade de voz não está configurada no servidor.");
     }
+    
+    const today = new Date().toISOString().split('T')[0];
 
     const basePrompt = `
+      A data de hoje é ${today}.
       Você é um assistente financeiro especialista em extrair dados de texto.
-      Analise o texto do usuário e extraia as seguintes informações para uma transação financeira: nome, valor, tipo (income ou expense), data, categoria e conta.
+      Analise o texto do usuário e extraia as seguintes informações para uma transação financeira.
       O texto do usuário é: "${text}"
-      As contas disponíveis são: ${JSON.stringify(accounts)}
-      As categorias disponíveis são: ${JSON.stringify(categories)}
+
+      As contas disponíveis para este usuário são:
+      ${JSON.stringify(accounts)}
+
+      As categorias disponíveis são:
+      ${JSON.stringify(categories)}
+
       Regras:
-      1. Tipo: Se for gasto, use "expense". Se for ganho, use "income".
-      2. Nome: Crie um nome curto e descritivo.
-      3. Valor: Extraia o valor numérico.
-      4. Data: Se for "hoje", use a data atual. Se não, use a data mencionada. Formato YYYY-MM-DD.
-      5. Conta: Associe à conta mais relevante. Se não existir, defina "account_id" como null e "new_account_name" com uma sugestão.
-      6. Categoria: Associe à categoria mais relevante. Se não existir, defina "category_id" como null e "new_category_name" com uma sugestão.
-      7. Resposta: Retorne APENAS um objeto JSON válido com a estrutura:
-         {"name": "string", "amount": number, "type": "income" | "expense", "date": "YYYY-MM-DD", "account_id": "uuid" | null, "category_id": "uuid" | null, "new_account_name": "string" | null, "new_category_name": "string" | null}
+      1.  **Tipo**: Se o texto indicar um gasto, use "expense". Se indicar um ganho, use "income".
+      2.  **Nome**: Crie um nome curto e descritivo para a transação.
+      3.  **Valor**: Extraia o valor numérico.
+      4.  **Data**: A data de hoje é ${today}. Se o usuário mencionar "hoje", "agora" ou não especificar uma data, use a data de hoje. Se mencionar outra data (ex: "ontem", "terça-feira", "dia 15"), calcule e use a data correta. O formato da data na resposta DEVE ser YYYY-MM-DD.
+      5.  **Conta**:
+          a. Primeiro, verifique se o usuário mencionou o nome ou o tipo de uma conta existente na lista de contas. Se sim, use o 'id' dessa conta.
+          b. Se o usuário mencionou um tipo de conta que NÃO existe na lista (ex: "cartão de crédito" e não há nenhuma conta desse tipo), você DEVE criar uma nova. Para isso, defina "account_id" como null, "new_account_name" com um nome sugerido (ex: "Cartão de Crédito") e "new_account_type" com o tipo mencionado (ex: "Cartão de Crédito").
+          c. Se nenhuma conta for mencionada, use a conta padrão do usuário (is_default: true), se houver uma. Se não houver, deixe como null para o usuário escolher.
+      6.  **Categoria**: Associe a transação à categoria mais relevante. Se nenhuma categoria existente corresponder, defina "category_id" como null e "new_category_name" com uma sugestão de nome para a nova categoria.
+      7.  **Resposta**: Retorne APENAS um objeto JSON válido com a seguinte estrutura:
+          {
+            "name": "string",
+            "amount": number,
+            "type": "income" | "expense",
+            "date": "YYYY-MM-DD",
+            "account_id": "uuid" | null,
+            "category_id": "uuid" | null,
+            "new_account_name": "string" | null,
+            "new_account_type": "string" | null,
+            "new_category_name": "string" | null
+          }
     `
     
     let parsedData = null;
@@ -157,7 +178,14 @@ serve(async (req) => {
     }
 
     if (parsedData.account_id === null && parsedData.new_account_name) {
-      const { data: newAccount } = await supabaseClient.from('accounts').insert({ name: parsedData.new_account_name, type: 'Outro', bank: 'Desconhecido', balance: 0, user_id: user.id, is_default: false }).select('id').single()
+      const { data: newAccount } = await supabaseClient.from('accounts').insert({ 
+        name: parsedData.new_account_name, 
+        type: parsedData.new_account_type || 'Outro', 
+        bank: 'Desconhecido', 
+        balance: 0, 
+        user_id: user.id, 
+        is_default: false 
+      }).select('id').single()
       if (newAccount) parsedData.account_id = newAccount.id
     }
 
