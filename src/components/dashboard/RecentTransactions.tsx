@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -18,54 +17,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const RecentTransactions = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+interface RecentTransactionsProps {
+  transactions: Transaction[];
+  loading: boolean;
+}
 
-  useEffect(() => {
-    const fetchRecentTransactions = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("transactions")
-        .select(`
-          id,
-          account_id,
-          date,
-          name,
-          amount,
-          status,
-          description,
-          category:categories (name)
-        `)
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .limit(6);
-
-      if (error) {
-        console.error("Error fetching recent transactions:", error);
-      } else {
-        const formattedData = data.map((t: any) => ({
-          ...t,
-          category: t.category?.name || "Sem categoria",
-        }));
-        setTransactions(formattedData);
-      }
-      setLoading(false);
-    };
-
-    fetchRecentTransactions();
-  }, []);
-
+const RecentTransactions = ({ transactions, loading }: RecentTransactionsProps) => {
   const statusVariant = {
     "Concluído": "default",
     "Pendente": "secondary",
