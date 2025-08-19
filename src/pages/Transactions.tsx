@@ -160,7 +160,7 @@ const TransactionsPage = () => {
             <Skeleton className="h-64 w-full" />
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                 <Input
                   placeholder="Pesquisar por nome ou descrição..."
                   value={searchQuery}
