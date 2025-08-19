@@ -7,8 +7,8 @@ export function ThemeOptions() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <Tabs defaultValue={theme} onValueChange={setTheme} className="w-[400px]">
-      <TabsList>
+    <Tabs defaultValue={theme} onValueChange={setTheme} className="w-full max-w-sm">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="light">Claro</TabsTrigger>
         <TabsTrigger value="dark">Escuro</TabsTrigger>
         <TabsTrigger value="system">Sistema</TabsTrigger>
