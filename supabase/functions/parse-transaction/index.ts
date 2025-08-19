@@ -14,17 +14,18 @@ async function callGemini(prompt: string, apiKey: string) {
   const result = await model.generateContent(prompt)
   const response = await result.response
   const responseText = response.text().replace(/```json/g, '').replace(/```/g, '').trim()
-  return JSON.parse(responseText)
+  try {
+    return JSON.parse(responseText)
+  } catch (e) {
+    throw new Error(`Gemini retornou uma resposta em formato inválido.`)
+  }
 }
 
 // Helper function to call OpenAI API
 async function callOpenAI(prompt: string, apiKey: string) {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
@@ -32,37 +33,38 @@ async function callOpenAI(prompt: string, apiKey: string) {
     }),
   })
   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`OpenAI API error: ${response.statusText} - ${errorBody}`);
+    throw new Error(`A API da OpenAI respondeu com um erro.`);
   }
   const data = await response.json()
-  return JSON.parse(data.choices[0].message.content)
+  try {
+    return JSON.parse(data.choices[0].message.content)
+  } catch (e) {
+    throw new Error(`OpenAI retornou uma resposta em formato inválido.`)
+  }
 }
 
 // Helper function to call Anthropic API
 async function callAnthropic(prompt: string, apiKey: string) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: 'claude-3-haiku-20240307',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     }),
   })
-   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Anthropic API error: ${response.statusText} - ${errorBody}`);
+  if (!response.ok) {
+    throw new Error(`A API da Anthropic respondeu com um erro.`);
   }
   const data = await response.json()
   const responseText = data.content[0].text.replace(/```json/g, '').replace(/```/g, '').trim()
-  return JSON.parse(responseText)
+  try {
+    return JSON.parse(responseText)
+  } catch (e) {
+    throw new Error(`Anthropic retornou uma resposta em formato inválido.`)
+  }
 }
-
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -77,102 +79,85 @@ serve(async (req) => {
     )
 
     const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) throw new Error('Usuário não autenticado')
+    if (!user) throw new Error('Sessão inválida. Por favor, faça login novamente.')
 
     const { text } = await req.json()
-    if (!text) throw new Error('Texto não fornecido')
+    if (!text) throw new Error('Nenhum texto foi recebido para análise.')
 
     const { data: accounts, error: accountsError } = await supabaseClient.from('accounts').select('id, name, type')
     const { data: categories, error: categoriesError } = await supabaseClient.from('categories').select('id, name, type')
-    if (accountsError || categoriesError) throw new Error('Erro ao buscar contas ou categorias')
+    if (accountsError || categoriesError) throw new Error('Não foi possível carregar suas contas e categorias.')
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
 
+    if (!geminiApiKey && !openaiApiKey && !anthropicApiKey) {
+      throw new Error("A funcionalidade de voz não está configurada no servidor.");
+    }
+
     const basePrompt = `
       Você é um assistente financeiro especialista em extrair dados de texto.
       Analise o texto do usuário e extraia as seguintes informações para uma transação financeira: nome, valor, tipo (income ou expense), data, categoria e conta.
       O texto do usuário é: "${text}"
-
-      As contas disponíveis para este usuário são:
-      ${JSON.stringify(accounts)}
-
-      As categorias disponíveis são:
-      ${JSON.stringify(categories)}
-
+      As contas disponíveis são: ${JSON.stringify(accounts)}
+      As categorias disponíveis são: ${JSON.stringify(categories)}
       Regras:
-      1.  **Tipo**: Se o texto indicar um gasto, use "expense". Se indicar um ganho, use "income".
-      2.  **Nome**: Crie um nome curto e descritivo para a transação.
-      3.  **Valor**: Extraia o valor numérico.
-      4.  **Data**: Se o usuário mencionar "hoje", use a data atual. Se mencionar outra data, use-a. Se não mencionar, use a data atual. Formato YYYY-MM-DD.
-      5.  **Conta**: Associe a transação à conta mais relevante das disponíveis. Se o usuário mencionar um tipo de conta que não existe (ex: "cartão novo"), defina "account_id" como null e "new_account_name" com uma sugestão de nome.
-      6.  **Categoria**: Associe a transação à categoria mais relevante. Se nenhuma categoria existente corresponder, defina "category_id" como null e "new_category_name" com uma sugestão de nome para a nova categoria.
-      7.  **Resposta**: Retorne APENAS um objeto JSON válido com a seguinte estrutura:
-          {
-            "name": "string",
-            "amount": number,
-            "type": "income" | "expense",
-            "date": "YYYY-MM-DD",
-            "account_id": "uuid" | null,
-            "category_id": "uuid" | null,
-            "new_account_name": "string" | null,
-            "new_category_name": "string" | null
-          }
+      1. Tipo: Se for gasto, use "expense". Se for ganho, use "income".
+      2. Nome: Crie um nome curto e descritivo.
+      3. Valor: Extraia o valor numérico.
+      4. Data: Se for "hoje", use a data atual. Se não, use a data mencionada. Formato YYYY-MM-DD.
+      5. Conta: Associe à conta mais relevante. Se não existir, defina "account_id" como null e "new_account_name" com uma sugestão.
+      6. Categoria: Associe à categoria mais relevante. Se não existir, defina "category_id" como null e "new_category_name" com uma sugestão.
+      7. Resposta: Retorne APENAS um objeto JSON válido com a estrutura:
+         {"name": "string", "amount": number, "type": "income" | "expense", "date": "YYYY-MM-DD", "account_id": "uuid" | null, "category_id": "uuid" | null, "new_account_name": "string" | null, "new_category_name": "string" | null}
     `
     
     let parsedData = null;
+    const errors = [];
 
-    // 1. Try Gemini
     if (geminiApiKey) {
       try {
         console.log("Tentando com Gemini...");
         parsedData = await callGemini(basePrompt, geminiApiKey);
       } catch (error) {
         console.error("Erro com Gemini:", error.message);
+        errors.push(`Gemini: ${error.message}`);
       }
     }
 
-    // 2. Try OpenAI if Gemini failed
     if (!parsedData && openaiApiKey) {
       try {
         console.log("Tentando com OpenAI...");
         parsedData = await callOpenAI(basePrompt, openaiApiKey);
       } catch (error) {
         console.error("Erro com OpenAI:", error.message);
+        errors.push(`OpenAI: ${error.message}`);
       }
     }
 
-    // 3. Try Anthropic if both failed
     if (!parsedData && anthropicApiKey) {
       try {
         console.log("Tentando com Anthropic...");
         parsedData = await callAnthropic(basePrompt, anthropicApiKey);
       } catch (error) {
         console.error("Erro com Anthropic:", error.message);
+        errors.push(`Anthropic: ${error.message}`);
       }
     }
 
     if (!parsedData) {
-      throw new Error("Todos os provedores de IA falharam em processar a solicitação.");
+      console.error("Todos os provedores de IA falharam:", errors);
+      throw new Error("A IA não conseguiu processar sua solicitação. Tente novamente mais tarde.");
     }
 
-    // Lógica para criar nova conta/categoria se necessário
     if (parsedData.category_id === null && parsedData.new_category_name) {
-      const { data: newCategory } = await supabaseClient
-        .from('categories')
-        .insert({ name: parsedData.new_category_name, type: parsedData.type, user_id: user.id })
-        .select('id')
-        .single()
+      const { data: newCategory } = await supabaseClient.from('categories').insert({ name: parsedData.new_category_name, type: parsedData.type, user_id: user.id }).select('id').single()
       if (newCategory) parsedData.category_id = newCategory.id
     }
 
     if (parsedData.account_id === null && parsedData.new_account_name) {
-      const { data: newAccount } = await supabaseClient
-        .from('accounts')
-        .insert({ name: parsedData.new_account_name, type: 'Outro', bank: 'Desconhecido', balance: 0, user_id: user.id, is_default: false })
-        .select('id')
-        .single()
+      const { data: newAccount } = await supabaseClient.from('accounts').insert({ name: parsedData.new_account_name, type: 'Outro', bank: 'Desconhecido', balance: 0, user_id: user.id, is_default: false }).select('id').single()
       if (newAccount) parsedData.account_id = newAccount.id
     }
 
@@ -180,6 +165,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
+    console.error("Erro na Edge Function:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

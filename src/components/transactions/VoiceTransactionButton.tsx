@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { showError, showSuccess } from "@/utils/toast";
+import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext";
 
 const VoiceTransactionButton = () => {
@@ -32,14 +32,20 @@ const VoiceTransactionButton = () => {
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
       setIsProcessing(true);
-      showSuccess("Processando sua transação...");
+      const toastId = showLoading("Analisando sua fala...");
 
       try {
         const { data, error } = await supabase.functions.invoke('parse-transaction', {
           body: { text: transcript },
         });
 
-        if (error) throw error;
+        if (error) {
+          const errorMessage = error.context?.json?.error || error.message;
+          throw new Error(errorMessage);
+        }
+        
+        dismissToast(toastId);
+        showSuccess("Pronto! Revise os detalhes e salve.");
 
         const transactionData = {
           ...data,
@@ -49,7 +55,8 @@ const VoiceTransactionButton = () => {
         openAddTransactionModal(() => {}, transactionData);
 
       } catch (err: any) {
-        showError(`IA não conseguiu processar: ${err.message}`);
+        dismissToast(toastId);
+        showError(err.message || "Ocorreu um erro desconhecido.");
       } finally {
         setIsProcessing(false);
       }
