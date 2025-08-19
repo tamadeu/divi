@@ -10,6 +10,7 @@
 - UPDATE the main page to include the new components. OTHERWISE, the user can NOT see any components!
 - ALWAYS try to use the shadcn/ui library.
 - Tailwind CSS: always use Tailwind CSS for styling components. Utilize Tailwind classes extensively for layout, spacing, colors, and other design aspects.
+- don't waste time and tokens trying to explain what you are doing and what you will code.
 
 Available packages and libraries:
 
