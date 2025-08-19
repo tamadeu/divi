@@ -34,7 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
-import { Account } from "@/types/database";
+import { Account, Category } from "@/types/database";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -45,6 +45,7 @@ const transferSchema = z.object({
   to_account_id: z.string().uuid("Selecione uma conta de destino."),
   amount: z.coerce.number().positive("O valor deve ser positivo."),
   date: z.date({ required_error: "A data é obrigatória." }),
+  category_id: z.string().uuid("Selecione uma categoria."),
   description: z.string().optional(),
 }).refine(data => data.from_account_id !== data.to_account_id, {
   message: "A conta de origem e destino não podem ser a mesma.",
@@ -62,6 +63,7 @@ interface AddTransferModalProps {
 const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [incomeCategories, setIncomeCategories] = useState<Category[]>([]);
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
@@ -73,14 +75,22 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
   });
 
   useEffect(() => {
-    const fetchAccounts = async () => {
+    const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("accounts").select("*").eq("user_id", user.id);
-      setAccounts(data || []);
+
+      const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
+      setAccounts(accountsData || []);
+
+      const { data: categoriesData } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("type", "income");
+      setIncomeCategories(categoriesData || []);
     };
     if (isOpen) {
-      fetchAccounts();
+      fetchData();
     }
   }, [isOpen]);
 
@@ -130,7 +140,7 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
         description,
         status: 'Concluído',
         transfer_id: transferId,
-        category_id: null,
+        category_id: values.category_id,
       },
     ];
 
@@ -226,6 +236,26 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria da Entrada</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria de receita" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {incomeCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
