@@ -42,7 +42,7 @@ const Layout = () => {
                 className="flex items-center gap-2 text-lg font-semibold mb-4"
               >
                 <Package2 className="h-6 w-6" />
-                <span>Finance Inc</span>
+                <span>Divi</span>
               </Link>
               <div onClick={() => setMobileSidebarOpen(false)}>
                 <NavLinks />
