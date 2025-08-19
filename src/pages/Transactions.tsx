@@ -138,7 +138,7 @@ const TransactionsPage = () => {
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <VoiceTransactionButton />
           <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(fetchTransactions)}>
             <ArrowRightLeft className="h-4 w-4" />
