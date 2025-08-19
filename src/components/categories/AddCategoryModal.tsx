@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -44,15 +44,25 @@ interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCategoryAdded: (newCategory?: Category) => void;
+  defaultType?: "income" | "expense";
 }
 
-const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded }: AddCategoryModalProps) => {
+const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: AddCategoryModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { name: "" },
+    defaultValues: { name: "", type: defaultType },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        name: "",
+        type: defaultType,
+      });
+    }
+  }, [isOpen, defaultType, form]);
 
   const handleSubmit = async (values: CategoryFormValues) => {
     setIsSubmitting(true);
@@ -108,7 +118,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded }: AddCategoryModal
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um tipo" />

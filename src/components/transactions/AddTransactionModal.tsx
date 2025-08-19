@@ -385,6 +385,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
           });
           setIsAddCategoryModalOpen(false);
         }}
+        defaultType={transactionType}
       />
     </>
   );
