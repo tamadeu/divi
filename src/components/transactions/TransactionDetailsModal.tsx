@@ -39,7 +39,7 @@ const TransactionDetailsModal = ({ transaction, isOpen, onClose }: TransactionDe
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <span className="text-right text-sm font-medium text-muted-foreground">Valor</span>
-            <span className={`col-span-3 font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
+            <span className={`col-span-3 font-semibold ${transaction.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
               {transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </span>
           </div>

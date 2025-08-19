@@ -119,7 +119,7 @@ const RecentTransactions = () => {
                       {transaction.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : ''}`}>
+                  <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {transaction.amount.toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",

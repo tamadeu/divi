@@ -54,7 +54,7 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
                 </TableCell>
                 <TableCell
                   className={`text-right font-semibold ${
-                    transaction.amount > 0 ? "text-green-500" : ""
+                    transaction.amount > 0 ? "text-green-500" : "text-red-500"
                   }`}
                 >
                   {transaction.amount.toLocaleString("pt-BR", {
