@@ -18,6 +18,7 @@ const Layout = () => {
     isAddTransactionModalOpen,
     closeAddTransactionModal,
     onTransactionAdded,
+    addTransactionInitialData,
     isAddAccountModalOpen,
     closeAddAccountModal,
     onAccountAdded,
@@ -64,6 +65,7 @@ const Layout = () => {
         isOpen={isAddTransactionModalOpen}
         onClose={closeAddTransactionModal}
         onTransactionAdded={onTransactionAdded}
+        initialData={addTransactionInitialData}
       />
       <AddAccountModal
         isOpen={isAddAccountModalOpen}

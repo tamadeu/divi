@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
 import { Transaction } from "@/types/database";
+import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 
 interface SummaryData {
   total_balance: number;
@@ -85,6 +86,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
         <div className="hidden md:flex gap-2">
+           <VoiceTransactionButton />
            <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(fetchDashboardData)}>
             <ArrowRightLeft className="h-4 w-4" />
             Transferência

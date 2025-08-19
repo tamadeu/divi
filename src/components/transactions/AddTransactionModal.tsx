@@ -61,9 +61,10 @@ interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTransactionAdded: () => void;
+  initialData?: any;
 }
 
-const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransactionModalProps) => {
+const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData }: AddTransactionModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -127,17 +128,22 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
 
   useEffect(() => {
     if (isOpen) {
-      form.reset({
-        name: "",
-        amount: 0,
-        date: new Date(),
-        status: "Concluído",
-        description: "",
-        type: "expense",
+      fetchData().then(() => {
+        if (initialData) {
+          form.reset(initialData);
+        } else {
+          form.reset({
+            name: "",
+            amount: 0,
+            date: new Date(),
+            status: "Concluído",
+            description: "",
+            type: "expense",
+          });
+        }
       });
-      fetchData();
     }
-  }, [isOpen, form, fetchData]);
+  }, [isOpen, initialData, form, fetchData]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -177,19 +183,19 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded }: AddTransac
   }, [nameValue, nameSuggestions]);
 
   useEffect(() => {
-    if (transactionType) {
+    if (transactionType && !initialData) {
       form.setValue('category_id', '');
     }
-  }, [transactionType, form]);
+  }, [transactionType, form, initialData]);
 
   useEffect(() => {
-    if (accounts.length > 0 && transactionType === 'expense') {
+    if (accounts.length > 0 && transactionType === 'expense' && !initialData) {
       const defaultAccount = accounts.find(acc => acc.is_default);
       if (defaultAccount) {
         form.setValue('account_id', defaultAccount.id);
       }
     }
-  }, [accounts, transactionType, form]);
+  }, [accounts, transactionType, form, initialData]);
 
   const handleSubmit = async (values: TransactionFormValues) => {
     setIsSubmitting(true);

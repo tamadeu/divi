@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, ArrowRightLeft } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
+import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -138,6 +139,7 @@ const TransactionsPage = () => {
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
         <div className="flex gap-2">
+          <VoiceTransactionButton />
           <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(fetchTransactions)}>
             <ArrowRightLeft className="h-4 w-4" />
             Transferência

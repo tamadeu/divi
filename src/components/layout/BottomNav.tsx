@@ -1,14 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, LineChart, Menu, Plus, ReceiptText } from "lucide-react";
+import { Home, LineChart, Menu, Plus, ReceiptText, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useModal } from "@/contexts/ModalContext";
+import VoiceTransactionButton from "../transactions/VoiceTransactionButton";
 
 interface BottomNavProps {
   onMenuClick: () => void;
@@ -48,7 +50,11 @@ const BottomNav = ({ onMenuClick }: BottomNavProps) => {
                 <Plus className="w-6 h-6" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" side="top" className="mb-2">
+            <DropdownMenuContent align="center" side="top" className="mb-2 w-56">
+              <DropdownMenuItem className="p-0">
+                <VoiceTransactionButton />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => openAddTransactionModal()}>Nova Transação</DropdownMenuItem>
               <DropdownMenuItem onClick={() => openAddTransferModal()}>Nova Transferência</DropdownMenuItem>
               <DropdownMenuItem onClick={() => openAddAccountModal()}>Nova Conta</DropdownMenuItem>

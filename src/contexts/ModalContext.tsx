@@ -4,9 +4,10 @@ type SuccessCallback = () => void;
 
 interface ModalContextType {
   isAddTransactionModalOpen: boolean;
-  openAddTransactionModal: (onSuccess?: SuccessCallback) => void;
+  openAddTransactionModal: (onSuccess?: SuccessCallback, initialData?: any) => void;
   closeAddTransactionModal: () => void;
   onTransactionAdded: SuccessCallback;
+  addTransactionInitialData: any;
 
   isAddAccountModalOpen: boolean;
   openAddAccountModal: (onSuccess?: SuccessCallback) => void;
@@ -29,6 +30,7 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [isAddTransactionModalOpen, setAddTransactionModalOpen] = useState(false);
   const [onTransactionAdded, setOnTransactionAdded] = useState<SuccessCallback>(() => () => {});
+  const [addTransactionInitialData, setAddTransactionInitialData] = useState<any>(null);
 
   const [isAddAccountModalOpen, setAddAccountModalOpen] = useState(false);
   const [onAccountAdded, setOnAccountAdded] = useState<SuccessCallback>(() => () => {});
@@ -39,8 +41,9 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [isAddTransferModalOpen, setAddTransferModalOpen] = useState(false);
   const [onTransferAdded, setOnTransferAdded] = useState<SuccessCallback>(() => () => {});
 
-  const openAddTransactionModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload()) => {
+  const openAddTransactionModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload(), initialData: any = null) => {
     setOnTransactionAdded(() => onSuccess);
+    setAddTransactionInitialData(initialData);
     setAddTransactionModalOpen(true);
   }, []);
 
@@ -64,6 +67,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     openAddTransactionModal,
     closeAddTransactionModal: () => setAddTransactionModalOpen(false),
     onTransactionAdded,
+    addTransactionInitialData,
 
     isAddAccountModalOpen,
     openAddAccountModal,
