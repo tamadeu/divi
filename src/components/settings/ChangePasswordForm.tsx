@@ -7,8 +7,7 @@ import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { showError, showSuccess } from "@/utils/toast";
 
 const changePasswordSchema = z
@@ -72,49 +71,51 @@ export function ChangePasswordForm() {
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-      <FormField
-        control={form.control}
-        name="currentPassword"
-        render={({ field }) => (
-          <FormItem>
-            <Label>Senha Atual</Label>
-            <FormControl>
-              <Input type="password" placeholder="Digite sua senha atual" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="newPassword"
-        render={({ field }) => (
-          <FormItem>
-            <Label>Nova Senha</Label>
-            <FormControl>
-              <Input type="password" placeholder="Digite a nova senha" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="confirmNewPassword"
-        render={({ field }) => (
-          <FormItem>
-            <Label>Confirmar Nova Senha</Label>
-            <FormControl>
-              <Input type="password" placeholder="Confirme a nova senha" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Atualizando..." : "Atualizar Senha"}
-      </Button>
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="currentPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Senha Atual</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="Digite sua senha atual" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="newPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nova Senha</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="Digite a nova senha" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="confirmNewPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirmar Nova Senha</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="Confirme a nova senha" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Atualizando..." : "Atualizar Senha"}
+        </Button>
+      </form>
+    </Form>
   );
 }
