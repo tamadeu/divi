@@ -1,5 +1,6 @@
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { ThemeOptions } from "@/components/settings/ThemeOptions";
+import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import {
   Card,
   CardContent,
@@ -31,6 +32,15 @@ const SettingsPage = () => {
           </CardHeader>
           <CardContent>
             <ThemeOptions />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Alterar Senha</CardTitle>
+            <CardDescription>Atualize sua senha de acesso.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChangePasswordForm />
           </CardContent>
         </Card>
       </div>
