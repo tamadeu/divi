@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -56,11 +56,6 @@ export function WorkspaceManagement() {
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [deletingWorkspace, setDeletingWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [managingMembersWorkspace, setManagingMembersWorkspace] = useState<WorkspaceWithRole | null>(null);
-  const [leavingWorkspace, setLeavingWorkspace] = useState<WorkspaceWithRole | null>(null);
-
-  useEffect(() => {
-    refreshWorkspaces();
-  }, [refreshWorkspaces]);
 
   const handleEdit = (workspace: WorkspaceWithRole) => {
     setEditingWorkspace(workspace);
