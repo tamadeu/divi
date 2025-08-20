@@ -434,7 +434,7 @@ const TransactionsPage = () => {
               )}
               <AllTransactionsTable
                 transactions={paginatedTransactions}
-                onEditTransaction={handleRowClick}
+                onRowClick={handleRowClick}
                 companies={companies}
               />
               {totalPages > 1 && (
