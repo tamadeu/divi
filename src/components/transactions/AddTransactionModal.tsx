@@ -144,11 +144,31 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
 
   useEffect(() => {
     if (isOpen && currentWorkspace) {
-      fetchData().then(({ accounts: fetchedAccounts }) => {
+      fetchData().then(({ accounts: fetchedAccounts, categories: fetchedCategories }) => {
         const defaultAccountId = fetchedAccounts.find(acc => acc.is_default)?.id || "";
 
         if (initialData) {
-          form.reset(initialData);
+          console.log("🎯 Dados iniciais recebidos:", initialData);
+          
+          // Resetar com dados iniciais
+          form.reset({
+            name: initialData.name || "",
+            amount: initialData.amount || 0,
+            date: initialData.date || new Date(),
+            status: initialData.status || "Concluído",
+            description: initialData.description || "",
+            type: initialData.type || "expense",
+            account_id: initialData.account_id || defaultAccountId,
+            category_id: initialData.category_id || "",
+          });
+
+          // Aguardar um pouco para garantir que as categorias foram carregadas
+          setTimeout(() => {
+            if (initialData.category_id) {
+              console.log("🏷️ Definindo category_id:", initialData.category_id);
+              form.setValue('category_id', initialData.category_id, { shouldValidate: true });
+            }
+          }, 100);
         } else {
           form.reset({
             name: "",
@@ -322,7 +342,9 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
                           value={field.value}
                           onValueChange={(value) => {
                             field.onChange(value);
-                            form.setValue("name", "");
+                            if (!initialData) {
+                              form.setValue("name", "");
+                            }
                           }}
                           className="w-full"
                         >

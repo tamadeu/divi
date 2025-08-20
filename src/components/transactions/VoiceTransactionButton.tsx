@@ -222,21 +222,38 @@ const VoiceTransactionButton = () => {
         
         const defaultAccount = accounts?.find(acc => acc.is_default);
         
+        // Converter data string para objeto Date se fornecida
+        let transactionDate = new Date(); // Default para hoje
+        if (transactionData.date) {
+          try {
+            // Criar data a partir da string YYYY-MM-DD
+            const [year, month, day] = transactionData.date.split('-').map(Number);
+            transactionDate = new Date(year, month - 1, day); // month é 0-indexed
+            console.log("🗓️ Data convertida:", transactionData.date, "→", transactionDate);
+          } catch (error) {
+            console.error("Erro ao converter data:", error);
+            // Manter data atual se houver erro
+          }
+        }
+        
         // Fechar modal de voz
         setShowModal(false);
         resetModal();
         
         // Aguardar um pouco e abrir modal de transação com dados preenchidos
         setTimeout(() => {
-          openAddTransactionModal({
+          const modalData = {
             name: transactionData.name,
             type: transactionData.type,
             amount: transactionData.amount,
             description: transactionData.description || `Criado por voz (${formatTime(recordingTime)})`,
-            date: transactionData.date ? new Date(transactionData.date) : new Date(),
+            date: transactionDate,
             account_id: defaultAccount?.id || "",
             category_id: transactionData.category_id || "",
-          });
+          };
+          
+          console.log("🎯 Dados para o modal:", modalData);
+          openAddTransactionModal(modalData);
         }, 500);
         
         showSuccess("Áudio processado! Verifique os dados antes de salvar.");
