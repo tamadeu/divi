@@ -45,7 +45,7 @@ import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import WorkspaceSwitcher from "./WorkspaceSwitcher";
+import WorkspaceSwitcher from "@/components/workspace/WorkspaceSwitcher"; // Corrected import path
 import { Skeleton } from "../ui/skeleton";
 import VoiceTransactionButton from "../transactions/VoiceTransactionButton";
 
