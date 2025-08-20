@@ -26,6 +26,15 @@ export type Profile = {
   user_type: "admin" | "user";
 };
 
+export type Bank = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  color: string;
+  created_at: string;
+  updated_at: string;
+};
+
 // Representa uma transação com o nome da categoria já incluído (via JOIN)
 export type Transaction = {
   id: string;

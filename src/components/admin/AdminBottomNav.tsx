@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Users, BarChart3, Database, Menu } from "lucide-react";
+import { Users, BarChart3, Building2, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AdminBottomNavProps {
@@ -12,7 +12,7 @@ const AdminBottomNav = ({ onMenuClick }: AdminBottomNavProps) => {
   const navItems = [
     { to: "/admin", icon: BarChart3, label: "Dashboard" },
     { to: "/admin/users", icon: Users, label: "Usuários" },
-    { to: "/admin/system", icon: Database, label: "Sistema" },
+    { to: "/admin/banks", icon: Building2, label: "Bancos" },
   ];
 
   return (
