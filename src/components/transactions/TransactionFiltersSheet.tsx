@@ -140,10 +140,10 @@ const TransactionFiltersSheet = ({
           </div>
         </div>
         <SheetFooter className="flex flex-col sm:flex-col gap-2">
-          <Button type="button" onClick={handleApply}>
+          <Button type="button" onClick={handleApply} className="w-full">
             Aplicar Filtros
           </Button>
-          <Button type="button" variant="outline" onClick={handleReset}>
+          <Button type="button" variant="outline" onClick={handleReset} className="w-full">
             Limpar Filtros
           </Button>
         </SheetFooter>
