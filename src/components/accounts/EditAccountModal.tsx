@@ -152,14 +152,14 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
         }
       }
 
-      // Update the account
+      // Update the account (excluding balance)
       const { error } = await supabase
         .from("accounts")
         .update({
           name: values.name,
           bank: bankNameToUpdate,
           type: values.type,
-          balance: values.balance,
+          // balance is intentionally excluded - it should not be editable
           is_default: values.is_default,
         })
         .eq("id", account.id);
@@ -326,9 +326,19 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                 <FormItem>
                   <FormLabel>Saldo Atual</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    <Input 
+                      type="text" 
+                      value={field.value.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                      readOnly
+                      className="bg-muted cursor-not-allowed"
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <p className="text-xs text-muted-foreground">
+                    O saldo é calculado automaticamente com base nas transações
+                  </p>
                 </FormItem>
               )}
             />
