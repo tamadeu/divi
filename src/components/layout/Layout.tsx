@@ -44,9 +44,10 @@ const Layout = () => {
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <Sidebar />
         <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-          <SheetContent side="left" className="flex flex-col">
+          <SheetContent side="left" className="flex flex-col w-[280px] sm:w-[350px]">
             <nav className="grid gap-2 text-lg font-medium">
-              <div className="flex items-center justify-between mb-4">
+              {/* Header do sidebar mobile com logo e botão refresh */}
+              <div className="flex items-center justify-between mb-4 pb-2 border-b">
                 <Link
                   to="/"
                   onClick={() => setMobileSidebarOpen(false)}
@@ -58,14 +59,20 @@ const Layout = () => {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="h-8 w-8"
+                  className="h-8 w-8 flex-shrink-0"
                   onClick={handleRefresh}
+                  title="Atualizar página"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  <span className="sr-only">Atualizar página</span>
                 </Button>
               </div>
-              <UserCard /> 
+              
+              {/* Card do usuário */}
+              <div className="mb-4">
+                <UserCard />
+              </div>
+              
+              {/* Links de navegação */}
               <div onClick={() => setMobileSidebarOpen(false)}>
                 <NavLinks />
               </div>
