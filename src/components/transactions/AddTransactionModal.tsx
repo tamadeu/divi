@@ -84,6 +84,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       status: "Concluído",
       description: "",
       type: "expense",
+      account_id: "", 
+      category_id: "", 
     },
   });
 
@@ -113,7 +115,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return { accounts: [], categories: [] };
 
     const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
     setAccounts(accountsData || []);
@@ -124,11 +126,15 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       .eq("user_id", user.id)
       .order("name", { ascending: true });
     setCategories(categoriesData || []);
+
+    return { accounts: accountsData || [], categories: categoriesData || [] };
   }, []);
 
   useEffect(() => {
     if (isOpen) {
-      fetchData().then(() => {
+      fetchData().then(({ accounts: fetchedAccounts }) => {
+        const defaultAccountId = fetchedAccounts.find(acc => acc.is_default)?.id || "";
+
         if (initialData) {
           form.reset(initialData);
         } else {
@@ -139,6 +145,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
             status: "Concluído",
             description: "",
             type: "expense",
+            account_id: defaultAccountId, 
+            category_id: "", 
           });
         }
       });
@@ -191,8 +199,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   useEffect(() => {
     if (accounts.length > 0 && transactionType === 'expense' && !initialData) {
       const defaultAccount = accounts.find(acc => acc.is_default);
-      if (defaultAccount) {
-        form.setValue('account_id', defaultAccount.id);
+      if (defaultAccount && form.getValues('account_id') !== defaultAccount.id) {
+        form.setValue('account_id', defaultAccount.id, { shouldValidate: true });
       }
     }
   }, [accounts, transactionType, form, initialData]);
