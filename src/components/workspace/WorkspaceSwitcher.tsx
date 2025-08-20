@@ -28,8 +28,9 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
   const { workspaces, currentWorkspace, switchWorkspace, loading } = useWorkspace();
   const navigate = useNavigate();
 
-  const handleWorkspaceSelect = async (workspaceId: string) => {
-    await switchWorkspace(workspaceId);
+  const handleWorkspaceSelect = (workspaceId: string) => {
+    console.log('Selecting workspace:', workspaceId); // Debug log
+    switchWorkspace(workspaceId);
     setOpen(false);
     onWorkspaceChange?.();
   };
@@ -40,6 +41,9 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
     onWorkspaceChange?.();
   };
 
+  // Não desabilitar o botão se há workspaces disponíveis
+  const isDisabled = loading || workspaces.length === 0;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -48,7 +52,7 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
-          disabled={loading}
+          disabled={isDisabled}
         >
           <span className="truncate">
             {currentWorkspace?.name || "Selecionar núcleo..."}
@@ -66,7 +70,7 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
                 {workspaces.map((workspace) => (
                   <CommandItem
                     key={workspace.id}
-                    value={workspace.id}
+                    value={workspace.name}
                     onSelect={() => handleWorkspaceSelect(workspace.id)}
                   >
                     <Check

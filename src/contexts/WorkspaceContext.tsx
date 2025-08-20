@@ -39,7 +39,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const { data: ownedWorkspaces, error: ownedError } = await supabase
         .from('workspaces')
         .select('*')
-        .eq('workspace_owner', session.user.id) // Usar workspace_owner ao invés de created_by
+        .eq('workspace_owner', session.user.id)
         .order('created_at', { ascending: true });
 
       if (ownedError) {
@@ -77,7 +77,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               memberWorkspaceDetails.push({
                 ...workspace,
                 user_role: memberInfo.role as 'admin' | 'user',
-                is_owner: workspace.workspace_owner === session.user.id, // Verificar se é owner pelo workspace_owner
+                is_owner: workspace.workspace_owner === session.user.id,
               });
             }
           }
@@ -102,8 +102,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       setWorkspaces(allWorkspaces);
 
-      // Se não há workspace atual, selecionar o primeiro
-      if (!currentWorkspace && allWorkspaces.length > 0) {
+      // Se não há workspace atual ou o atual não está mais na lista, selecionar o primeiro
+      const currentWorkspaceStillExists = allWorkspaces.find(w => w.id === currentWorkspace?.id);
+      
+      if (!currentWorkspaceStillExists && allWorkspaces.length > 0) {
         const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
         const workspaceToSelect = savedWorkspaceId 
           ? allWorkspaces.find(w => w.id === savedWorkspaceId) || allWorkspaces[0]
@@ -118,13 +120,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.id, sessionLoading, currentWorkspace]);
+  }, [session?.user?.id, sessionLoading]);
 
   const switchWorkspace = useCallback((workspaceId: string) => {
     const workspace = workspaces.find(w => w.id === workspaceId);
     if (workspace) {
       setCurrentWorkspace(workspace);
       localStorage.setItem('currentWorkspaceId', workspaceId);
+      console.log('Switched to workspace:', workspace.name); // Debug log
+    } else {
+      console.error('Workspace not found:', workspaceId);
     }
   }, [workspaces]);
 
@@ -138,7 +143,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           name,
           description,
           created_by: session.user.id,
-          workspace_owner: session.user.id, // Definir o criador como owner inicial
+          workspace_owner: session.user.id,
           is_shared: isShared
         })
         .select()
@@ -177,7 +182,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', workspaceId)
-        .eq('workspace_owner', session.user.id); // Só o owner atual pode transferir
+        .eq('workspace_owner', session.user.id);
 
       if (error) throw error;
 
@@ -195,7 +200,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     if (!sessionLoading) {
       fetchWorkspaces();
     }
-  }, [sessionLoading, session?.user?.id]);
+  }, [sessionLoading, session?.user?.id, fetchWorkspaces]);
 
   const value = {
     currentWorkspace,
