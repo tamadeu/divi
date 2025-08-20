@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Package } from "lucide-react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SubscriptionPlan } from "@/types/subscription-plans";
 import { Skeleton } from "@/components/ui/skeleton";
 import { showError, showSuccess } from "@/utils/toast";
 import SubscriptionPlansTable from "@/components/admin/SubscriptionPlansTable";
-import AddEditPlanModal from "@/components/admin/AddEditPlanModal";
-import PlanDetailsModal from "@/components/admin/PlanDetailsModal";
 import DeletePlanAlert from "@/components/admin/DeletePlanAlert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,10 +20,6 @@ const AdminPlans = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   
   // Modal states
-  const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [viewingPlan, setViewingPlan] = useState<SubscriptionPlan | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [deletingPlan, setDeletingPlan] = useState<SubscriptionPlan | null>(null);
 
@@ -81,21 +76,6 @@ const AdminPlans = () => {
 
     setFilteredPlans(filtered);
   }, [plans, searchQuery, statusFilter]);
-
-  const handleAddPlan = () => {
-    setEditingPlan(null);
-    setIsAddEditModalOpen(true);
-  };
-
-  const handleEditPlan = (plan: SubscriptionPlan) => {
-    setEditingPlan(plan);
-    setIsAddEditModalOpen(true);
-  };
-
-  const handleViewDetails = (plan: SubscriptionPlan) => {
-    setViewingPlan(plan);
-    setIsDetailsModalOpen(true);
-  };
 
   const handleDeletePlan = (plan: SubscriptionPlan) => {
     setDeletingPlan(plan);
@@ -203,12 +183,6 @@ const AdminPlans = () => {
     }
   };
 
-  const handlePlanSaved = () => {
-    fetchPlans();
-    setIsAddEditModalOpen(false);
-    setEditingPlan(null);
-  };
-
   const totalPlans = plans.length;
   const activePlans = plans.filter(p => p.is_active).length;
   const featuredPlans = plans.filter(p => p.is_featured).length;
@@ -217,9 +191,11 @@ const AdminPlans = () => {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Gerenciar Planos de Assinatura</h1>
-        <Button size="sm" className="gap-1" onClick={handleAddPlan}>
-          <PlusCircle className="h-4 w-4" />
-          Novo Plano
+        <Button size="sm" className="gap-1" asChild>
+          <Link to="/admin/plans/new">
+            <PlusCircle className="h-4 w-4" />
+            Novo Plano
+          </Link>
         </Button>
       </div>
 
@@ -235,7 +211,6 @@ const AdminPlans = () => {
             <p className="text-xs text-muted-foreground">
               Planos cadastrados no sistema
             </p>
-          
           </CardContent>
         </Card>
         
@@ -299,11 +274,9 @@ const AdminPlans = () => {
           ) : filteredPlans.length > 0 ? (
             <SubscriptionPlansTable 
               plans={filteredPlans} 
-              onEdit={handleEditPlan}
               onDelete={handleDeletePlan}
               onToggleActive={handleToggleActive}
               onToggleFeatured={handleToggleFeatured}
-              onViewDetails={handleViewDetails}
               onMoveUp={handleMoveUp}
               onMoveDown={handleMoveDown}
               loading={loading}
@@ -321,9 +294,11 @@ const AdminPlans = () => {
                   }
                 </p>
                 {!searchQuery && statusFilter === "all" && (
-                  <Button className="mt-4" onClick={handleAddPlan}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Criar Primeiro Plano
+                  <Button className="mt-4" asChild>
+                    <Link to="/admin/plans/new">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Criar Primeiro Plano
+                    </Link>
                   </Button>
                 )}
               </div>
@@ -331,25 +306,6 @@ const AdminPlans = () => {
           )}
         </CardContent>
       </Card>
-
-      <AddEditPlanModal
-        isOpen={isAddEditModalOpen}
-        onClose={() => {
-          setIsAddEditModalOpen(false);
-          setEditingPlan(null);
-        }}
-        onPlanSaved={handlePlanSaved}
-        plan={editingPlan}
-      />
-
-      <PlanDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={() => {
-          setIsDetailsModalOpen(false);
-          setViewingPlan(null);
-        }}
-        plan={viewingPlan}
-      />
 
       <DeletePlanAlert
         isOpen={isDeleteAlertOpen}

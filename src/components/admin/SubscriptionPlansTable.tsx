@@ -9,16 +9,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubscriptionPlan } from "@/types/subscription-plans";
-import { Pencil, Trash2, Star, Eye, ArrowUp, ArrowDown } from "lucide-react";
+import { Pencil, Trash2, Star, Eye, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Link } from "react-router-dom";
 
 interface SubscriptionPlansTableProps {
   plans: SubscriptionPlan[];
-  onEdit: (plan: SubscriptionPlan) => void;
   onDelete: (plan: SubscriptionPlan) => void;
   onToggleActive: (plan: SubscriptionPlan) => void;
   onToggleFeatured: (plan: SubscriptionPlan) => void;
-  onViewDetails: (plan: SubscriptionPlan) => void;
   onMoveUp: (plan: SubscriptionPlan) => void;
   onMoveDown: (plan: SubscriptionPlan) => void;
   loading?: boolean;
@@ -26,11 +25,9 @@ interface SubscriptionPlansTableProps {
 
 const SubscriptionPlansTable = ({ 
   plans, 
-  onEdit, 
   onDelete, 
   onToggleActive,
   onToggleFeatured,
-  onViewDetails,
   onMoveUp,
   onMoveDown,
   loading 
@@ -107,12 +104,16 @@ const SubscriptionPlansTable = ({
                 </TableCell>
                 <TableCell>
                   <div>
-                    <div className="font-medium flex items-center gap-2">
+                    <Link 
+                      to={`/admin/plans/${plan.id}`}
+                      className="font-medium hover:underline flex items-center gap-2"
+                    >
                       {plan.name}
                       {plan.is_featured && (
                         <Star className="h-4 w-4 text-yellow-500 fill-current" />
                       )}
-                    </div>
+                      <ExternalLink className="h-3 w-3 opacity-50" />
+                    </Link>
                     {plan.description && (
                       <div className="text-sm text-muted-foreground mt-1">
                         {plan.description.length > 50 
@@ -179,18 +180,12 @@ const SubscriptionPlansTable = ({
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      onClick={() => onViewDetails(plan)}
+                      asChild
                       disabled={loading}
                     >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => onEdit(plan)}
-                      disabled={loading}
-                    >
-                      <Pencil className="h-4 w-4" />
+                      <Link to={`/admin/plans/${plan.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
                     </Button>
                     <Button 
                       variant="ghost" 

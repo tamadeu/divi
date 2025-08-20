@@ -20,6 +20,7 @@ import CreditCardsPage from "./pages/CreditCards";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminPlans from "./pages/admin/AdminPlans";
+import AdminPlanDetail from "./pages/admin/AdminPlanDetail";
 import AdminBanks from "./pages/admin/AdminBanks";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import AdminSystem from "./pages/admin/AdminSystem";
@@ -106,6 +107,7 @@ function AppRoutes() {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="plans" element={<AdminPlans />} />
+          <Route path="plans/:planId" element={<AdminPlanDetail />} />
           <Route path="banks" element={<AdminBanks />} />
           <Route path="companies" element={<AdminCompanies />} />
           <Route path="system" element={<AdminSystem />} />
