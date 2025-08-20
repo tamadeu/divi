@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -8,148 +11,188 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Pencil, Trash2, Star } from "lucide-react";
 import { Account } from "@/types/database";
-import { Pencil, Trash2, Star, Eye, Calculator, MinusCircle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { showSuccess, showError } from "@/utils/toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface AccountsTableProps {
   accounts: Account[];
-  onEdit: (account: Account) => void;
-  onDelete: (account: Account) => void;
-  onSetDefault: (accountId: string) => void;
-  settingDefaultId: string | null;
+  onAccountUpdated: () => void;
 }
 
-const AccountsTable = ({ 
-  accounts, 
-  onEdit, 
-  onDelete, 
-  onSetDefault, 
-  settingDefaultId 
-}: AccountsTableProps) => {
+const AccountsTable = ({ accounts, onAccountUpdated }: AccountsTableProps) => {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const getAccountTypeColor = (type: string) => {
+    switch (type) {
+      case 'Conta Corrente':
+        return 'bg-blue-100 text-blue-800';
+      case 'Poupança':
+        return 'bg-green-100 text-green-800';
+      case 'Cartão de Crédito':
+        return 'bg-red-100 text-red-800';
+      case 'Investimento':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleSetDefault = async (accountId: string) => {
+    try {
+      const { error } = await supabase.rpc('set_default_account', {
+        account_id_to_set: accountId
+      });
+
+      if (error) throw error;
+
+      showSuccess("Conta padrão definida com sucesso!");
+      onAccountUpdated();
+    } catch (error: any) {
+      console.error("Error setting default account:", error);
+      showError("Erro ao definir conta padrão. Tente novamente.");
+    }
+  };
+
+  const handleDelete = async (accountId: string) => {
+    setDeletingId(accountId);
+    
+    try {
+      const { error } = await supabase
+        .from("accounts")
+        .delete()
+        .eq("id", accountId);
+
+      if (error) throw error;
+
+      showSuccess("Conta excluída com sucesso!");
+      onAccountUpdated();
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      showError("Erro ao excluir conta. Tente novamente.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (accounts.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">
+          Nenhuma conta encontrada.
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Crie sua primeira conta clicando no botão "Nova Conta".
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Conta</TableHead>
-            <TableHead className="hidden lg:table-cell">Banco</TableHead>
-            <TableHead className="hidden lg:table-cell">Tipo</TableHead>
-            <TableHead className="text-right">Saldo</TableHead>
-            <TableHead className="hidden lg:table-cell">Status</TableHead>
+            <TableHead>Nome</TableHead>
+            <TableHead>Banco</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Saldo</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {accounts.length > 0 ? (
-            accounts.map((account) => (
-              <TableRow key={account.id}>
-                <TableCell className="font-medium">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      {account.name}
-                      {account.include_in_total ? (
-                        <Calculator className="h-3 w-3 text-green-600" title="Incluído no saldo total" />
-                      ) : (
-                        <MinusCircle className="h-3 w-3 text-gray-400" title="Não incluído no saldo total" />
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground lg:hidden">
-                      {account.bank} - {account.type}
-                    </div>
-                    <div className="lg:hidden mt-1 flex flex-wrap gap-1">
-                      {account.is_default ? (
-                        <Badge variant="secondary" className="text-xs">
-                          <Star className="mr-1 h-3 w-3" />
-                          Padrão
-                        </Badge>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-6 px-2"
-                          onClick={() => onSetDefault(account.id)}
-                          disabled={settingDefaultId === account.id}
-                        >
-                          {settingDefaultId === account.id ? "..." : "Tornar Padrão"}
-                        </Button>
-                      )}
-                      {account.include_in_total ? (
-                        <Badge variant="outline" className="text-xs text-green-600">
-                          No Total
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs text-gray-500">
-                          Fora do Total
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">{account.bank}</TableCell>
-                <TableCell className="hidden lg:table-cell">{account.type}</TableCell>
-                <TableCell className="text-right font-semibold">
-                  <div className="text-sm lg:text-base">
-                    {account.balance.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </div>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <div className="flex flex-col gap-1">
-                    {account.is_default ? (
-                      <Badge>
-                        <Star className="mr-1 h-3 w-3" />
-                        Padrão
-                      </Badge>
-                    ) : (
+          {accounts.map((account) => (
+            <TableRow key={account.id}>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  {account.is_default && (
+                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                  )}
+                  {account.name}
+                </div>
+              </TableCell>
+              <TableCell>{account.bank}</TableCell>
+              <TableCell>
+                <Badge className={getAccountTypeColor(account.type)}>
+                  {account.type}
+                </Badge>
+              </TableCell>
+              <TableCell className={account.balance >= 0 ? "text-green-600" : "text-red-600"}>
+                {formatCurrency(account.balance)}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  {account.include_in_total ? (
+                    <Badge variant="default">Incluído no total</Badge>
+                  ) : (
+                    <Badge variant="secondary">Não incluído</Badge>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  {!account.is_default && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSetDefault(account.id)}
+                    >
+                      Definir como padrão
+                    </Button>
+                  )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onSetDefault(account.id)}
-                        disabled={settingDefaultId === account.id}
+                        variant="ghost"
+                        size="icon"
+                        disabled={deletingId === account.id}
                       >
-                        {settingDefaultId === account.id ? "Definindo..." : "Tornar Padrão"}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    {account.include_in_total ? (
-                      <Badge variant="outline" className="text-green-600">
-                        <Calculator className="mr-1 h-3 w-3" />
-                        No Total
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-gray-500">
-                        <MinusCircle className="mr-1 h-3 w-3" />
-                        Fora do Total
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                      <Link to={`/accounts/${account.id}`}>
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(account)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(account)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
-                Nenhuma conta encontrada.
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Conta</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir a conta "{account.name}"?
+                          Esta ação não pode ser desfeita e todas as transações associadas serão perdidas.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete(account.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </TableCell>
             </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
     </div>

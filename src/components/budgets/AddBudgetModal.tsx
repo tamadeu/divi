@@ -1,10 +1,9 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +21,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -30,12 +28,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { showError, showSuccess } from "@/utils/toast";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { showSuccess, showError } from "@/utils/toast";
 import { Category } from "@/types/database";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const budgetSchema = z.object({
-  category_id: z.string().uuid("Selecione uma categoria válida."),
-  amount: z.coerce.number().positive("O valor do orçamento deve ser positivo."),
+  categoryId: z.string().min(1, "Selecione uma categoria."),
+  amount: z.string().min(1, "O valor é obrigatório.").refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    "O valor deve ser um número positivo."
+  ),
 });
 
 type BudgetFormValues = z.infer<typeof budgetSchema>;
@@ -44,109 +48,137 @@ interface AddBudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onBudgetAdded: () => void;
+  selectedMonth: string;
 }
 
-const AddBudgetModal = ({ isOpen, onClose, onBudgetAdded }: AddBudgetModalProps) => {
+const AddBudgetModal = ({ isOpen, onClose, onBudgetAdded, selectedMonth }: AddBudgetModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [expenseCategories, setExpenseCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const { currentWorkspace } = useWorkspace();
 
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetSchema),
     defaultValues: {
-      amount: 0,
+      categoryId: "",
+      amount: "",
     },
   });
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const fetchCategories = async () => {
+    if (!currentWorkspace) return;
 
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("type", "expense");
-
-      if (error) {
-        console.error("Error fetching expense categories:", error);
-      } else {
-        setExpenseCategories(data || []);
-      }
-    };
-
-    if (isOpen) {
-      fetchCategories();
-    }
-  }, [isOpen]);
-
-  const handleSubmit = async (values: BudgetFormValues) => {
-    setIsSubmitting(true);
+    setLoadingCategories(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      showError("Você precisa estar logado para adicionar um orçamento.");
-      setIsSubmitting(false);
+      setLoadingCategories(false);
       return;
     }
 
-    const currentMonth = new Date();
-    currentMonth.setDate(1);
-    currentMonth.setHours(0, 0, 0, 0);
-
-    const { error } = await supabase.from("budgets").insert({
-      ...values,
-      user_id: user.id,
-      month: currentMonth.toISOString().split('T')[0],
-    });
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("workspace_id", currentWorkspace.id)
+      .eq("type", "Despesa")
+      .order("name");
 
     if (error) {
-      if (error.code === '23505') { // Unique constraint violation
+      console.error("Error fetching categories:", error);
+      showError("Erro ao carregar categorias.");
+    } else {
+      setCategories(data || []);
+    }
+    setLoadingCategories(false);
+  };
+
+  useEffect(() => {
+    if (isOpen && currentWorkspace) {
+      fetchCategories();
+    }
+  }, [isOpen, currentWorkspace]);
+
+  const handleSubmit = async (values: BudgetFormValues) => {
+    if (!currentWorkspace) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { error } = await supabase.from("budgets").insert({
+        user_id: user.id,
+        workspace_id: currentWorkspace.id,
+        category_id: values.categoryId,
+        amount: Number(values.amount),
+        month: `${selectedMonth}-01`,
+      });
+
+      if (error) throw error;
+
+      showSuccess("Orçamento criado com sucesso!");
+      form.reset();
+      onBudgetAdded();
+      onClose();
+    } catch (error: any) {
+      console.error("Error creating budget:", error);
+      if (error.code === '23505') {
         showError("Já existe um orçamento para esta categoria neste mês.");
       } else {
-        showError("Erro ao adicionar orçamento: " + error.message);
+        showError("Erro ao criar orçamento. Tente novamente.");
       }
-    } else {
-      showSuccess("Orçamento adicionado com sucesso!");
-      onBudgetAdded();
-      form.reset();
-      onClose();
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Orçamento</DialogTitle>
+          <DialogTitle>Novo Orçamento</DialogTitle>
           <DialogDescription>
-            Defina um orçamento mensal para uma categoria de despesa.
+            Defina um orçamento para uma categoria específica.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
-              name="category_id"
+              name="categoryId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria de despesa" />
+                        <SelectValue placeholder="Selecione uma categoria" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {expenseCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
+                      {loadingCategories ? (
+                        <SelectItem value="loading" disabled>
+                          Carregando...
+                        </SelectItem>
+                      ) : categories.length === 0 ? (
+                        <SelectItem value="empty" disabled>
+                          Nenhuma categoria de despesa encontrada
+                        </SelectItem>
+                      ) : (
+                        categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
             <FormField
               control={form.control}
               name="amount"
@@ -154,16 +186,24 @@ const AddBudgetModal = ({ isOpen, onClose, onBudgetAdded }: AddBudgetModalProps)
                 <FormItem>
                   <FormLabel>Valor do Orçamento</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancelar
+              </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adicionando..." : "Adicionar Orçamento"}
+                {isSubmitting ? "Criando..." : "Criar Orçamento"}
               </Button>
             </DialogFooter>
           </form>
