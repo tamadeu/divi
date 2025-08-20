@@ -11,14 +11,6 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   const { session, loading: sessionLoading } = useSession();
   const { isAdmin, loading: adminLoading } = useAdmin();
 
-  // Debug logs
-  console.log('AdminRoute Debug:', {
-    sessionLoading,
-    adminLoading,
-    session: !!session,
-    isAdmin
-  });
-
   // Se ainda está carregando qualquer coisa
   if (sessionLoading || adminLoading) {
     return (
@@ -35,17 +27,14 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
 
   // Se não tem sessão
   if (!session) {
-    console.log('AdminRoute: No session, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   // Se não é admin
   if (!isAdmin) {
-    console.log('AdminRoute: User is not admin, redirecting to home');
     return <Navigate to="/" replace />;
   }
 
-  console.log('AdminRoute: User is admin, rendering children');
   return <>{children}</>;
 };
 

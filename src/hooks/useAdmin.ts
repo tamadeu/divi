@@ -9,17 +9,9 @@ export const useAdmin = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('useAdmin effect:', {
-      sessionLoading,
-      profileLoading,
-      profile,
-      userType: profile?.user_type
-    });
-
     // Só atualizar quando ambos não estiverem carregando
     if (!sessionLoading && !profileLoading) {
       const adminStatus = profile?.user_type === 'admin';
-      console.log('useAdmin: Setting admin status to:', adminStatus);
       setIsAdmin(adminStatus);
       setLoading(false);
     } else {
