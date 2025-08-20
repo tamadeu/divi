@@ -7,14 +7,13 @@ import InstallPrompt from "../pwa/InstallPrompt";
 import UpdatePrompt from "../pwa/UpdatePrompt";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import NavLinks from "./NavLinks";
-import { Package2, RotateCcw } from "lucide-react";
+import { Package2 } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import AddTransferModal from "@/components/transfers/AddTransferModal";
 import UserCard from "./UserCard";
-import { Button } from "@/components/ui/button";
 
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -35,10 +34,6 @@ const Layout = () => {
     onTransferAdded,
   } = useModal();
 
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
   return (
     <>
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -46,8 +41,8 @@ const Layout = () => {
         <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent side="left" className="flex flex-col w-[280px] sm:w-[350px]">
             <nav className="grid gap-2 text-lg font-medium">
-              {/* Header do sidebar mobile com logo e botão refresh */}
-              <div className="flex items-center justify-between mb-4 pb-2 border-b">
+              {/* Header do sidebar mobile apenas com logo */}
+              <div className="flex items-center mb-4 pb-2 border-b">
                 <Link
                   to="/"
                   onClick={() => setMobileSidebarOpen(false)}
@@ -56,15 +51,6 @@ const Layout = () => {
                   <Package2 className="h-6 w-6" />
                   <span>Divi</span>
                 </Link>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8 flex-shrink-0"
-                  onClick={handleRefresh}
-                  title="Atualizar página"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
               </div>
               
               {/* Card do usuário */}

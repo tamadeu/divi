@@ -1,6 +1,6 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, PlusCircle, ArrowRightLeft, Mic } from "lucide-react";
+import { Search, PlusCircle, ArrowRightLeft, Mic, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showSuccess } from "@/utils/toast";
@@ -20,6 +20,10 @@ const Header = () => {
     }
   };
 
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
       <div className="w-full flex-1">
@@ -36,6 +40,17 @@ const Header = () => {
           </div>
         </form>
       </div>
+      
+      {/* Botão de refresh - apenas mobile */}
+      <Button 
+        variant="outline" 
+        size="icon" 
+        className="h-8 w-8 md:hidden"
+        onClick={handleRefresh}
+        title="Atualizar página"
+      >
+        <RotateCcw className="h-4 w-4" />
+      </Button>
       
       {/* Botões de ação - apenas desktop */}
       <div className="hidden md:flex items-center gap-2">
