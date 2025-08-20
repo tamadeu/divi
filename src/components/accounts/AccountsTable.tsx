@@ -141,7 +141,7 @@ const AccountsTable = ({ accounts, onAccountUpdated }: AccountsTableProps) => {
                   {account.name}
                 </div>
               </TableCell>
-              <TableCell>{account.bank}</TableCell> {/* Still using account.bank for display */}
+              <TableCell>{account.bank}</TableCell>
               <TableCell>
                 <Badge className={getAccountTypeColor(account.type)}>
                   {account.type}

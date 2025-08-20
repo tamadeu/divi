@@ -412,7 +412,7 @@ const Accounts = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{account.bank}</TableCell> {/* Still using account.bank for display */}
+                      <TableCell>{account.bank}</TableCell>
                       <TableCell>
                         <Badge className={getTypeColor(account.type)}>
                           {account.type}

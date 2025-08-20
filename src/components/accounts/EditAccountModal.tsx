@@ -73,9 +73,12 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
 
   // Initialize form data when account changes or modal opens
   useEffect(() => {
+    console.log("EditAccountModal: useEffect triggered.");
+    console.log("EditAccountModal: Current isOpen =", isOpen, ", Current account =", account);
+
     const initializeFormData = async () => {
       if (!isOpen || !account) {
-        // Reset form data when modal closes or account is null
+        console.log("EditAccountModal: Skipping initialization because isOpen is false or account is null.");
         setFormData({
           name: "",
           bank_id: "",
@@ -84,6 +87,8 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         });
         return;
       }
+
+      console.log("EditAccountModal: Account received for initialization:", account);
 
       setLoadingBanks(true);
       const { data: fetchedBanks, error: banksError } = await supabase
@@ -95,7 +100,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         console.error("Error fetching banks:", banksError);
         showError("Erro ao carregar bancos");
         setBanks([]);
-        // Set other form data, but bank_id will be empty
         setFormData({
           name: account.name,
           bank_id: "", 
@@ -104,14 +108,18 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         });
       } else {
         setBanks(fetchedBanks || []);
+        console.log("EditAccountModal: Fetched banks:", fetchedBanks);
         
-        // Set all form data at once after fetching banks
+        const initialBankId = account.bank_id || "";
+        console.log("EditAccountModal: Initial bank_id from account:", initialBankId);
+
         setFormData({
           name: account.name,
-          bank_id: account.bank_id || "", // Use bank_id from account, fallback to empty string
+          bank_id: initialBankId, // Use bank_id from account, fallback to empty string
           type: mapAccountTypeForDisplay(account.type),
           includeInTotal: account.include_in_total,
         });
+        console.log("EditAccountModal: Final formData.bank_id set to:", initialBankId);
       }
       setLoadingBanks(false);
     };
