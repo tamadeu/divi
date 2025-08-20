@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -76,7 +78,7 @@ const UserCard = () => {
 
   const getDisplayName = () => {
     if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
+      return `${profile.first_name} ${profile.last_name[0]}.`;
     }
     if (profile?.first_name) {
       return profile.first_name;
@@ -114,7 +116,8 @@ const UserCard = () => {
           
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{getDisplayName()}</p>
-            <p className="text-xs text-muted-foreground truncate">{email}</p>
+            {/* E-mail removido para otimização de espaço */}
+            {/* <p className="text-xs text-muted-foreground truncate">{email}</p> */}
           </div>
 
           <DropdownMenu>
