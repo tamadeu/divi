@@ -4,7 +4,7 @@ import { Building, User } from "lucide-react";
 
 interface TransactionCardProps {
   transaction: Transaction;
-  onRowClick: (transaction: Transaction) => void;
+  onRowClick?: (transaction: Transaction) => void; // Made optional with default
   companyLogo?: string | null;
 }
 
@@ -47,19 +47,27 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
     );
   };
 
+  const handleClick = () => {
+    if (onRowClick && typeof onRowClick === 'function') {
+      onRowClick(transaction);
+    }
+  };
+
   return (
     <div
-      onClick={() => onRowClick(transaction)}
-      className="flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      onClick={handleClick}
+      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow ${
+        onRowClick ? 'cursor-pointer' : 'cursor-default'
+      }`}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {getAvatarContent()}
         
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-foreground mb-1"> {/* Removido 'truncate' */}
+          <h3 className="font-medium text-foreground mb-1">
             {transaction.name}
           </h3>
-          <p className="text-sm text-muted-foreground"> {/* Removido 'truncate' */}
+          <p className="text-sm text-muted-foreground">
             {getTransactionType()}
           </p>
           <p className="text-xs text-muted-foreground">

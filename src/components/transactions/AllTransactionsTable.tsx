@@ -14,7 +14,7 @@ import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
-  onEditTransaction: (transaction: Transaction) => void; // Changed prop name
+  onEditTransaction?: (transaction: Transaction) => void; // Made optional
   companies: Company[];
 }
 
@@ -26,6 +26,12 @@ const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: Al
     "Pendente": "secondary",
     "Falhou": "destructive",
   } as const;
+
+  const handleRowClick = (transaction: Transaction) => {
+    if (onEditTransaction && typeof onEditTransaction === 'function') {
+      onEditTransaction(transaction);
+    }
+  };
 
   // Renderizar cards no mobile
   if (isMobile) {
@@ -50,8 +56,8 @@ const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: Al
             transactions.map((transaction) => (
               <TableRow
                 key={transaction.id}
-                onClick={() => onEditTransaction(transaction)} // Pass the new function
-                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleRowClick(transaction)}
+                className={`${onEditTransaction ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'}`}
               >
                 <TableCell className="min-w-[150px]">
                   <div className="font-medium">{transaction.name}</div>

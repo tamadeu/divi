@@ -6,7 +6,7 @@ import { getCompanyLogo } from "@/utils/transaction-helpers";
 interface TransactionCardListProps {
   transactions: Transaction[];
   loading: boolean;
-  onEditTransaction: (transaction: Transaction) => void; // Changed prop name
+  onEditTransaction?: (transaction: Transaction) => void; // Made optional
   companies: Company[];
 }
 
@@ -36,7 +36,7 @@ const TransactionCardList = ({ transactions, loading, onEditTransaction, compani
         <TransactionCard
           key={transaction.id}
           transaction={transaction}
-          onRowClick={onEditTransaction} // Pass the new function
+          onRowClick={onEditTransaction} // This will be undefined if not passed, but now handled safely
           companyLogo={getCompanyLogo(transaction.name, companies)}
         />
       ))}
