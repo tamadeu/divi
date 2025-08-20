@@ -24,7 +24,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Users, User, Edit, Trash2, Shield } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { MoreHorizontal, Plus, Users, User, Edit, Trash2, Shield, LogOut } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { WorkspaceWithRole } from "@/types/workspace";
 import CreateWorkspaceModal from "@/components/workspace/CreateWorkspaceModal";
@@ -34,13 +45,18 @@ import WorkspaceMembersModal from "@/components/settings/WorkspaceMembersModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { showSuccess, showError } from "@/utils/toast";
+import { useSession } from "@/contexts/SessionContext";
 
 export function WorkspaceManagement() {
-  const { workspaces, loading, refreshWorkspaces } = useWorkspace();
+  const { session } = useSession();
+  const { workspaces, loading, refreshWorkspaces, switchWorkspace } = useWorkspace();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [deletingWorkspace, setDeletingWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [managingMembersWorkspace, setManagingMembersWorkspace] = useState<WorkspaceWithRole | null>(null);
+  const [leavingWorkspace, setLeavingWorkspace] = useState<WorkspaceWithRole | null>(null);
 
   useEffect(() => {
     refreshWorkspaces();
@@ -58,6 +74,34 @@ export function WorkspaceManagement() {
     setManagingMembersWorkspace(workspace);
   };
 
+  const handleLeaveWorkspace = async (workspace: WorkspaceWithRole) => {
+    if (!session?.user) return;
+
+    try {
+      // Remover o usuário do workspace
+      const { error } = await supabase
+        .from('workspace_users')
+        .delete()
+        .eq('workspace_id', workspace.id)
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+
+      showSuccess(`Você saiu do núcleo "${workspace.name}" com sucesso!`);
+      
+      // Se o workspace que saiu era o atual, mudar para outro
+      const remainingWorkspaces = workspaces.filter(w => w.id !== workspace.id);
+      if (remainingWorkspaces.length > 0) {
+        switchWorkspace(remainingWorkspaces[0].id);
+      }
+      
+      await refreshWorkspaces();
+    } catch (error: any) {
+      console.error('Error leaving workspace:', error);
+      showError('Erro ao sair do núcleo: ' + error.message);
+    }
+  };
+
   const canEdit = (workspace: WorkspaceWithRole) => {
     return workspace.is_owner || workspace.user_role === 'admin';
   };
@@ -68,6 +112,11 @@ export function WorkspaceManagement() {
 
   const canManageMembers = (workspace: WorkspaceWithRole) => {
     return workspace.is_shared && (workspace.is_owner || workspace.user_role === 'admin');
+  };
+
+  const canLeaveWorkspace = (workspace: WorkspaceWithRole) => {
+    // Usuário pode sair se não for o proprietário e for um workspace compartilhado
+    return workspace.is_shared && !workspace.is_owner;
   };
 
   if (loading) {
@@ -190,6 +239,43 @@ export function WorkspaceManagement() {
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Excluir
+                            </DropdownMenuItem>
+                          )}
+                          {canLeaveWorkspace(workspace) && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onSelect={(e) => e.preventDefault()}
+                                >
+                                  <LogOut className="mr-2 h-4 w-4" />
+                                  Sair do Núcleo
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Sair do Núcleo</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja sair do núcleo "{workspace.name}"?
+                                    Você perderá acesso a todas as informações financeiras deste núcleo.
+                                    Para voltar, será necessário ser convidado novamente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleLeaveWorkspace(workspace)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Sair do Núcleo
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                          {!canManageMembers(workspace) && !canEdit(workspace) && !canDelete(workspace) && !canLeaveWorkspace(workspace) && (
+                            <DropdownMenuItem disabled>
+                              Nenhuma ação disponível
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>

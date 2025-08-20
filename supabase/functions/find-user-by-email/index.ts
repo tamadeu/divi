@@ -29,11 +29,11 @@ serve(async (req) => {
       )
     }
 
-    // Buscar usuário na tabela auth.users usando service role
-    const { data: authUser, error: authError } = await supabaseClient.auth.admin.listUsers()
-    
-    if (authError) {
-      console.error('Error fetching users:', authError)
+    // Buscar usuário pelo email usando o service role
+    const { data: { users }, error } = await supabaseClient.auth.admin.listUsers()
+
+    if (error) {
+      console.error('Error listing users:', error)
       return new Response(
         JSON.stringify({ error: 'Erro ao buscar usuários' }),
         { 
@@ -43,28 +43,17 @@ serve(async (req) => {
       )
     }
 
-    // Encontrar usuário pelo email
-    const user = authUser.users.find(u => u.email === email)
+    // Encontrar usuário com o email específico
+    const user = users.find(u => u.email === email)
 
     if (!user) {
       return new Response(
-        JSON.stringify({ error: 'Usuário não encontrado' }),
+        JSON.stringify({ user: null }),
         { 
-          status: 404, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
-    }
-
-    // Buscar perfil do usuário
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('first_name, last_name, avatar_url')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Error fetching profile:', profileError)
     }
 
     return new Response(
@@ -72,7 +61,7 @@ serve(async (req) => {
         user: {
           id: user.id,
           email: user.email,
-          profile: profile || null
+          created_at: user.created_at
         }
       }),
       { 

@@ -29,11 +29,11 @@ serve(async (req) => {
       )
     }
 
-    // Buscar usuário na tabela auth.users usando service role
-    const { data: authUser, error: authError } = await supabaseClient.auth.admin.getUserById(userId)
-    
-    if (authError) {
-      console.error('Error fetching user:', authError)
+    // Buscar usuário pelo ID usando o service role
+    const { data: { user }, error } = await supabaseClient.auth.admin.getUserById(userId)
+
+    if (error) {
+      console.error('Error getting user:', error)
       return new Response(
         JSON.stringify({ error: 'Erro ao buscar usuário' }),
         { 
@@ -43,11 +43,11 @@ serve(async (req) => {
       )
     }
 
-    if (!authUser.user) {
+    if (!user) {
       return new Response(
-        JSON.stringify({ error: 'Usuário não encontrado' }),
+        JSON.stringify({ email: null }),
         { 
-          status: 404, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
@@ -55,8 +55,8 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        email: authUser.user.email,
-        id: authUser.user.id
+        email: user.email,
+        id: user.id
       }),
       { 
         status: 200, 
