@@ -2,7 +2,8 @@ export interface User {
   id: string;
   email: string;
   created_at: string;
-  profile?: Profile;
+  // Changed from 'profile' to 'profiles' to match Supabase function return
+  profiles?: Profile; 
 }
 
 export interface Profile {
@@ -132,43 +133,65 @@ export interface Workspace {
 export interface WorkspaceUser {
   id: string;
   workspace_id: string;
-  user_id: string;
-  role: string;
+  user_id: string | null;
+  role: 'admin' | 'user';
   joined_at: string;
   is_ghost_user: boolean;
   ghost_user_name: string | null;
   ghost_user_email: string | null;
+  // Campos adicionais para exibição
+  profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
+  email?: string | null;
 }
 
-export interface CreditCard {
+export interface SubscriptionPlan {
   id: string;
-  workspace_id: string;
-  user_id: string;
-  account_id: string;
   name: string;
-  brand: string;
-  last_four_digits: string;
-  credit_limit: number;
-  closing_day: number;
-  due_day: number;
+  description: string | null;
+  price_monthly: number;
+  price_yearly: number | null;
   is_active: boolean;
+  is_featured: boolean;
+  is_exclusive: boolean;
+  exclusive_user_id: string | null;
+  max_subscriptions: number | null;
+  sort_order: number;
+  
+  // Core limits (always enabled)
+  max_transactions: number | null; // null means unlimited
+  max_accounts: number | null;
+  max_credit_cards: number | null;
+  max_categories: number | null;
+  max_workspaces: number | null;
+  max_users_per_workspace: number | null;
+  
+  // Optional features (can be disabled)
+  enable_reports: boolean;
+  enable_budgets: boolean;
+  enable_ai_features: boolean;
+  enable_api_access: boolean;
+  enable_export_data: boolean;
+  enable_custom_categories: boolean;
+  enable_multiple_workspaces: boolean;
+  enable_workspace_sharing: boolean;
+  
+  // Additional features
+  features: any[] | null;
+  
   created_at: string;
   updated_at: string;
-  account?: Account;
-}
-
-export interface CreditCardBill {
-  id: string;
-  workspace_id: string;
-  user_id: string;
-  credit_card_id: string;
-  reference_month: string;
-  closing_date: string;
-  due_date: string;
-  total_amount: number;
-  paid_amount: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  credit_card?: CreditCard;
+  
+  // Relations for exclusive plans
+  exclusive_user?: {
+    id: string;
+    email: string;
+    profiles?: {
+      first_name: string | null;
+      last_name: string | null;
+    };
+  };
 }

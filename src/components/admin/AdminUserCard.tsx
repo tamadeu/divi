@@ -23,7 +23,7 @@ import { useProfile } from "@/hooks/useProfile";
 
 const AdminUserCard = () => {
   const { session } = useSession();
-  const { profile } = useProfile();
+  const { profile } = useProfile(); // This hook already returns 'profile' (singular)
   const navigate = useNavigate();
 
   const handleSignOut = async () => {

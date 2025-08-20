@@ -16,14 +16,11 @@ import { supabase } from "@/integrations/supabase/client"
 interface User {
   id: string;
   email: string;
-  profile?: {
-    first_name: string | null;
-    last_name: string | null;
-    user_type: string | null;
-  };
+  // Changed from 'profile' to 'profiles'
   profiles?: {
     first_name: string | null;
     last_name: string | null;
+    user_type: string | null;
   };
 }
 
@@ -93,7 +90,8 @@ export function UserSearchCombobox({
   }, [searchQuery, searchUsers])
 
   const getDisplayName = (user: User) => {
-    const profile = user.profile || user.profiles
+    // Use user.profiles instead of user.profile
+    const profile = user.profiles 
     if (profile?.first_name && profile?.last_name) {
       return `${profile.first_name} ${profile.last_name}`
     }

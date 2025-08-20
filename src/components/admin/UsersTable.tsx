@@ -24,11 +24,12 @@ const UsersTable = ({ users, onChangeUserType, loading }: UsersTableProps) => {
   };
 
   const getDisplayName = (user: User) => {
-    if (user.profile?.first_name && user.profile?.last_name) {
-      return `${user.profile.first_name} ${user.profile.last_name}`;
+    // Use user.profiles instead of user.profile
+    if (user.profiles?.first_name && user.profiles?.last_name) {
+      return `${user.profiles.first_name} ${user.profiles.last_name}`;
     }
-    if (user.profile?.first_name) {
-      return user.profile.first_name;
+    if (user.profiles?.first_name) {
+      return user.profiles.first_name;
     }
     return user.email.split('@')[0];
   };
@@ -51,7 +52,8 @@ const UsersTable = ({ users, onChangeUserType, loading }: UsersTableProps) => {
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    {user.profile?.user_type === 'admin' ? (
+                    {/* Use user.profiles instead of user.profile */}
+                    {user.profiles?.user_type === 'admin' ? (
                       <Shield className="h-4 w-4 text-blue-500" />
                     ) : (
                       <UserIcon className="h-4 w-4 text-gray-500" />
@@ -67,8 +69,9 @@ const UsersTable = ({ users, onChangeUserType, loading }: UsersTableProps) => {
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <Badge variant={user.profile?.user_type === 'admin' ? 'default' : 'secondary'}>
-                    {user.profile?.user_type === 'admin' ? 'Admin' : 'Usuário'}
+                  {/* Use user.profiles instead of user.profile */}
+                  <Badge variant={user.profiles?.user_type === 'admin' ? 'default' : 'secondary'}>
+                    {user.profiles?.user_type === 'admin' ? 'Admin' : 'Usuário'}
                   </Badge>
                 </TableCell>
                 <TableCell>{formatDate(user.created_at)}</TableCell>
@@ -90,12 +93,13 @@ const UsersTable = ({ users, onChangeUserType, loading }: UsersTableProps) => {
                       onClick={() => 
                         onChangeUserType(
                           user.id, 
-                          user.profile?.user_type === 'admin' ? 'user' : 'admin'
+                          // Use user.profiles instead of user.profile
+                          user.profiles?.user_type === 'admin' ? 'user' : 'admin'
                         )
                       }
                       disabled={loading}
                     >
-                      {user.profile?.user_type === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
+                      {user.profiles?.user_type === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
                     </Button>
                   </div>
                 </TableCell>

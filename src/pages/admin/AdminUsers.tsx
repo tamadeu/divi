@@ -33,6 +33,7 @@ const AdminUsers = () => {
         return;
       }
 
+      // Ensure 'profiles' is used here
       setUsers(data.users || []);
       setFilteredUsers(data.users || []);
     } catch (error) {
@@ -53,7 +54,8 @@ const AdminUsers = () => {
     // Filtrar por busca
     if (searchQuery) {
       filtered = filtered.filter(user => {
-        const name = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.toLowerCase();
+        // Use user.profiles instead of user.profile
+        const name = `${user.profiles?.first_name || ''} ${user.profiles?.last_name || ''}`.toLowerCase();
         const email = user.email.toLowerCase();
         const query = searchQuery.toLowerCase();
         return name.includes(query) || email.includes(query);
@@ -62,7 +64,8 @@ const AdminUsers = () => {
 
     // Filtrar por tipo
     if (userTypeFilter !== "all") {
-      filtered = filtered.filter(user => user.profile?.user_type === userTypeFilter);
+      // Use user.profiles instead of user.profile
+      filtered = filtered.filter(user => user.profiles?.user_type === userTypeFilter);
     }
 
     setFilteredUsers(filtered);

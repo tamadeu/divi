@@ -19,15 +19,10 @@ import {
   Calendar, 
   Activity,
   Brain,
-  Building, // Changed from Building to Building2 for consistency with AdminNavLinks
+  Building, 
   Clock,
-  MapPin,
-  Smartphone,
   Monitor,
-  Globe,
-  Edit,
-  Eye,
-  Trash2
+  Edit
 } from "lucide-react";
 import {
   Table,
@@ -61,7 +56,8 @@ interface UserData {
   last_sign_in_at: string | null;
   email_confirmed_at: string | null;
   phone: string | null;
-  profile: UserProfile;
+  // Changed from 'profile' to 'profiles'
+  profiles: UserProfile; 
 }
 
 interface AIRequestLog {
@@ -131,9 +127,10 @@ const AdminUserDetail = () => {
       }
 
       const userInfo = userData.users[0];
-      setUser(userInfo);
-      setFormData(userInfo.profile || {});
-
+      // Ensure 'profiles' is used here
+      setUser({ ...userInfo, profiles: userInfo.profiles || {} }); 
+      setFormData(userInfo.profiles || {}); // Initialize formData with 'profiles'
+      
       // Fetch AI request logs
       const { data: aiLogsData, error: aiLogsError } = await supabase
         .from('ai_request_logs')
@@ -224,7 +221,8 @@ const AdminUserDetail = () => {
       if (error) throw error;
 
       showSuccess('Usuário atualizado com sucesso!');
-      setUser({ ...user, profile: { ...user.profile, ...formData } });
+      // Update user state with new formData
+      setUser({ ...user, profiles: { ...user.profiles, ...formData } });
       setIsEditing(false);
       
     } catch (error: any) {
@@ -254,16 +252,18 @@ const AdminUserDetail = () => {
   };
 
   const getDisplayName = () => {
-    if (!user?.profile) return user?.email?.split('@')[0] || 'Usuário';
-    const { first_name, last_name } = user.profile;
+    // Use user.profiles instead of user.profile
+    if (!user?.profiles) return user?.email?.split('@')[0] || 'Usuário';
+    const { first_name, last_name } = user.profiles;
     if (first_name && last_name) return `${first_name} ${last_name}`;
     if (first_name) return first_name;
     return user.email?.split('@')[0] || 'Usuário';
   };
 
   const getInitials = () => {
-    if (!user?.profile) return user?.email?.[0]?.toUpperCase() || 'U';
-    const { first_name, last_name } = user.profile;
+    // Use user.profiles instead of user.profile
+    if (!user?.profiles) return user?.email?.[0]?.toUpperCase() || 'U';
+    const { first_name, last_name } = user.profiles;
     if (first_name && last_name) return `${first_name[0]}${last_name[0]}`.toUpperCase();
     if (first_name) return first_name[0].toUpperCase();
     return user.email?.[0]?.toUpperCase() || 'U';
@@ -308,7 +308,8 @@ const AdminUserDetail = () => {
           </Button>
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={user.profile?.avatar_url || ""} alt={getDisplayName()} />
+              {/* Use user.profiles instead of user.profile */}
+              <AvatarImage src={user.profiles?.avatar_url || ""} alt={getDisplayName()} />
               <AvatarFallback>
                 {getInitials()}
               </AvatarFallback>
@@ -316,13 +317,15 @@ const AdminUserDetail = () => {
             <div>
               <h1 className="text-lg font-semibold md:text-2xl flex items-center gap-2">
                 {getDisplayName()}
-                {user.profile?.user_type === 'admin' ? (
+                {/* Use user.profiles instead of user.profile */}
+                {user.profiles?.user_type === 'admin' ? (
                   <Shield className="h-5 w-5 text-blue-500" />
                 ) : (
                   <UserIcon className="h-5 w-5 text-gray-500" />
                 )}
-                <Badge variant={user.profile?.user_type === 'admin' ? 'default' : 'secondary'}>
-                  {user.profile?.user_type === 'admin' ? 'Admin' : 'Usuário'}
+                {/* Use user.profiles instead of user.profile */}
+                <Badge variant={user.profiles?.user_type === 'admin' ? 'default' : 'secondary'}>
+                  {user.profiles?.user_type === 'admin' ? 'Admin' : 'Usuário'}
                 </Badge>
               </h1>
               <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -340,7 +343,8 @@ const AdminUserDetail = () => {
           {isEditing && (
             <>
               <Button variant="ghost" onClick={() => {
-                setFormData(user.profile || {});
+                // Reset formData using user.profiles
+                setFormData(user.profiles || {});
                 setIsEditing(false);
               }}>
                 Cancelar
@@ -424,7 +428,7 @@ const AdminUserDetail = () => {
           {/* Informações Básicas */}
           <Card>
             <CardHeader>
-              <CardTitle>Informações Básicas</CardTitle>
+              <CardTitle>Informações Básula</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -444,7 +448,8 @@ const AdminUserDetail = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Provedor IA Preferido</Label>
-                  <p className="text-sm font-medium">{user.profile?.ai_provider || 'Padrão'}</p>
+                  {/* Use user.profiles instead of user.profile */}
+                  <p className="text-sm font-medium">{user.profiles?.ai_provider || 'Padrão'}</p>
                 </div>
               </div>
             </CardContent>
@@ -589,7 +594,7 @@ const AdminUserDetail = () => {
                       onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                     />
                   ) : (
-                    <p className="text-sm font-medium">{user.profile?.first_name || 'Não informado'}</p>
+                    <p className="text-sm font-medium">{user.profiles?.first_name || 'Não informado'}</p>
                   )}
                 </div>
 
@@ -602,7 +607,7 @@ const AdminUserDetail = () => {
                       onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                     />
                   ) : (
-                    <p className="text-sm font-medium">{user.profile?.last_name || 'Não informado'}</p>
+                    <p className="text-sm font-medium">{user.profiles?.last_name || 'Não informado'}</p>
                   )}
                 </div>
 
@@ -619,8 +624,8 @@ const AdminUserDetail = () => {
                       <option value="admin">Administrador</option>
                     </select>
                   ) : (
-                    <Badge variant={user.profile?.user_type === 'admin' ? 'default' : 'secondary'}>
-                      {user.profile?.user_type === 'admin' ? 'Administrador' : 'Usuário'}
+                    <Badge variant={user.profiles?.user_type === 'admin' ? 'default' : 'secondary'}>
+                      {user.profiles?.user_type === 'admin' ? 'Administrador' : 'Usuário'}
                     </Badge>
                   )}
                 </div>
@@ -639,7 +644,7 @@ const AdminUserDetail = () => {
                       <option value="anthropic">Anthropic</option>
                     </select>
                   ) : (
-                    <p className="text-sm font-medium">{user.profile?.ai_provider || 'gemini'}</p>
+                    <p className="text-sm font-medium">{user.profiles?.ai_provider || 'gemini'}</p>
                   )}
                 </div>
               </div>
@@ -659,7 +664,7 @@ const AdminUserDetail = () => {
                   </div>
                   <div>
                     <span className="font-medium">Última atualização:</span>
-                    <p className="text-muted-foreground">{formatDate(user.profile?.updated_at)}</p>
+                    <p className="text-muted-foreground">{formatDate(user.profiles?.updated_at)}</p>
                   </div>
                   <div>
                     <span className="font-medium">Último login:</span>
