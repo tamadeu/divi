@@ -11,6 +11,7 @@ import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import AddTransferModal from "@/components/transfers/AddTransferModal";
+import UserCard from "./UserCard"; // Importar UserCard
 
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -45,6 +46,8 @@ const Layout = () => {
                 <Package2 className="h-6 w-6" />
                 <span>Divi</span>
               </Link>
+              {/* Adicionar UserCard aqui para mobile */}
+              <UserCard /> 
               <div onClick={() => setMobileSidebarOpen(false)}>
                 <NavLinks />
               </div>
