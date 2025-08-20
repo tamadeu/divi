@@ -9,7 +9,7 @@ const corsHeaders = {
 interface VoiceTransactionRequest {
   audio_data?: string;
   audio_type?: string;
-  text?: string; // Manter compatibilidade com versão anterior
+  text?: string;
   workspace_id: string;
 }
 
@@ -20,6 +20,22 @@ interface TransactionData {
   category?: string;
   description?: string;
   date?: string;
+}
+
+interface AIRequestLog {
+  user_id: string;
+  workspace_id: string;
+  transaction_id?: string;
+  input_text: string;
+  ai_provider: string;
+  ai_model?: string;
+  ai_response?: string;
+  processing_time_ms: number;
+  cost_usd?: number;
+  tokens_input?: number;
+  tokens_output?: number;
+  success: boolean;
+  error_message?: string;
 }
 
 serve(async (req) => {
@@ -51,6 +67,23 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Obter informações do usuário
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Token de autorização necessário' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Usuário não autenticado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
     // Buscar categorias do workspace para ajudar na classificação
     const { data: categories } = await supabase
       .from('categories')
@@ -66,15 +99,16 @@ serve(async (req) => {
     // Se temos áudio, primeiro precisamos transcrever
     if (audio_data) {
       console.log('Transcrevendo áudio...')
-      transcribedText = await transcribeAudio(audio_data, audio_type || 'audio/webm')
+      const transcriptionResult = await transcribeAudio(audio_data, audio_type || 'audio/webm', user.id, workspace_id, supabase)
       
-      if (!transcribedText) {
+      if (!transcriptionResult.success) {
         return new Response(
           JSON.stringify({ success: false, error: 'Não foi possível transcrever o áudio' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         )
       }
       
+      transcribedText = transcriptionResult.text
       console.log('Texto transcrito:', transcribedText)
     }
 
@@ -108,163 +142,52 @@ Regras:
 `
 
     // Tentar usar diferentes provedores de IA
-    let aiResponse: string | null = null
+    let aiResult: { success: boolean; transaction?: TransactionData; error?: string } = { success: false }
     
     // Tentar Gemini primeiro
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    if (geminiApiKey && !aiResponse) {
-      try {
-        console.log('Tentando Gemini...')
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{ text: prompt }]
-              }],
-              generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 500
-              }
-            })
-          }
-        )
-
-        if (geminiResponse.ok) {
-          const geminiData = await geminiResponse.json()
-          aiResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
-          console.log('Resposta do Gemini:', aiResponse)
-        }
-      } catch (error) {
-        console.error('Erro no Gemini:', error)
-      }
+    if (geminiApiKey && !aiResult.success) {
+      aiResult = await processWithGemini(prompt, transcribedText, user.id, workspace_id, supabase)
     }
 
     // Tentar OpenAI se Gemini falhar
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
-    if (openaiApiKey && !aiResponse) {
-      try {
-        console.log('Tentando OpenAI...')
-        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.1,
-            max_tokens: 500
-          })
-        })
-
-        if (openaiResponse.ok) {
-          const openaiData = await openaiResponse.json()
-          aiResponse = openaiData.choices?.[0]?.message?.content
-          console.log('Resposta do OpenAI:', aiResponse)
-        }
-      } catch (error) {
-        console.error('Erro no OpenAI:', error)
-      }
+    if (openaiApiKey && !aiResult.success) {
+      aiResult = await processWithOpenAI(prompt, transcribedText, user.id, workspace_id, supabase)
     }
 
     // Tentar Anthropic se outros falharem
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
-    if (anthropicApiKey && !aiResponse) {
-      try {
-        console.log('Tentando Anthropic...')
-        const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': anthropicApiKey,
-            'Content-Type': 'application/json',
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 500,
-            messages: [{ role: 'user', content: prompt }]
-          })
-        })
-
-        if (anthropicResponse.ok) {
-          const anthropicData = await anthropicResponse.json()
-          aiResponse = anthropicData.content?.[0]?.text
-          console.log('Resposta do Anthropic:', aiResponse)
-        }
-      } catch (error) {
-        console.error('Erro no Anthropic:', error)
-      }
+    if (anthropicApiKey && !aiResult.success) {
+      aiResult = await processWithAnthropic(prompt, transcribedText, user.id, workspace_id, supabase)
     }
 
-    if (!aiResponse) {
+    if (!aiResult.success) {
       // Fallback: processamento simples baseado em regras
       console.log('Usando fallback de processamento simples')
       const transaction = processWithFallback(transcribedText, categoryNames)
       
-      return new Response(
-        JSON.stringify({ success: true, transaction }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Processar resposta da IA
-    try {
-      // Limpar a resposta para extrair apenas o JSON
-      let cleanResponse = aiResponse.trim()
-      
-      // Remover markdown se presente
-      if (cleanResponse.includes('```json')) {
-        cleanResponse = cleanResponse.split('```json')[1].split('```')[0].trim()
-      } else if (cleanResponse.includes('```')) {
-        cleanResponse = cleanResponse.split('```')[1].split('```')[0].trim()
-      }
-      
-      // Tentar encontrar JSON na resposta
-      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        cleanResponse = jsonMatch[0]
-      }
-
-      console.log('JSON limpo:', cleanResponse)
-      
-      const transaction: TransactionData = JSON.parse(cleanResponse)
-      
-      // Validar dados essenciais
-      if (!transaction.name || !transaction.amount || !transaction.type) {
-        throw new Error('Dados essenciais faltando na resposta da IA')
-      }
-
-      // Garantir que amount seja positivo
-      transaction.amount = Math.abs(transaction.amount)
-
-      // Validar tipo
-      if (!['income', 'expense'].includes(transaction.type)) {
-        transaction.type = 'expense' // default
-      }
-
-      console.log('Transação processada:', transaction)
-
-      return new Response(
-        JSON.stringify({ success: true, transaction }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-
-    } catch (parseError) {
-      console.error('Erro ao processar resposta da IA:', parseError)
-      console.error('Resposta original:', aiResponse)
-      
-      // Usar fallback em caso de erro
-      const transaction = processWithFallback(transcribedText, categoryNames)
+      // Log do fallback
+      await logAIRequest({
+        user_id: user.id,
+        workspace_id,
+        input_text: transcribedText,
+        ai_provider: 'fallback',
+        ai_response: JSON.stringify(transaction),
+        processing_time_ms: 0,
+        success: true
+      }, supabase)
       
       return new Response(
         JSON.stringify({ success: true, transaction }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    return new Response(
+      JSON.stringify({ success: true, transaction: aiResult.transaction }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
     console.error('Erro geral:', error)
@@ -279,13 +202,233 @@ Regras:
   }
 })
 
+// Função para processar com Gemini
+async function processWithGemini(prompt: string, inputText: string, userId: string, workspaceId: string, supabase: any) {
+  const startTime = Date.now()
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!
+  
+  try {
+    console.log('Tentando Gemini...')
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 500
+          }
+        })
+      }
+    )
+
+    const processingTime = Date.now() - startTime
+    const responseData = await response.json()
+
+    if (response.ok && responseData.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const aiResponse = responseData.candidates[0].content.parts[0].text
+      console.log('Resposta do Gemini:', aiResponse)
+      
+      const transaction = parseAIResponse(aiResponse)
+      
+      // Log da requisição bem-sucedida
+      await logAIRequest({
+        user_id: userId,
+        workspace_id: workspaceId,
+        input_text: inputText,
+        ai_provider: 'gemini',
+        ai_model: 'gemini-1.5-flash',
+        ai_response: aiResponse,
+        processing_time_ms: processingTime,
+        tokens_input: responseData.usageMetadata?.promptTokenCount,
+        tokens_output: responseData.usageMetadata?.candidatesTokenCount,
+        success: true
+      }, supabase)
+      
+      return { success: true, transaction }
+    } else {
+      throw new Error('Resposta inválida do Gemini')
+    }
+  } catch (error) {
+    const processingTime = Date.now() - startTime
+    console.error('Erro no Gemini:', error)
+    
+    // Log do erro
+    await logAIRequest({
+      user_id: userId,
+      workspace_id: workspaceId,
+      input_text: inputText,
+      ai_provider: 'gemini',
+      ai_model: 'gemini-1.5-flash',
+      processing_time_ms: processingTime,
+      success: false,
+      error_message: error.message
+    }, supabase)
+    
+    return { success: false, error: error.message }
+  }
+}
+
+// Função para processar com OpenAI
+async function processWithOpenAI(prompt: string, inputText: string, userId: string, workspaceId: string, supabase: any) {
+  const startTime = Date.now()
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!
+  
+  try {
+    console.log('Tentando OpenAI...')
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        max_tokens: 500
+      })
+    })
+
+    const processingTime = Date.now() - startTime
+    const responseData = await response.json()
+
+    if (response.ok && responseData.choices?.[0]?.message?.content) {
+      const aiResponse = responseData.choices[0].message.content
+      console.log('Resposta do OpenAI:', aiResponse)
+      
+      const transaction = parseAIResponse(aiResponse)
+      
+      // Calcular custo aproximado (GPT-3.5-turbo: $0.0015/1K input tokens, $0.002/1K output tokens)
+      const inputTokens = responseData.usage?.prompt_tokens || 0
+      const outputTokens = responseData.usage?.completion_tokens || 0
+      const cost = (inputTokens * 0.0015 / 1000) + (outputTokens * 0.002 / 1000)
+      
+      // Log da requisição bem-sucedida
+      await logAIRequest({
+        user_id: userId,
+        workspace_id: workspaceId,
+        input_text: inputText,
+        ai_provider: 'openai',
+        ai_model: 'gpt-3.5-turbo',
+        ai_response: aiResponse,
+        processing_time_ms: processingTime,
+        cost_usd: cost,
+        tokens_input: inputTokens,
+        tokens_output: outputTokens,
+        success: true
+      }, supabase)
+      
+      return { success: true, transaction }
+    } else {
+      throw new Error('Resposta inválida do OpenAI')
+    }
+  } catch (error) {
+    const processingTime = Date.now() - startTime
+    console.error('Erro no OpenAI:', error)
+    
+    // Log do erro
+    await logAIRequest({
+      user_id: userId,
+      workspace_id: workspaceId,
+      input_text: inputText,
+      ai_provider: 'openai',
+      ai_model: 'gpt-3.5-turbo',
+      processing_time_ms: processingTime,
+      success: false,
+      error_message: error.message
+    }, supabase)
+    
+    return { success: false, error: error.message }
+  }
+}
+
+// Função para processar com Anthropic
+async function processWithAnthropic(prompt: string, inputText: string, userId: string, workspaceId: string, supabase: any) {
+  const startTime = Date.now()
+  const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')!
+  
+  try {
+    console.log('Tentando Anthropic...')
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': anthropicApiKey,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+
+    const processingTime = Date.now() - startTime
+    const responseData = await response.json()
+
+    if (response.ok && responseData.content?.[0]?.text) {
+      const aiResponse = responseData.content[0].text
+      console.log('Resposta do Anthropic:', aiResponse)
+      
+      const transaction = parseAIResponse(aiResponse)
+      
+      // Calcular custo aproximado (Claude Haiku: $0.25/1M input tokens, $1.25/1M output tokens)
+      const inputTokens = responseData.usage?.input_tokens || 0
+      const outputTokens = responseData.usage?.output_tokens || 0
+      const cost = (inputTokens * 0.25 / 1000000) + (outputTokens * 1.25 / 1000000)
+      
+      // Log da requisição bem-sucedida
+      await logAIRequest({
+        user_id: userId,
+        workspace_id: workspaceId,
+        input_text: inputText,
+        ai_provider: 'anthropic',
+        ai_model: 'claude-3-haiku-20240307',
+        ai_response: aiResponse,
+        processing_time_ms: processingTime,
+        cost_usd: cost,
+        tokens_input: inputTokens,
+        tokens_output: outputTokens,
+        success: true
+      }, supabase)
+      
+      return { success: true, transaction }
+    } else {
+      throw new Error('Resposta inválida do Anthropic')
+    }
+  } catch (error) {
+    const processingTime = Date.now() - startTime
+    console.error('Erro no Anthropic:', error)
+    
+    // Log do erro
+    await logAIRequest({
+      user_id: userId,
+      workspace_id: workspaceId,
+      input_text: inputText,
+      ai_provider: 'anthropic',
+      ai_model: 'claude-3-haiku-20240307',
+      processing_time_ms: processingTime,
+      success: false,
+      error_message: error.message
+    }, supabase)
+    
+    return { success: false, error: error.message }
+  }
+}
+
 // Função para transcrever áudio usando OpenAI Whisper
-async function transcribeAudio(audioBase64: string, audioType: string): Promise<string | null> {
+async function transcribeAudio(audioBase64: string, audioType: string, userId: string, workspaceId: string, supabase: any) {
+  const startTime = Date.now()
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
   
   if (!openaiApiKey) {
-    console.log('OpenAI API key não encontrada, tentando fallback...')
-    return null
+    console.log('OpenAI API key não encontrada para transcrição')
+    return { success: false, text: '' }
   }
 
   try {
@@ -308,18 +451,105 @@ async function transcribeAudio(audioBase64: string, audioType: string): Promise<
       body: formData
     })
 
+    const processingTime = Date.now() - startTime
+
     if (response.ok) {
       const transcription = await response.text()
       console.log('Transcrição do Whisper:', transcription)
-      return transcription.trim()
+      
+      // Calcular custo aproximado (Whisper: $0.006/minuto)
+      // Estimativa baseada no tamanho do arquivo (muito aproximada)
+      const estimatedMinutes = Math.max(0.1, audioBuffer.length / (1024 * 1024 * 2)) // Estimativa grosseira
+      const cost = estimatedMinutes * 0.006
+      
+      // Log da transcrição
+      await logAIRequest({
+        user_id: userId,
+        workspace_id: workspaceId,
+        input_text: `[ÁUDIO: ${audioBuffer.length} bytes]`,
+        ai_provider: 'openai',
+        ai_model: 'whisper-1',
+        ai_response: transcription,
+        processing_time_ms: processingTime,
+        cost_usd: cost,
+        success: true
+      }, supabase)
+      
+      return { success: true, text: transcription.trim() }
     } else {
-      console.error('Erro na transcrição:', await response.text())
-      return null
+      throw new Error('Erro na transcrição: ' + await response.text())
     }
   } catch (error) {
+    const processingTime = Date.now() - startTime
     console.error('Erro ao transcrever áudio:', error)
-    return null
+    
+    // Log do erro de transcrição
+    await logAIRequest({
+      user_id: userId,
+      workspace_id: workspaceId,
+      input_text: `[ÁUDIO: erro na transcrição]`,
+      ai_provider: 'openai',
+      ai_model: 'whisper-1',
+      processing_time_ms: processingTime,
+      success: false,
+      error_message: error.message
+    }, supabase)
+    
+    return { success: false, text: '' }
   }
+}
+
+// Função para fazer log das requisições de IA
+async function logAIRequest(logData: AIRequestLog, supabase: any) {
+  try {
+    const { error } = await supabase
+      .from('ai_request_logs')
+      .insert(logData)
+    
+    if (error) {
+      console.error('Erro ao salvar log de IA:', error)
+    }
+  } catch (error) {
+    console.error('Erro ao salvar log de IA:', error)
+  }
+}
+
+// Função para parsear resposta da IA
+function parseAIResponse(aiResponse: string): TransactionData {
+  // Limpar a resposta para extrair apenas o JSON
+  let cleanResponse = aiResponse.trim()
+  
+  // Remover markdown se presente
+  if (cleanResponse.includes('```json')) {
+    cleanResponse = cleanResponse.split('```json')[1].split('```')[0].trim()
+  } else if (cleanResponse.includes('```')) {
+    cleanResponse = cleanResponse.split('```')[1].split('```')[0].trim()
+  }
+  
+  // Tentar encontrar JSON na resposta
+  const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    cleanResponse = jsonMatch[0]
+  }
+
+  console.log('JSON limpo:', cleanResponse)
+  
+  const transaction: TransactionData = JSON.parse(cleanResponse)
+  
+  // Validar dados essenciais
+  if (!transaction.name || !transaction.amount || !transaction.type) {
+    throw new Error('Dados essenciais faltando na resposta da IA')
+  }
+
+  // Garantir que amount seja positivo
+  transaction.amount = Math.abs(transaction.amount)
+
+  // Validar tipo
+  if (!['income', 'expense'].includes(transaction.type)) {
+    transaction.type = 'expense' // default
+  }
+
+  return transaction
 }
 
 // Função de fallback para processamento simples baseado em regras
