@@ -25,6 +25,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -66,6 +77,7 @@ const Settings = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [managingMembersWorkspace, setManagingMembersWorkspace] = useState<WorkspaceWithRole | null>(null);
+  const [leavingWorkspace, setLeavingWorkspace] = useState<Workspace | null>(null);
   const [createFormData, setCreateFormData] = useState({
     name: "",
     description: "",
@@ -301,15 +313,13 @@ const Settings = () => {
     }
   };
 
-  const handleLeaveWorkspace = async (workspaceId: string, workspaceName: string) => {
-    if (!confirm(`Tem certeza que deseja deixar o núcleo "${workspaceName}"?`)) {
-      return;
-    }
+  const confirmLeaveWorkspace = async () => {
+    if (!leavingWorkspace) return;
 
     const { error } = await supabase
       .from("workspace_users")
       .delete()
-      .eq("workspace_id", workspaceId)
+      .eq("workspace_id", leavingWorkspace.id)
       .eq("user_id", currentUserId);
 
     if (error) {
@@ -320,6 +330,8 @@ const Settings = () => {
       fetchWorkspaces();
       refreshWorkspaces();
     }
+
+    setLeavingWorkspace(null);
   };
 
   const getRoleLabel = (role: string) => {
@@ -530,7 +542,7 @@ const Settings = () => {
                         </DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem
-                          onClick={() => handleLeaveWorkspace(workspace.id, workspace.name)}
+                          onClick={() => setLeavingWorkspace(workspace)}
                           className="text-red-600"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
@@ -718,6 +730,29 @@ const Settings = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Leave Workspace Alert Dialog */}
+      <AlertDialog open={!!leavingWorkspace} onOpenChange={() => setLeavingWorkspace(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deixar Núcleo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deixar o núcleo "{leavingWorkspace?.name}"?
+              Você perderá acesso a todas as informações financeiras deste núcleo.
+              Para voltar, será necessário ser convidado novamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmLeaveWorkspace}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Deixar Núcleo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Workspace Members Modal */}
       {managingMembersWorkspace && (
