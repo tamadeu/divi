@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Transaction } from "@/types/database";
+import { useIsMobile } from "@/hooks/use-mobile";
+import TransactionCardList from "./TransactionCardList";
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
@@ -15,12 +17,21 @@ interface AllTransactionsTableProps {
 }
 
 const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTableProps) => {
+  const isMobile = useIsMobile();
+  console.log("Is Mobile (AllTransactionsTable):", isMobile, "Window Width:", window.innerWidth); // Adicionado para depuração
+  
   const statusVariant = {
     "Concluído": "default",
     "Pendente": "secondary",
     "Falhou": "destructive",
   } as const;
 
+  // Renderizar cards no mobile
+  if (isMobile) {
+    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} />;
+  }
+
+  // Renderizar tabela no desktop
   return (
     <div className="rounded-md border overflow-x-auto">
       <Table>

@@ -18,6 +18,7 @@ interface AccountTransactionsTableProps {
 
 const AccountTransactionsTable = ({ transactions, onRowClick }: AccountTransactionsTableProps) => {
   const isMobile = useIsMobile();
+  console.log("Is Mobile (AccountTransactionsTable):", isMobile, "Window Width:", window.innerWidth); // Adicionado para depuração
 
   const statusVariant = {
     "Concluído": "default",
