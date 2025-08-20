@@ -37,38 +37,87 @@ const SearchResultsPage = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("transactions")
-        .select(`
-          id,
-          account_id,
-          date,
-          name,
-          amount,
-          status,
-          description,
-          category:categories (name)
-        `)
-        .eq("user_id", user.id)
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+      try {
+        // Busca 1: Transações por nome e descrição
+        const { data: transactionData, error: transactionError } = await supabase
+          .from("transactions")
+          .select(`
+            id,
+            account_id,
+            date,
+            name,
+            amount,
+            status,
+            description,
+            category:categories (name)
+          `)
+          .eq("user_id", user.id)
+          .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
 
-      if (error) {
-        console.error("Error fetching search results:", error);
-        setSearchResults([]);
-      } else {
-        // Filtrar também por categoria no lado do cliente
-        const formattedData = data
-          .map((t: any) => ({
-            ...t,
-            category: t.category?.name || "Sem categoria",
-          }))
-          .filter((t: any) => 
-            t.name.toLowerCase().includes(query.toLowerCase()) ||
-            (t.description && t.description.toLowerCase().includes(query.toLowerCase())) ||
-            t.category.toLowerCase().includes(query.toLowerCase())
-          );
+        if (transactionError) {
+          console.error("Error fetching transactions:", transactionError);
+        }
+
+        // Busca 2: Categorias que correspondem à busca
+        const { data: categoryData, error: categoryError } = await supabase
+          .from("categories")
+          .select("id")
+          .eq("user_id", user.id)
+          .ilike("name", `%${query}%`);
+
+        if (categoryError) {
+          console.error("Error fetching categories:", categoryError);
+        }
+
+        // Busca 3: Transações das categorias encontradas
+        let categoryTransactionData = [];
+        if (categoryData && categoryData.length > 0) {
+          const categoryIds = categoryData.map(cat => cat.id);
+          const { data: catTransData, error: catTransError } = await supabase
+            .from("transactions")
+            .select(`
+              id,
+              account_id,
+              date,
+              name,
+              amount,
+              status,
+              description,
+              category:categories (name)
+            `)
+            .eq("user_id", user.id)
+            .in("category_id", categoryIds);
+
+          if (catTransError) {
+            console.error("Error fetching category transactions:", catTransError);
+          } else {
+            categoryTransactionData = catTransData || [];
+          }
+        }
+
+        // Combinar e remover duplicatas
+        const allTransactions = [
+          ...(transactionData || []),
+          ...categoryTransactionData
+        ];
+
+        // Remover duplicatas baseado no ID
+        const uniqueTransactions = allTransactions.filter((transaction, index, self) =>
+          index === self.findIndex(t => t.id === transaction.id)
+        );
+
+        // Formatar dados
+        const formattedData = uniqueTransactions.map((t: any) => ({
+          ...t,
+          category: t.category?.name || "Sem categoria",
+        }));
+
         setSearchResults(formattedData);
+      } catch (error) {
+        console.error("Error in search:", error);
+        setSearchResults([]);
       }
+
       setLoading(false);
     };
 
