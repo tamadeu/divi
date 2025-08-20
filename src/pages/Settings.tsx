@@ -6,7 +6,6 @@ import { useSession } from "@/contexts/SessionContext";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { WorkspaceManagement } from "@/components/settings/WorkspaceManagement";
 
 const Settings = () => {
