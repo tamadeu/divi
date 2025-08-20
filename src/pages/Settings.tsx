@@ -132,17 +132,6 @@ const Settings = () => {
       {/* Núcleos Financeiros - usando o componente existente */}
       <WorkspaceManagement />
 
-      {/* Aparência */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Aparência</h2>
-          <p className="text-sm text-muted-foreground">
-            Personalize a aparência do aplicativo.
-          </p>
-        </div>
-
-      </div>
-
       {/* Alterar Senha */}
       <div className="space-y-4">
         <div>
