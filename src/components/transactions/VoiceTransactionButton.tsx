@@ -35,6 +35,32 @@ const VoiceTransactionButton = () => {
     };
   }, [showModal]);
 
+  const handleVoiceInput = () => {
+    console.log("🔥 Botão clicado - abrindo modal");
+    setShowModal(true);
+    setIsListening(true);
+    
+    // Simular listening por 5 segundos
+    setTimeout(() => {
+      console.log("🔥 Mudando para processing");
+      setIsListening(false);
+      setIsProcessing(true);
+      
+      // Simular processing por 3 segundos
+      setTimeout(() => {
+        console.log("🔥 Fechando modal");
+        setIsProcessing(false);
+        setShowModal(false);
+        
+        // Simular abertura do modal de transação
+        setTimeout(() => {
+          console.log("🔥 Abrindo modal de transação");
+          openAddTransactionModal();
+        }, 500);
+      }, 3000);
+    }, 5000);
+  };
+
   const closeModal = () => {
     console.log("🔥 Fechando modal manualmente");
     setShowModal(false);
