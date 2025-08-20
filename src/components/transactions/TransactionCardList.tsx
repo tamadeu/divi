@@ -1,28 +1,14 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Transaction } from "@/types/database";
-import { cn } from "@/lib/utils";
+import TransactionCard from "./TransactionCard"; // Importar o TransactionCard existente
 
 interface TransactionCardListProps {
   transactions: Transaction[];
   loading: boolean;
+  onRowClick: (transaction: Transaction) => void; // Adicionar prop onRowClick
 }
 
-const TransactionCardList = ({ transactions, loading }: TransactionCardListProps) => {
-  const statusVariant = {
-    "Concluído": "default",
-    "Pendente": "secondary",
-    "Falhou": "destructive",
-  } as const;
-
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  };
-
+const TransactionCardList = ({ transactions, loading, onRowClick }: TransactionCardListProps) => {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -45,30 +31,12 @@ const TransactionCardList = ({ transactions, loading }: TransactionCardListProps
   return (
     <div className="space-y-3">
       {transactions.map((transaction) => (
-        <Card key={transaction.id}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-lg">{transaction.name}</h3>
-              <Badge variant={statusVariant[transaction.status]}>
-                {transaction.status}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>{new Date(transaction.date).toLocaleDateString("pt-BR")}</span>
-              <span className={cn(
-                "font-bold",
-                transaction.amount > 0 ? "text-green-600" : "text-red-600"
-              )}>
-                {formatCurrency(transaction.amount)}
-              </span>
-            </div>
-            {transaction.category && (
-              <div className="text-sm text-muted-foreground mt-1">
-                Categoria: {typeof transaction.category === 'string' ? transaction.category : transaction.category.name}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TransactionCard
+          key={transaction.id}
+          transaction={transaction}
+          onRowClick={onRowClick} // Passar a função onRowClick
+          companyLogo={null} // Não temos logo de empresa para transações recentes aqui
+        />
       ))}
     </div>
   );

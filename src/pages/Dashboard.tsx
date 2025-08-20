@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Transaction } from "@/types/database"; // Import Transaction type
+import { Transaction } from "@/types/database";
+import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal"; // Importar o modal de detalhes
 
 interface SummaryData {
   total_balance: number;
@@ -24,6 +25,14 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
+
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const handleTransactionClick = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsDetailsModalOpen(true);
+  };
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -144,12 +153,18 @@ const Dashboard = () => {
       )}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <RecentTransactions transactions={transactions} loading={loading} />
+          <RecentTransactions transactions={transactions} loading={loading} onRowClick={handleTransactionClick} />
         </div>
         <div className="lg:col-span-2">
           <SpendingChart />
         </div>
       </div>
+
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+      />
     </>
   );
 };

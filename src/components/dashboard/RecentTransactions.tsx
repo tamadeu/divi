@@ -19,16 +19,17 @@ import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Transaction } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useIsMobile } from "@/hooks/use-mobile"; // Importar o hook
-import TransactionCardList from "@/components/transactions/TransactionCardList"; // Importar o novo componente
+import { useIsMobile } from "@/hooks/use-mobile";
+import TransactionCardList from "@/components/transactions/TransactionCardList";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
   loading: boolean;
+  onRowClick: (transaction: Transaction) => void; // Adicionar prop onRowClick
 }
 
-const RecentTransactions = ({ transactions, loading }: RecentTransactionsProps) => {
-  const isMobile = useIsMobile(); // Usar o hook para detectar mobile
+const RecentTransactions = ({ transactions, loading, onRowClick }: RecentTransactionsProps) => {
+  const isMobile = useIsMobile();
 
   const statusVariant = {
     "Concluído": "default",
@@ -60,9 +61,9 @@ const RecentTransactions = ({ transactions, loading }: RecentTransactionsProps) 
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-        ) : isMobile ? ( // Condicionalmente renderizar o CardList para mobile
-          <TransactionCardList transactions={transactions} loading={loading} />
-        ) : ( // Ou a tabela para desktop
+        ) : isMobile ? (
+          <TransactionCardList transactions={transactions} loading={loading} onRowClick={onRowClick} />
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -73,7 +74,7 @@ const RecentTransactions = ({ transactions, loading }: RecentTransactionsProps) 
             </TableHeader>
             <TableBody>
               {transactions.map((transaction) => (
-                <TableRow key={transaction.id}>
+                <TableRow key={transaction.id} onClick={() => onRowClick(transaction)} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
                     <div className="font-medium">{transaction.name}</div>
                     <div className="hidden text-sm text-muted-foreground md:inline">
