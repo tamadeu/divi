@@ -6,11 +6,18 @@ import { getCompanyLogo } from "@/utils/transaction-helpers";
 interface TransactionCardListProps {
   transactions: Transaction[];
   loading: boolean;
-  onEditTransaction?: (transaction: Transaction) => void; // Made optional
+  onEditTransaction?: (transaction: Transaction) => void;
   companies: Company[];
 }
 
 const TransactionCardList = ({ transactions, loading, onEditTransaction, companies }: TransactionCardListProps) => {
+  console.log("TransactionCardList rendered:", {
+    transactionsCount: transactions.length,
+    onEditTransactionExists: !!onEditTransaction,
+    onEditTransactionType: typeof onEditTransaction,
+    loading
+  });
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -32,14 +39,22 @@ const TransactionCardList = ({ transactions, loading, onEditTransaction, compani
 
   return (
     <div className="space-y-3">
-      {transactions.map((transaction) => (
-        <TransactionCard
-          key={transaction.id}
-          transaction={transaction}
-          onRowClick={onEditTransaction} // This will be undefined if not passed, but now handled safely
-          companyLogo={getCompanyLogo(transaction.name, companies)}
-        />
-      ))}
+      {transactions.map((transaction, index) => {
+        console.log(`Rendering TransactionCard ${index}:`, {
+          transactionId: transaction.id,
+          transactionName: transaction.name,
+          onEditTransactionPassed: !!onEditTransaction
+        });
+        
+        return (
+          <TransactionCard
+            key={transaction.id}
+            transaction={transaction}
+            onRowClick={onEditTransaction}
+            companyLogo={getCompanyLogo(transaction.name, companies)}
+          />
+        );
+      })}
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { Building, User } from "lucide-react";
 
 interface TransactionCardProps {
   transaction: Transaction;
-  onRowClick?: (transaction: Transaction) => void; // Made optional with default
+  onRowClick?: (transaction: Transaction) => void;
   companyLogo?: string | null;
 }
 
@@ -47,18 +47,43 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
     );
   };
 
-  const handleClick = () => {
-    if (onRowClick && typeof onRowClick === 'function') {
-      onRowClick(transaction);
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("TransactionCard clicked:", {
+      transactionId: transaction.id,
+      transactionName: transaction.name,
+      onRowClickExists: !!onRowClick,
+      onRowClickType: typeof onRowClick
+    });
+
+    try {
+      if (onRowClick && typeof onRowClick === 'function') {
+        onRowClick(transaction);
+      } else {
+        console.warn("onRowClick is not a function or is undefined:", onRowClick);
+      }
+    } catch (error) {
+      console.error("Error calling onRowClick:", error);
     }
   };
 
+  const isClickable = onRowClick && typeof onRowClick === 'function';
+
   return (
     <div
-      onClick={handleClick}
-      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow ${
-        onRowClick ? 'cursor-pointer' : 'cursor-default'
+      onClick={isClickable ? handleClick : undefined}
+      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm transition-shadow ${
+        isClickable 
+          ? 'cursor-pointer hover:shadow-md active:bg-muted/50' 
+          : 'cursor-default'
       }`}
+      style={{
+        WebkitTapHighlightColor: 'transparent',
+        touchAction: 'manipulation',
+        userSelect: 'none'
+      }}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {getAvatarContent()}

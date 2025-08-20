@@ -14,12 +14,19 @@ import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
-  onEditTransaction?: (transaction: Transaction) => void; // Made optional
+  onEditTransaction?: (transaction: Transaction) => void;
   companies: Company[];
 }
 
 const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: AllTransactionsTableProps) => {
   const isMobile = useIsMobile();
+  
+  console.log("AllTransactionsTable rendered:", {
+    isMobile,
+    transactionsCount: transactions.length,
+    onEditTransactionExists: !!onEditTransaction,
+    onEditTransactionType: typeof onEditTransaction
+  });
   
   const statusVariant = {
     "Concluído": "default",
@@ -28,17 +35,31 @@ const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: Al
   } as const;
 
   const handleRowClick = (transaction: Transaction) => {
-    if (onEditTransaction && typeof onEditTransaction === 'function') {
-      onEditTransaction(transaction);
+    console.log("AllTransactionsTable handleRowClick:", {
+      transactionId: transaction.id,
+      onEditTransactionExists: !!onEditTransaction,
+      onEditTransactionType: typeof onEditTransaction
+    });
+
+    try {
+      if (onEditTransaction && typeof onEditTransaction === 'function') {
+        onEditTransaction(transaction);
+      } else {
+        console.warn("onEditTransaction is not a function or is undefined:", onEditTransaction);
+      }
+    } catch (error) {
+      console.error("Error calling onEditTransaction:", error);
     }
   };
 
   // Renderizar cards no mobile
   if (isMobile) {
+    console.log("Rendering mobile view with TransactionCardList");
     return <TransactionCardList transactions={transactions} onEditTransaction={onEditTransaction} companies={companies} loading={false} />;
   }
 
   // Renderizar tabela no desktop
+  console.log("Rendering desktop view with Table");
   return (
     <div className="rounded-md border overflow-x-auto">
       <Table>
