@@ -38,7 +38,6 @@ const CategoriesPage = () => {
     const { data, error } = await supabase
       .from("categories")
       .select("*")
-      .eq("user_id", user.id)
       .eq("workspace_id", currentWorkspace.id)
       .order("name");
 
