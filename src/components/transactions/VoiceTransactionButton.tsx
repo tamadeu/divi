@@ -36,22 +36,29 @@ const VoiceTransactionButton = () => {
   }, [showModal]);
 
   const handleVoiceInput = () => {
-    console.log("🔥 Botão clicado - forçando modal");
+    console.log("🔥 Botão clicado - abrindo modal");
     setShowModal(true);
     setIsListening(true);
     
-    // Simular processo por enquanto
+    // Simular listening por 5 segundos
     setTimeout(() => {
-      console.log("🔥 Simulando fim do listening");
+      console.log("🔥 Mudando para processing");
       setIsListening(false);
       setIsProcessing(true);
       
+      // Simular processing por 3 segundos
       setTimeout(() => {
-        console.log("🔥 Simulando fim do processing");
+        console.log("🔥 Fechando modal");
         setIsProcessing(false);
         setShowModal(false);
-      }, 2000);
-    }, 3000);
+        
+        // Simular abertura do modal de transação
+        setTimeout(() => {
+          console.log("🔥 Abrindo modal de transação");
+          openAddTransactionModal();
+        }, 500);
+      }, 3000);
+    }, 5000);
   };
 
   const closeModal = () => {
@@ -98,7 +105,7 @@ const VoiceTransactionButton = () => {
             </Button>
 
             <div className="mt-4">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">MODAL DE TESTE</h2>
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Transação por Voz</h2>
               
               {isListening && !isProcessing && (
                 <div>
@@ -107,7 +114,7 @@ const VoiceTransactionButton = () => {
                     <div className="absolute inset-0 rounded-full border-4 border-blue-500 animate-ping"></div>
                   </div>
                   <h3 className="text-lg font-semibold text-blue-600 mb-2">Ouvindo...</h3>
-                  <p className="text-sm text-gray-600">Fale agora!</p>
+                  <p className="text-sm text-gray-600">Diga algo como: "Gastei 50 reais no Uber hoje"</p>
                 </div>
               )}
               
@@ -115,7 +122,7 @@ const VoiceTransactionButton = () => {
                 <div>
                   <Loader2 className="h-16 w-16 text-green-500 animate-spin mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-green-600 mb-2">Processando...</h3>
-                  <p className="text-sm text-gray-600">Analisando sua fala...</p>
+                  <p className="text-sm text-gray-600">Analisando sua fala e criando a transação...</p>
                 </div>
               )}
 
