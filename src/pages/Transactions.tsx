@@ -34,8 +34,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
-import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet"; // Import the new component
-import { format } from "date-fns";
+import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet";
+import { format, subMonths } from "date-fns"; // Adicionado subMonths aqui
 
 const ITEMS_PER_PAGE = 10;
 
@@ -51,12 +51,12 @@ const TransactionsPage = () => {
   const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [monthFilter, setMonthFilter] = useState("all"); // Novo estado para o filtro de mês
+  const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [accountTypeFilter, setAccountTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false); // New state for filter sheet
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
   const fetchTransactions = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -139,7 +139,7 @@ const TransactionsPage = () => {
 
       return searchMatch && statusMatch && categoryMatch && accountTypeMatch && monthMatch;
     });
-  }, [allTransactions, searchQuery, monthFilter, statusFilter, categoryFilter, accountTypeFilter]); // Adicionar monthFilter aqui
+  }, [allTransactions, searchQuery, monthFilter, statusFilter, categoryFilter, accountTypeFilter]);
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
@@ -395,8 +395,8 @@ const TransactionsPage = () => {
       <TransactionFiltersSheet
         isOpen={isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}
-        monthFilter={monthFilter} // Passar o novo filtro
-        setMonthFilter={setMonthFilter} // Passar o setter do novo filtro
+        monthFilter={monthFilter}
+        setMonthFilter={setMonthFilter}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
         categoryFilter={categoryFilter}
