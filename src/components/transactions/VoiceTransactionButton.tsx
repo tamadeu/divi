@@ -158,8 +158,9 @@ const VoiceTransactionButton = () => {
   };
 
   const sendRecording = async () => {
-    if (!audioBlob || !currentWorkspace) {
-      showError("Nenhuma gravação para enviar.");
+    if (!audioBlob || !currentWorkspace || isProcessing) {
+      if (!audioBlob) showError("Nenhuma gravação para enviar.");
+      if (!currentWorkspace) showError("Nenhum núcleo financeiro selecionado.");
       return;
     }
 
@@ -167,10 +168,30 @@ const VoiceTransactionButton = () => {
     
     try {
       console.log("🤖 Enviando áudio para processamento...");
+      console.log("Tamanho do áudio:", audioBlob.size, "bytes");
+      console.log("Tipo do áudio:", audioBlob.type);
       
-      // Converter blob para base64
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      // Verificar se o áudio não está muito grande (limite de 25MB)
+      if (audioBlob.size > 25 * 1024 * 1024) {
+        throw new Error("Áudio muito grande. Tente gravar um áudio mais curto.");
+      }
+      
+      // Converter blob para base64 de forma mais eficiente
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remover o prefixo "data:audio/...;base64,"
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = () => reject(new Error("Erro ao converter áudio"));
+      });
+      
+      reader.readAsDataURL(audioBlob);
+      const base64Audio = await base64Promise;
+      
+      console.log("Áudio convertido para base64, tamanho:", base64Audio.length);
       
       // Chamar edge function para processar áudio
       const { data, error } = await supabase.functions.invoke('process-voice-transaction', {
@@ -183,9 +204,7 @@ const VoiceTransactionButton = () => {
 
       if (error) {
         console.error("Erro na edge function:", error);
-        showError("Erro ao processar áudio: " + error.message);
-        setIsProcessing(false);
-        return;
+        throw new Error(error.message || "Erro ao processar áudio");
       }
 
       console.log("🤖 Resultado da IA:", data);
@@ -195,7 +214,6 @@ const VoiceTransactionButton = () => {
         
         // Fechar modal de voz
         setShowModal(false);
-        setIsProcessing(false);
         resetModal();
         
         // Aguardar um pouco e abrir modal de transação com dados preenchidos
@@ -211,12 +229,13 @@ const VoiceTransactionButton = () => {
         
         showSuccess("Áudio processado! Verifique os dados antes de salvar.");
       } else {
-        showError(data?.error || "Não foi possível processar o áudio.");
-        setIsProcessing(false);
+        throw new Error(data?.error || "Não foi possível processar o áudio.");
       }
     } catch (error) {
       console.error("Erro ao processar áudio:", error);
-      showError("Erro inesperado ao processar áudio.");
+      const errorMessage = error instanceof Error ? error.message : "Erro inesperado ao processar áudio.";
+      showError(errorMessage);
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -361,6 +380,7 @@ const VoiceTransactionButton = () => {
                       onClick={discardRecording}
                       variant="outline"
                       className="rounded-full w-12 h-12"
+                      disabled={isProcessing}
                     >
                       <Trash2 className="h-5 w-5" />
                     </Button>
@@ -368,6 +388,7 @@ const VoiceTransactionButton = () => {
                     <Button
                       onClick={sendRecording}
                       className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12"
+                      disabled={isProcessing}
                     >
                       <Send className="h-5 w-5" />
                     </Button>
