@@ -81,44 +81,47 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
   // Initialize form data when account changes or modal opens
   useEffect(() => {
     const initializeFormData = async () => {
-      if (account && isOpen) {
-        // Set initial form data immediately with account details
-        setFormData({
-          name: account.name,
-          bank: "", // Will be updated after banks are fetched
-          type: mapAccountTypeForDisplay(account.type),
-          includeInTotal: account.include_in_total,
-        });
-
-        setLoadingBanks(true);
-        const { data, error } = await supabase
-          .from("banks")
-          .select("id, name, logo_url, color")
-          .order("name");
-
-        if (error) {
-          console.error("Error fetching banks:", error);
-          showError("Erro ao carregar bancos");
-          setBanks([]);
-        } else {
-          setBanks(data || []);
-          const exactBankName = getExactBankName(account.bank, data || []);
-          // Update form data with the correct bank name after fetching banks
-          setFormData(prev => ({
-            ...prev,
-            bank: exactBankName,
-          }));
-        }
-        setLoadingBanks(false);
-      } else if (!isOpen) {
-        // Reset form data when modal closes
+      if (!isOpen || !account) {
+        // Reset form data when modal closes or account is null
         setFormData({
           name: "",
           bank: "",
           type: "",
           includeInTotal: true,
         });
+        return;
       }
+
+      setLoadingBanks(true);
+      const { data: fetchedBanks, error: banksError } = await supabase
+        .from("banks")
+        .select("id, name, logo_url, color")
+        .order("name");
+
+      if (banksError) {
+        console.error("Error fetching banks:", banksError);
+        showError("Erro ao carregar bancos");
+        setBanks([]);
+        // Even on error, try to set other form data, but bank will be empty
+        setFormData({
+          name: account.name,
+          bank: "", 
+          type: mapAccountTypeForDisplay(account.type),
+          includeInTotal: account.include_in_total,
+        });
+      } else {
+        setBanks(fetchedBanks || []);
+        const exactBankName = getExactBankName(account.bank, fetchedBanks || []);
+        
+        // Set all form data at once after fetching banks
+        setFormData({
+          name: account.name,
+          bank: exactBankName,
+          type: mapAccountTypeForDisplay(account.type),
+          includeInTotal: account.include_in_total,
+        });
+      }
+      setLoadingBanks(false);
     };
 
     initializeFormData();
