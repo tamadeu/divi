@@ -105,8 +105,22 @@ const VoiceTransactionButton = () => {
     };
   }, []);
 
-  const startRecording = async () => {
+  const startRecording = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log("🎤 Tentando iniciar gravação...");
+    
     try {
+      // Verificar se o navegador suporta getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Seu navegador não suporta gravação de áudio");
+      }
+
+      console.log("🎤 Solicitando permissão do microfone...");
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -115,28 +129,51 @@ const VoiceTransactionButton = () => {
         } 
       });
       
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-      });
+      console.log("🎤 Permissão concedida, criando MediaRecorder...");
+      
+      // Verificar tipos MIME suportados
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/wav')) {
+          mimeType = 'audio/wav';
+        } else {
+          mimeType = ''; // Deixar o navegador escolher
+        }
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
       mediaRecorder.ondataavailable = (event) => {
+        console.log("🎤 Dados de áudio recebidos:", event.data.size, "bytes");
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
       
       mediaRecorder.onstop = () => {
+        console.log("🎤 MediaRecorder parado, criando blob...");
         const audioBlob = new Blob(audioChunksRef.current, { 
-          type: mediaRecorder.mimeType 
+          type: mediaRecorder.mimeType || mimeType
         });
+        console.log("🎤 Blob criado:", audioBlob.size, "bytes, tipo:", audioBlob.type);
         setAudioBlob(audioBlob);
         setHasRecording(true);
         
         // Parar todas as tracks do stream
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => {
+          track.stop();
+          console.log("🎤 Track parada:", track.kind);
+        });
+      };
+      
+      mediaRecorder.onerror = (event) => {
+        console.error("🎤 Erro no MediaRecorder:", event);
+        showError("Erro durante a gravação: " + event.error?.message);
       };
       
       mediaRecorder.start(100); // Coletar dados a cada 100ms
@@ -148,32 +185,49 @@ const VoiceTransactionButton = () => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
       
-      console.log("🎤 Gravação iniciada");
+      console.log("🎤 Gravação iniciada com sucesso!");
       
     } catch (error) {
-      console.error("Erro ao iniciar gravação:", error);
+      console.error("🎤 Erro ao iniciar gravação:", error);
       let errorMessage = "Erro ao acessar o microfone.";
       
       if (error instanceof DOMException) {
         switch (error.name) {
           case 'NotAllowedError':
-            errorMessage = "Permissão para usar o microfone foi negada.";
+            errorMessage = "Permissão para usar o microfone foi negada. Verifique as configurações do seu navegador.";
             break;
           case 'NotFoundError':
-            errorMessage = "Nenhum microfone encontrado.";
+            errorMessage = "Nenhum microfone encontrado no dispositivo.";
             break;
           case 'NotReadableError':
             errorMessage = "Microfone está sendo usado por outro aplicativo.";
             break;
+          case 'OverconstrainedError':
+            errorMessage = "Configurações de áudio não suportadas pelo dispositivo.";
+            break;
+          case 'SecurityError':
+            errorMessage = "Acesso ao microfone bloqueado por questões de segurança.";
+            break;
         }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
       
       showError(errorMessage);
-      setShowModal(false);
+      
+      // Não fechar o modal, deixar o usuário tentar novamente
+      console.log("🎤 Mantendo modal aberto para nova tentativa");
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log("🎤 Tentando parar gravação...");
+    
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -183,18 +237,29 @@ const VoiceTransactionButton = () => {
         timerRef.current = null;
       }
       
-      console.log("🎤 Gravação parada");
+      console.log("🎤 Gravação parada com sucesso!");
     }
   };
 
-  const discardRecording = () => {
+  const discardRecording = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log("🎤 Descartando gravação...");
     setHasRecording(false);
     setAudioBlob(null);
     setRecordingTime(0);
     audioChunksRef.current = [];
   };
 
-  const sendRecording = async () => {
+  const sendRecording = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!audioBlob || !currentWorkspace || isProcessing) {
       if (!audioBlob) showError("Nenhuma gravação para enviar.");
       if (!currentWorkspace) showError("Nenhum núcleo financeiro selecionado.");
@@ -396,14 +461,10 @@ const VoiceTransactionButton = () => {
         touchAction: 'none', // Prevenir gestos no mobile
       }}
       onClick={handleBackdropClick}
-      onTouchStart={(e) => e.stopPropagation()}
-      onTouchEnd={(e) => e.stopPropagation()}
     >
       <div 
         className="w-full max-w-sm mx-auto"
         onClick={handleModalClick}
-        onTouchStart={(e) => e.stopPropagation()}
-        onTouchEnd={(e) => e.stopPropagation()}
       >
         <Card className="relative bg-white shadow-2xl border-2">
           <CardContent className="p-6 text-center">
@@ -413,7 +474,6 @@ const VoiceTransactionButton = () => {
               className="absolute top-2 right-2 h-8 w-8 hover:bg-gray-100"
               onClick={closeModal}
               disabled={isRecording || isProcessing}
-              onTouchStart={(e) => e.stopPropagation()}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -431,13 +491,17 @@ const VoiceTransactionButton = () => {
                   <p className="text-xs text-gray-500 italic">"Gastei 50 reais no Uber hoje"</p>
                   <p className="text-xs text-gray-500 italic">"Recebi 2000 reais de salário"</p>
                   
-                  <Button
+                  <button
                     onClick={startRecording}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    className="mt-4 bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16"
+                    onTouchEnd={startRecording}
+                    className="mt-4 bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                    style={{ 
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'manipulation'
+                    }}
                   >
                     <Mic className="h-6 w-6" />
-                  </Button>
+                  </button>
                 </div>
               )}
               
@@ -452,13 +516,17 @@ const VoiceTransactionButton = () => {
                   <p className="text-2xl font-mono text-red-600 mb-4">{formatTime(recordingTime)}</p>
                   <p className="text-sm text-gray-600 mb-4">Fale sobre sua transação</p>
                   
-                  <Button
+                  <button
                     onClick={stopRecording}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-16 h-16"
+                    onTouchEnd={stopRecording}
+                    className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-16 h-16 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                    style={{ 
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'manipulation'
+                    }}
                   >
                     <Square className="h-6 w-6" />
-                  </Button>
+                  </button>
                 </div>
               )}
               
@@ -473,24 +541,31 @@ const VoiceTransactionButton = () => {
                   <p className="text-sm text-gray-600 mb-4">Enviar para processar ou gravar novamente?</p>
                   
                   <div className="flex justify-center gap-3">
-                    <Button
+                    <button
                       onClick={discardRecording}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      variant="outline"
-                      className="rounded-full w-12 h-12"
+                      onTouchEnd={discardRecording}
+                      className="border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-full w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
                       disabled={isProcessing}
+                      style={{ 
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation'
+                      }}
                     >
                       <Trash2 className="h-5 w-5" />
-                    </Button>
+                    </button>
                     
-                    <Button
+                    <button
                       onClick={sendRecording}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12"
+                      onTouchEnd={sendRecording}
+                      className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                       disabled={isProcessing}
+                      style={{ 
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation'
+                      }}
                     >
                       <Send className="h-5 w-5" />
-                    </Button>
+                    </button>
                   </div>
                 </div>
               )}
@@ -523,7 +598,6 @@ const VoiceTransactionButton = () => {
         variant="outline"
         className="gap-1 w-full md:w-auto"
         onClick={handleVoiceInput}
-        onTouchStart={(e) => e.stopPropagation()}
         disabled={!currentWorkspace}
       >
         <Mic className="h-4 w-4" />
