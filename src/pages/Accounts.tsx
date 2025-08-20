@@ -108,9 +108,13 @@ const AccountsPage = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Contas</h1>
-        <Button size="sm" className="gap-1" onClick={() => openAddAccountModal(fetchAccounts)}>
+        <Button 
+          size="sm" 
+          className="gap-1 w-full sm:w-auto" 
+          onClick={() => openAddAccountModal(fetchAccounts)}
+        >
           <PlusCircle className="h-4 w-4" />
           Nova Conta
         </Button>
@@ -118,31 +122,33 @@ const AccountsPage = () => {
 
       <Tabs defaultValue="cards" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="cards">Visualização em Cards</TabsTrigger>
-          <TabsTrigger value="table">Visualização em Tabela</TabsTrigger>
+          <TabsTrigger value="cards">Cards</TabsTrigger>
+          <TabsTrigger value="table">Tabela</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="cards">
+        <TabsContent value="cards" className="space-y-4">
           {loading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <Skeleton className="h-48 w-full" />
               <Skeleton className="h-48 w-full" />
               <Skeleton className="h-48 w-full" />
             </div>
           ) : accounts.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {accounts.map((account) => (
                 <Card key={account.id} className="flex flex-col">
                   <Link to={`/accounts/${account.id}`} className="flex-grow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span className="truncate">{account.name}</span>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                        <span className="truncate pr-2">{account.name}</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       </CardTitle>
-                      <CardDescription>{account.bank} - {account.type}</CardDescription>
+                      <CardDescription className="text-sm">
+                        {account.bank} - {account.type}
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
+                    <CardContent className="pt-0">
+                      <div className="text-xl sm:text-2xl font-bold">
                         {account.balance.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL",
@@ -152,7 +158,7 @@ const AccountsPage = () => {
                   </Link>
                   <div className="p-4 pt-0">
                     {account.is_default ? (
-                      <Badge>
+                      <Badge className="w-full justify-center sm:w-auto">
                         <Star className="mr-2 h-4 w-4" />
                         Padrão
                       </Badge>
@@ -160,6 +166,7 @@ const AccountsPage = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="w-full sm:w-auto"
                         onClick={() => handleSetDefault(account.id)}
                         disabled={settingDefaultId === account.id}
                       >
@@ -171,15 +178,15 @@ const AccountsPage = () => {
               ))}
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-              <div className="flex flex-col items-center gap-1 text-center">
-                <h3 className="text-2xl font-bold tracking-tight">
+            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-12">
+              <div className="flex flex-col items-center gap-1 text-center px-4">
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
                   Nenhuma conta encontrada
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   Comece adicionando sua primeira conta.
                 </p>
-                <Button className="mt-4" onClick={() => openAddAccountModal(fetchAccounts)}>
+                <Button onClick={() => openAddAccountModal(fetchAccounts)}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Adicionar Conta
                 </Button>
@@ -188,7 +195,7 @@ const AccountsPage = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="table">
+        <TabsContent value="table" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Todas as Contas</CardTitle>
@@ -200,13 +207,15 @@ const AccountsPage = () => {
               {loading ? (
                 <Skeleton className="h-64 w-full" />
               ) : (
-                <AccountsTable
-                  accounts={accounts}
-                  onEdit={handleEditAccount}
-                  onDelete={handleDeleteAccount}
-                  onSetDefault={handleSetDefault}
-                  settingDefaultId={settingDefaultId}
-                />
+                <div className="overflow-x-auto">
+                  <AccountsTable
+                    accounts={accounts}
+                    onEdit={handleEditAccount}
+                    onDelete={handleDeleteAccount}
+                    onSetDefault={handleSetDefault}
+                    settingDefaultId={settingDefaultId}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
