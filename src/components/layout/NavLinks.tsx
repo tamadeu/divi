@@ -35,7 +35,6 @@ const NavLinks = () => {
       const { count, error } = await supabase
         .from("transactions")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
         .eq("workspace_id", currentWorkspace.id);
 
       if (error) {
