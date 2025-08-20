@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   ArrowRightLeft,
   Mic,
+  PlusCircle, // Certificando que PlusCircle está importado
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ModeToggle } from "@/components/ui/mode-toggle"; // Corrected import path
+import { ModeToggle } from "@/components/ui/mode-toggle";
 import { useSession } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
