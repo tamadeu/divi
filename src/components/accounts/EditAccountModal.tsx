@@ -209,8 +209,17 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[425px] relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-4 left-4 h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 z-10"
+          onClick={handleDelete}
+          disabled={isDeleting}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <DialogHeader className="pl-12">
           <DialogTitle>Editar Conta</DialogTitle>
           <DialogDescription>
             Atualize os detalhes da sua conta.
@@ -345,25 +354,13 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                 </FormItem>
               )}
             />
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button 
-                type="button" 
-                variant="destructive" 
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-full sm:w-auto"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {isDeleting ? "Excluindo..." : "Excluir Conta"}
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancelar
               </Button>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button type="button" variant="ghost" onClick={onClose} className="flex-1 sm:flex-none">
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
-                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
-                </Button>
-              </div>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
