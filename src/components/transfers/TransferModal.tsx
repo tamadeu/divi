@@ -130,17 +130,26 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
     if (isOpen) {
       fetchData().then(() => {
         if (initialTransferData) {
-          // Preencher o formulário com os dados da transferência existente
+          const { fromTransaction, toTransaction } = initialTransferData;
+          const initialCategoryId = toTransaction.category_id || "";
+
           form.reset({
-            from_account_id: initialTransferData.fromTransaction.account_id || "",
-            to_account_id: initialTransferData.toTransaction.account_id || "",
-            amount: Math.abs(initialTransferData.fromTransaction.amount),
-            date: new Date(initialTransferData.fromTransaction.date),
-            category_id: initialTransferData.toTransaction.category_id || "",
-            description: initialTransferData.fromTransaction.description || "",
+            from_account_id: fromTransaction.account_id || "",
+            to_account_id: toTransaction.account_id || "",
+            amount: Math.abs(fromTransaction.amount),
+            date: new Date(fromTransaction.date),
+            category_id: initialCategoryId, // Set it initially
+            description: fromTransaction.description || "",
           });
+
+          // Explicitly set category_id again after a short delay
+          // This can help if there's a race condition with Select options loading
+          if (initialCategoryId) {
+            setTimeout(() => {
+              form.setValue('category_id', initialCategoryId, { shouldValidate: true });
+            }, 50); // Small delay
+          }
         } else {
-          // Resetar para valores padrão para nova transferência
           form.reset({
             amount: 0,
             date: new Date(),
