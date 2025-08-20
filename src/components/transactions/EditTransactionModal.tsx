@@ -15,6 +15,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -35,7 +45,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category, Transaction } from "@/types/database";
-import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon } from "lucide-react";
+import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon, Trash2 } from "lucide-react";
 import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -63,10 +73,11 @@ interface EditTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTransactionUpdated: () => void;
+  onTransactionDeleted: () => void;
   transaction: Transaction | null;
 }
 
-const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transaction }: EditTransactionModalProps) => {
+const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, onTransactionDeleted, transaction }: EditTransactionModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -77,7 +88,8 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFutureDate, setIsFutureDate] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
-  const [originalBalance, setOriginalBalance] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isMobile = useIsMobile();
 
   const form = useForm<TransactionFormValues>({
@@ -143,12 +155,6 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
       fetchData().then(() => {
         const transactionType = transaction.amount > 0 ? "income" : "expense";
         const absoluteAmount = Math.abs(transaction.amount);
-        
-        // Armazenar o saldo original da conta para cálculos
-        const account = accounts.find(acc => acc.id === transaction.account_id);
-        if (account) {
-          setOriginalBalance(account.balance);
-        }
 
         form.reset({
           name: transaction.name,
@@ -162,7 +168,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
         });
       });
     }
-  }, [isOpen, transaction, form, fetchData, accounts]);
+  }, [isOpen, transaction, form, fetchData]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -280,6 +286,58 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
     onTransactionUpdated();
     onClose();
     setIsSubmitting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!transaction) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        showError("Você precisa estar logado.");
+        return;
+      }
+
+      // Se a transação estava concluída, precisamos reverter o saldo da conta
+      if (transaction.status === 'Concluído' && transaction.account_id) {
+        const { data: accountData } = await supabase
+          .from("accounts")
+          .select("balance")
+          .eq("id", transaction.account_id)
+          .single();
+
+        if (accountData) {
+          const newBalance = accountData.balance - transaction.amount;
+          await supabase
+            .from("accounts")
+            .update({ balance: newBalance })
+            .eq("id", transaction.account_id);
+        }
+      }
+
+      // Deletar a transação
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", transaction.id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        showError("Erro ao excluir transação: " + error.message);
+        return;
+      }
+
+      showSuccess("Transação excluída com sucesso!");
+      onTransactionDeleted();
+      setShowDeleteDialog(false);
+      onClose();
+    } catch (error) {
+      showError("Erro inesperado ao excluir transação.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleCalculatorValue = (value: string) => {
@@ -587,19 +645,30 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
             "px-6 py-4 border-t flex-shrink-0",
             isMobile && "flex-col gap-2 sm:flex-col"
           )}>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              onClick={form.handleSubmit(handleSubmit)}
-              className={cn(isMobile && "w-full order-1")}
-            >
-              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
-            </Button>
+            <div className="flex gap-2 w-full">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                onClick={form.handleSubmit(handleSubmit)}
+                className="flex-1"
+              >
+                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isSubmitting}
+                className="flex-shrink-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
             <Button 
               type="button" 
               variant="ghost" 
               onClick={onClose}
-              className={cn(isMobile && "w-full order-2")}
+              className="w-full"
             >
               Cancelar
             </Button>
@@ -617,6 +686,35 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
           />
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+              {transaction?.status === 'Concluído' && (
+                <span className="block mt-2 text-sm font-medium">
+                  O saldo da conta será ajustado automaticamente.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AddAccountModal
         isOpen={isAddAccountModalOpen}

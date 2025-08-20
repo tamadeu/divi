@@ -10,7 +10,6 @@ import TransactionCardList from "@/components/transactions/TransactionCardList";
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -43,10 +42,6 @@ const Index = () => {
     openEditTransactionModal,
     closeEditTransactionModal,
     editTransactionData,
-    isTransactionDetailsModalOpen,
-    openTransactionDetailsModal,
-    closeTransactionDetailsModal,
-    transactionDetailsData,
   } = useModal();
 
   const isMobile = useIsMobile();
@@ -195,12 +190,8 @@ const Index = () => {
     fetchData();
   };
 
+  // Agora ao clicar na transação vai direto para o modal de edição
   const handleRowClick = (transaction: Transaction) => {
-    openTransactionDetailsModal(transaction);
-  };
-
-  const handleEditTransaction = (transaction: Transaction) => {
-    closeTransactionDetailsModal(); // Fechar o modal de detalhes primeiro
     openEditTransactionModal(transaction);
   };
 
@@ -326,15 +317,8 @@ const Index = () => {
         isOpen={isEditTransactionModalOpen}
         onClose={closeEditTransactionModal}
         onTransactionUpdated={handleTransactionUpdated}
-        transaction={editTransactionData}
-      />
-
-      <TransactionDetailsModal
-        transaction={transactionDetailsData}
-        isOpen={isTransactionDetailsModalOpen}
-        onClose={closeTransactionDetailsModal}
-        onEdit={handleEditTransaction}
         onTransactionDeleted={handleTransactionDeleted}
+        transaction={editTransactionData}
       />
     </div>
   );
