@@ -15,7 +15,7 @@ import {
   Users,
   Wallet,
   Landmark,
-  CreditCard, // Import CreditCard icon
+  CreditCard,
   DollarSign,
   ListChecks,
   Settings,
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ModeToggle } from "@/components/mode-toggle"; // Corrected import path
+import { ModeToggle } from "@/components/ui/mode-toggle"; // Corrected import path
 import { useSession } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
@@ -67,7 +67,7 @@ const Layout = () => {
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Transações", href: "/transactions", icon: DollarSign },
     { name: "Contas", href: "/accounts", icon: Wallet },
-    { name: "Cartões de Crédito", href: "/credit-cards", icon: CreditCard }, // New navigation item
+    { name: "Cartões de Crédito", href: "/credit-cards", icon: CreditCard },
     { name: "Categorias", href: "/categories", icon: ListChecks },
     { name: "Orçamentos", href: "/budgets", icon: Package },
     { name: "Relatórios", href: "/reports", icon: BarChart3 },
