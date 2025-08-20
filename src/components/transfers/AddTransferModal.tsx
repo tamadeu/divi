@@ -77,6 +77,9 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       amount: 0,
       date: new Date(),
       description: "",
+      from_account_id: "",
+      to_account_id: "",
+      category_id: "",
     },
   });
 
@@ -96,13 +99,30 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       .eq("type", "income")
       .order("name", { ascending: true });
     setIncomeCategories(categoriesData || []);
-  }, []);
+
+    // Pré-selecionar conta padrão como origem
+    if (accountsData && accountsData.length > 0) {
+      const defaultAccount = accountsData.find(acc => acc.is_default);
+      if (defaultAccount) {
+        form.setValue('from_account_id', defaultAccount.id, { shouldValidate: true });
+      }
+    }
+  }, [form]);
 
   useEffect(() => {
     if (isOpen) {
+      // Reset form quando abrir o modal
+      form.reset({
+        amount: 0,
+        date: new Date(),
+        description: "",
+        from_account_id: "",
+        to_account_id: "",
+        category_id: "",
+      });
       fetchData();
     }
-  }, [isOpen, fetchData]);
+  }, [isOpen, fetchData, form]);
 
   const handleSubmit = async (values: TransferFormValues) => {
     setIsSubmitting(true);
@@ -226,7 +246,7 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>De</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Conta de Origem" />
@@ -246,7 +266,7 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Para</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Conta de Destino" />
@@ -304,7 +324,7 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
                     <FormItem>
                       <FormLabel>Categoria da Entrada</FormLabel>
                       <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione uma categoria de receita" />
