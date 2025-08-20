@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Workbox } from 'workbox-window';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -13,9 +13,19 @@ interface BeforeInstallPromptEvent extends Event {
 export const usePWA = () => {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [wb, setWb] = useState<Workbox | null>(null);
+
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r) {
+      console.log('SW Registered: ' + r);
+    },
+    onRegisterError(error) {
+      console.log('SW registration error', error);
+    },
+  });
 
   useEffect(() => {
     // Verifica se já está instalado
@@ -26,19 +36,6 @@ export const usePWA = () => {
     };
 
     checkIfInstalled();
-
-    // Service Worker registration
-    if ('serviceWorker' in navigator) {
-      const workbox = new Workbox('/sw.js');
-      setWb(workbox);
-
-      // Listener para atualizações
-      workbox.addEventListener('waiting', () => {
-        setIsUpdateAvailable(true);
-      });
-
-      workbox.register();
-    }
 
     // Listener para o prompt de instalação
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -83,17 +80,14 @@ export const usePWA = () => {
   };
 
   const updateApp = () => {
-    if (wb) {
-      wb.messageSkipWaiting();
-      setIsUpdateAvailable(false);
-      window.location.reload();
-    }
+    updateServiceWorker(true);
+    setNeedRefresh(false);
   };
 
   return {
     isInstallable,
     isInstalled,
-    isUpdateAvailable,
+    isUpdateAvailable: needRefresh,
     installApp,
     updateApp
   };
