@@ -43,6 +43,9 @@ interface AddEditCompanyModalProps {
   company?: Company | null;
 }
 
+// Placeholder padrão para empresas
+const DEFAULT_COMPANY_PLACEHOLDER = "https://via.placeholder.com/200x200/6366f1/ffffff?text=EMPRESA";
+
 const AddEditCompanyModal = ({ isOpen, onClose, onCompanySaved, company }: AddEditCompanyModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -171,14 +174,19 @@ const AddEditCompanyModal = ({ isOpen, onClose, onCompanySaved, company }: AddEd
         finalLogoUrl = uploadedUrl;
 
         // Delete old image if editing
-        if (isEditing && company?.logo_url && company.logo_url !== uploadedUrl) {
+        if (isEditing && company?.logo_url && company.logo_url !== uploadedUrl && company.logo_url !== DEFAULT_COMPANY_PLACEHOLDER) {
           await deleteOldImage(company.logo_url);
         }
       }
 
+      // Se não há imagem fornecida, usar placeholder padrão
+      if (!finalLogoUrl || finalLogoUrl.trim() === "") {
+        finalLogoUrl = DEFAULT_COMPANY_PLACEHOLDER;
+      }
+
       const companyData = {
         name: values.name,
-        logo_url: finalLogoUrl || null,
+        logo_url: finalLogoUrl,
       };
 
       if (isEditing && company) {
@@ -213,7 +221,7 @@ const AddEditCompanyModal = ({ isOpen, onClose, onCompanySaved, company }: AddEd
     form.setValue('logo_url', "");
   };
 
-  const currentImageUrl = uploadedImageUrl || watchedLogoUrl;
+  const currentImageUrl = uploadedImageUrl || watchedLogoUrl || DEFAULT_COMPANY_PLACEHOLDER;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -268,6 +276,9 @@ const AddEditCompanyModal = ({ isOpen, onClose, onCompanySaved, company }: AddEd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Logo da Empresa</FormLabel>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Opcional - Se não fornecida, será usado um placeholder padrão.
+                  </p>
                   <Tabs defaultValue="upload" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                       <TabsTrigger value="upload">Upload de Imagem</TabsTrigger>
@@ -282,7 +293,7 @@ const AddEditCompanyModal = ({ isOpen, onClose, onCompanySaved, company }: AddEd
                           onChange={handleFileSelect}
                           className="flex-1"
                         />
-                        {currentImageUrl && (
+                        {(uploadedImageUrl || watchedLogoUrl) && (
                           <Button
                             type="button"
                             variant="outline"

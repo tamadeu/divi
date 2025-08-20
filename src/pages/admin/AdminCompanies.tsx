@@ -11,6 +11,9 @@ import AddEditCompanyModal from "@/components/admin/AddEditCompanyModal";
 import DeleteCompanyAlert from "@/components/admin/DeleteCompanyAlert";
 import { Input } from "@/components/ui/input";
 
+// Placeholder padrão para empresas
+const DEFAULT_COMPANY_PLACEHOLDER = "https://via.placeholder.com/200x200/6366f1/ffffff?text=EMPRESA";
+
 const AdminCompanies = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
@@ -81,6 +84,11 @@ const AdminCompanies = () => {
 
   const deleteImageFromStorage = async (url: string) => {
     try {
+      // Não deletar placeholder padrão
+      if (url === DEFAULT_COMPANY_PLACEHOLDER) {
+        return;
+      }
+
       if (url && url.includes('supabase')) {
         // Extract filename from URL
         const urlParts = url.split('/');
@@ -102,8 +110,8 @@ const AdminCompanies = () => {
     if (!deletingCompany) return;
 
     try {
-      // Delete image from storage if it exists
-      if (deletingCompany.logo_url) {
+      // Delete image from storage if it exists and is not the default placeholder
+      if (deletingCompany.logo_url && deletingCompany.logo_url !== DEFAULT_COMPANY_PLACEHOLDER) {
         await deleteImageFromStorage(deletingCompany.logo_url);
       }
 

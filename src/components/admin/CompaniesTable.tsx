@@ -18,6 +18,9 @@ interface CompaniesTableProps {
   loading?: boolean;
 }
 
+// Placeholder padrão para empresas
+const DEFAULT_COMPANY_PLACEHOLDER = "https://via.placeholder.com/200x200/6366f1/ffffff?text=EMPRESA";
+
 const CompaniesTable = ({ companies, onEdit, onDelete, loading }: CompaniesTableProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR");
@@ -41,7 +44,10 @@ const CompaniesTable = ({ companies, onEdit, onDelete, loading }: CompaniesTable
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={company.logo_url || ""} alt={company.name} />
+                      <AvatarImage 
+                        src={company.logo_url || DEFAULT_COMPANY_PLACEHOLDER} 
+                        alt={company.name} 
+                      />
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         <Building className="h-5 w-5" />
                       </AvatarFallback>
