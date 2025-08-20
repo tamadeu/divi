@@ -1,5 +1,5 @@
 import IncomeExpenseChart from "@/components/reports/IncomeExpenseChart";
-import SpendingChart from "@/components/dashboard/SpendingChart";
+import SpendingChart from "@/components/reports/SpendingChart"; // Atualizar o caminho de importação
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const ReportsPage = () => {
