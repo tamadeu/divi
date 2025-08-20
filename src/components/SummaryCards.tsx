@@ -20,7 +20,7 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, s
 
   const gridClasses = cn(
     "grid gap-4 mb-6",
-    showTotalBalance ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2"
+    showTotalBalance ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-2 lg:grid-cols-2" // Alterado para grid-cols-2 para mobile
   );
 
   if (loading) {
