@@ -1,5 +1,4 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Transaction } from "@/types/database";
 import { Building, User } from "lucide-react";
 
@@ -10,13 +9,6 @@ interface TransactionCardProps {
 }
 
 const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCardProps) => {
-  // A badge de status foi removida conforme solicitado, então esta constante não é mais necessária aqui.
-  // const statusVariant = {
-  //   "Concluído": "default",
-  //   "Pendente": "secondary",
-  //   "Falhou": "destructive",
-  // } as const;
-
   const getTransactionType = () => {
     if (transaction.transfer_id) {
       return "Transferência";
@@ -60,16 +52,13 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
       onClick={() => onRowClick(transaction)}
       className="flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
     >
-      <div className="flex items-center gap-3 flex-1">
+      <div className="flex items-center gap-3 flex-1 min-w-0"> {/* Adicionado min-w-0 aqui */}
         {getAvatarContent()}
         
-        <div className="flex-1 min-w-0"> {/* Adicionado min-w-0 para permitir truncamento */}
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-foreground truncate"> {/* Garantindo que o nome trunque */}
-              {transaction.name}
-            </h3>
-            {/* A badge de status foi removida daqui */}
-          </div>
+        <div className="flex-1 min-w-0"> {/* Mantido min-w-0 para permitir truncamento */}
+          <h3 className="font-medium text-foreground truncate mb-1"> {/* Garantindo que o nome trunque */}
+            {transaction.name}
+          </h3>
           <p className="text-sm text-muted-foreground truncate">
             {getTransactionType()}
           </p>
@@ -79,7 +68,7 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
         </div>
       </div>
 
-      <div className="text-right">
+      <div className="text-right flex-shrink-0"> {/* Adicionado flex-shrink-0 para manter a largura do valor */}
         <p
           className={`font-semibold ${
             transaction.amount > 0 ? "text-green-600" : "text-red-600"
