@@ -22,6 +22,11 @@ import { Badge } from "@/components/ui/badge"
 interface User {
   id: string;
   email: string;
+  profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    user_type: string | null;
+  };
   profiles?: {
     first_name: string | null;
     last_name: string | null;
@@ -56,19 +61,28 @@ export function UserSearchCombobox({
 
     setLoading(true)
     try {
-      // Use the admin function to search users
+      console.log('Searching for:', query) // Debug log
+      
       const { data, error } = await supabase.functions.invoke('admin-list-users', {
         body: { search: query, limit: 10 }
       })
+
+      console.log('Search response:', data, error) // Debug log
 
       if (error) {
         console.error('Error searching users:', error)
         return
       }
 
-      setUsers(data.users || [])
+      if (data && data.users) {
+        console.log('Setting users:', data.users) // Debug log
+        setUsers(data.users)
+      } else {
+        setUsers([])
+      }
     } catch (error) {
       console.error('Error in searchUsers:', error)
+      setUsers([])
     } finally {
       setLoading(false)
     }
@@ -83,11 +97,13 @@ export function UserSearchCombobox({
   }, [searchQuery, searchUsers])
 
   const getDisplayName = (user: User) => {
-    if (user.profiles?.first_name && user.profiles?.last_name) {
-      return `${user.profiles.first_name} ${user.profiles.last_name}`
+    // Try profile first, then profiles
+    const profile = user.profile || user.profiles
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`
     }
-    if (user.profiles?.first_name) {
-      return user.profiles.first_name
+    if (profile?.first_name) {
+      return profile.first_name
     }
     return user.email.split('@')[0]
   }
@@ -117,38 +133,46 @@ export function UserSearchCombobox({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0">
-          <Command>
+          <Command shouldFilter={false}>
             <CommandInput 
               placeholder="Digite email ou nome do usuário..." 
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
             <CommandEmpty>
-              {loading ? "Buscando usuários..." : searchQuery.length < 2 ? "Digite pelo menos 2 caracteres" : "Nenhum usuário encontrado."}
+              {loading ? (
+                "Buscando usuários..."
+              ) : searchQuery.length < 2 ? (
+                "Digite pelo menos 2 caracteres"
+              ) : users.length === 0 ? (
+                "Nenhum usuário encontrado."
+              ) : null}
             </CommandEmpty>
-            <CommandGroup>
-              {users.map((user) => (
-                <CommandItem
-                  key={user.id}
-                  value={user.id}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? null : currentValue)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === user.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{getDisplayName(user)}</span>
-                    <span className="text-sm text-muted-foreground">{user.email}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {users.length > 0 && (
+              <CommandGroup>
+                {users.map((user) => (
+                  <CommandItem
+                    key={user.id}
+                    value={user.id}
+                    onSelect={(currentValue) => {
+                      onValueChange(currentValue === value ? null : currentValue)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === user.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span>{getDisplayName(user)}</span>
+                      <span className="text-sm text-muted-foreground">{user.email}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </Command>
         </PopoverContent>
       </Popover>
