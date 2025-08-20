@@ -284,6 +284,7 @@ const TransactionsPage = () => {
             monthlyIncome={monthlyIncome}
             monthlyExpenses={monthlyExpenses}
             loading={loadingSummary}
+            showTotalBalance={false} // Não exibir o card de Saldo Total
           />
           {loading ? (
             <Skeleton className="h-64 w-full" />

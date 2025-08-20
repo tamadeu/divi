@@ -1,14 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ArrowUp, ArrowDown } from "lucide-react";
+import { cn } from "@/lib/utils"; // Importar cn para classes condicionais
 
 interface SummaryCardsProps {
   totalBalance: number;
   monthlyIncome: number;
   monthlyExpenses: number;
   loading: boolean;
+  showTotalBalance?: boolean; // Nova prop opcional
 }
 
-const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading }: SummaryCardsProps) => {
+const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, showTotalBalance = true }: SummaryCardsProps) => {
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString("pt-BR", {
       style: "currency",
@@ -16,10 +18,15 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading }:
     });
   };
 
+  const gridClasses = cn(
+    "grid gap-4 mb-6",
+    showTotalBalance ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-2"
+  );
+
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <Card className="h-[120px] animate-pulse bg-gray-100"></Card>
+      <div className={gridClasses}>
+        {showTotalBalance && <Card className="h-[120px] animate-pulse bg-gray-100"></Card>}
         <Card className="h-[120px] animate-pulse bg-gray-100"></Card>
         <Card className="h-[120px] animate-pulse bg-gray-100"></Card>
       </div>
@@ -27,21 +34,23 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading }:
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Saldo Total
-          </CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(totalBalance)}</div>
-          <p className="text-xs text-muted-foreground">
-            Saldo atual em todas as contas incluídas.
-          </p>
-        </CardContent>
-      </Card>
+    <div className={gridClasses}>
+      {showTotalBalance && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Saldo Total
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalBalance)}</div>
+            <p className="text-xs text-muted-foreground">
+              Saldo atual em todas as contas incluídas.
+            </p>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
