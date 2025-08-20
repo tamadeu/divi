@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Workspace, WorkspaceWithRole } from '@/types/workspace';
 import { useSession } from './SessionContext';
@@ -18,13 +18,13 @@ interface WorkspaceContextType {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
-  const { session } = useSession();
+  const { session, loading: sessionLoading } = useSession();
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceWithRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchWorkspaces = async () => {
-    if (!session?.user) {
+  const fetchWorkspaces = useCallback(async () => {
+    if (!session?.user || sessionLoading) {
       setWorkspaces([]);
       setCurrentWorkspace(null);
       setLoading(false);
@@ -32,6 +32,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
+      setLoading(true);
+      
       // Buscar workspaces onde o usuário é owner
       const { data: ownedWorkspaces, error: ownedError } = await supabase
         .from('workspaces')
@@ -81,10 +83,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       const allWorkspaces = [...ownedWorkspacesWithRole, ...memberWorkspacesWithRole];
 
-      console.log('Owned workspaces:', ownedWorkspacesWithRole);
-      console.log('Member workspaces:', memberWorkspacesWithRole);
-      console.log('All workspaces:', allWorkspaces);
-
       setWorkspaces(allWorkspaces);
 
       // Se não há workspace atual, selecionar o primeiro
@@ -103,17 +101,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id, sessionLoading, currentWorkspace]);
 
-  const switchWorkspace = (workspaceId: string) => {
+  const switchWorkspace = useCallback((workspaceId: string) => {
     const workspace = workspaces.find(w => w.id === workspaceId);
     if (workspace) {
       setCurrentWorkspace(workspace);
       localStorage.setItem('currentWorkspaceId', workspaceId);
     }
-  };
+  }, [workspaces]);
 
-  const createWorkspace = async (name: string, description?: string, isShared: boolean = false): Promise<Workspace | null> => {
+  const createWorkspace = useCallback(async (name: string, description?: string, isShared: boolean = false): Promise<Workspace | null> => {
     if (!session?.user) return null;
 
     try {
@@ -148,17 +146,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       showError('Erro ao criar núcleo financeiro');
       return null;
     }
-  };
+  }, [session?.user, fetchWorkspaces]);
 
+  // Só executar fetchWorkspaces quando a sessão estiver carregada e houver mudança no usuário
   useEffect(() => {
-    if (session?.user) {
+    if (!sessionLoading) {
       fetchWorkspaces();
-    } else {
-      setWorkspaces([]);
-      setCurrentWorkspace(null);
-      setLoading(false);
     }
-  }, [session]);
+  }, [sessionLoading, session?.user?.id]);
 
   const value = {
     currentWorkspace,
