@@ -3,17 +3,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { useNavigate } from "react-router-dom";
-import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Plus, Users, Trash2, LogOut, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Profile {
   first_name: string | null;
@@ -21,29 +38,45 @@ interface Profile {
   avatar_url: string | null;
 }
 
+interface Workspace {
+  id: string;
+  name: string;
+  description: string | null;
+  is_shared: boolean;
+  created_at: string;
+  workspace_owner: string;
+  user_role?: string;
+}
+
 const Settings = () => {
-  const [profile, setProfile] = useState<Profile>({
-    first_name: "",
-    last_name: "",
-    avatar_url: "",
-  });
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
-  const { workspaces, currentWorkspace } = useWorkspace();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const { refreshWorkspaces } = useWorkspace();
+
+  // Modal states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    name: "",
+    description: "",
+    type: "personal",
+  });
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
   useEffect(() => {
     fetchProfile();
+    fetchWorkspaces();
   }, []);
 
   const fetchProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       setEmail(user.email || "");
+      setCurrentUserId(user.id);
       
       const { data: profileData, error } = await supabase
         .from("profiles")
@@ -53,116 +86,265 @@ const Settings = () => {
 
       if (error) {
         console.error("Error fetching profile:", error);
-      } else if (profileData) {
+      } else {
         setProfile(profileData);
       }
     }
+    setLoading(false);
   };
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const fetchWorkspaces = async () => {
+    setLoadingWorkspaces(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Buscar workspaces onde o usuário é owner
+    const { data: ownedWorkspaces, error: ownedError } = await supabase
+      .from("workspaces")
+      .select("*")
+      .eq("workspace_owner", user.id);
+
+    // Buscar workspaces onde o usuário é membro
+    const { data: memberWorkspaces, error: memberError } = await supabase
+      .from("workspace_users")
+      .select(`
+        role,
+        workspaces (
+          id,
+          name,
+          description,
+          is_shared,
+          created_at,
+          workspace_owner
+        )
+      `)
+      .eq("user_id", user.id);
+
+    if (ownedError || memberError) {
+      console.error("Error fetching workspaces:", ownedError || memberError);
+      showError("Erro ao carregar núcleos financeiros");
+      setLoadingWorkspaces(false);
+      return;
+    }
+
+    // Combinar e formatar os dados
+    const allWorkspaces: Workspace[] = [];
+
+    // Adicionar workspaces próprios
+    if (ownedWorkspaces) {
+      ownedWorkspaces.forEach(workspace => {
+        allWorkspaces.push({
+          ...workspace,
+          user_role: "owner"
+        });
+      });
+    }
+
+    // Adicionar workspaces onde é membro
+    if (memberWorkspaces) {
+      memberWorkspaces.forEach(item => {
+        if (item.workspaces) {
+          allWorkspaces.push({
+            ...item.workspaces,
+            user_role: item.role
+          });
+        }
+      });
+    }
+
+    setWorkspaces(allWorkspaces);
+    setLoadingWorkspaces(false);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("Usuário não autenticado");
+      setSaving(false);
+      return;
+    }
 
     const { error } = await supabase
       .from("profiles")
       .update({
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        avatar_url: profile.avatar_url,
+        first_name: profile?.first_name,
+        last_name: profile?.last_name,
+        avatar_url: profile?.avatar_url,
       })
       .eq("id", user.id);
 
     if (error) {
-      showError("Erro ao atualizar perfil");
+      showError("Erro ao salvar perfil");
+      console.error("Error updating profile:", error);
     } else {
       showSuccess("Perfil atualizado com sucesso!");
     }
-    setLoading(false);
+
+    setSaving(false);
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (newPassword !== confirmPassword) {
-      showError("As senhas não coincidem");
+    setCreatingWorkspace(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("Usuário não autenticado");
+      setCreatingWorkspace(false);
       return;
     }
 
-    if (newPassword.length < 6) {
-      showError("A nova senha deve ter pelo menos 6 caracteres");
-      return;
-    }
-
-    setLoading(true);
-
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
+    const { error } = await supabase
+      .from("workspaces")
+      .insert({
+        name: createFormData.name,
+        description: createFormData.description,
+        created_by: user.id,
+        workspace_owner: user.id,
+        is_shared: createFormData.type === "shared",
+      });
 
     if (error) {
-      showError("Erro ao atualizar senha");
+      showError("Erro ao criar núcleo financeiro");
+      console.error("Error creating workspace:", error);
     } else {
-      showSuccess("Senha atualizada com sucesso!");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      showSuccess("Núcleo financeiro criado com sucesso!");
+      setIsCreateModalOpen(false);
+      setCreateFormData({ name: "", description: "", type: "personal" });
+      fetchWorkspaces();
+      refreshWorkspaces();
     }
-    setLoading(false);
+
+    setCreatingWorkspace(false);
   };
 
-  const getWorkspaceRole = (workspace: any) => {
-    if (workspace.workspace_owner === workspace.user_id) {
-      return "Proprietário";
+  const handleDeleteWorkspace = async (workspaceId: string, workspaceName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o núcleo "${workspaceName}"? Esta ação não pode ser desfeita.`)) {
+      return;
     }
-    return workspace.role === "admin" ? "Administrador" : "Membro";
+
+    const { error } = await supabase
+      .from("workspaces")
+      .delete()
+      .eq("id", workspaceId);
+
+    if (error) {
+      showError("Erro ao excluir núcleo financeiro");
+      console.error("Error deleting workspace:", error);
+    } else {
+      showSuccess("Núcleo financeiro excluído com sucesso!");
+      fetchWorkspaces();
+      refreshWorkspaces();
+    }
   };
 
-  const getWorkspaceType = (workspace: any) => {
-    return workspace.is_shared ? "Compartilhado" : "Pessoal";
+  const handleLeaveWorkspace = async (workspaceId: string, workspaceName: string) => {
+    if (!confirm(`Tem certeza que deseja deixar o núcleo "${workspaceName}"?`)) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("workspace_users")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", currentUserId);
+
+    if (error) {
+      showError("Erro ao deixar núcleo financeiro");
+      console.error("Error leaving workspace:", error);
+    } else {
+      showSuccess("Você saiu do núcleo financeiro!");
+      fetchWorkspaces();
+      refreshWorkspaces();
+    }
   };
 
-  const formatCreatedDate = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), {
-      addSuffix: true,
-      locale: ptBR,
-    });
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "owner":
+        return "Proprietário";
+      case "admin":
+        return "Administrador";
+      case "user":
+        return "Membro";
+      default:
+        return "Membro";
+    }
   };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "owner":
+        return "default";
+      case "admin":
+        return "secondary";
+      case "user":
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
+
+  const getInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return "U";
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
+          <p className="text-muted-foreground">
+            Gerencie suas informações pessoais e preferências.
+          </p>
+        </div>
+        <Skeleton className="h-[200px] w-full" />
+        <Skeleton className="h-[300px] w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-4 space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Configurações</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Gerencie suas preferências e informações da conta.
+          Gerencie suas informações pessoais e preferências.
         </p>
       </div>
 
-      {/* Perfil */}
+      {/* Profile Settings */}
       <Card>
         <CardHeader>
           <CardTitle>Perfil</CardTitle>
           <CardDescription>
-            Atualize suas informações pessoais.
+            Atualize suas informações pessoais e foto de perfil.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleUpdateProfile} className="space-y-4">
+          <form onSubmit={handleSaveProfile} className="space-y-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={profile.avatar_url || ""} />
-                <AvatarFallback>
-                  {profile.first_name?.[0]}{profile.last_name?.[0]}
+                <AvatarImage src={profile?.avatar_url || ""} alt="Avatar" />
+                <AvatarFallback className="text-lg">
+                  {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <Label htmlFor="avatar_url">URL do Avatar</Label>
                 <Input
                   id="avatar_url"
-                  value={profile.avatar_url || ""}
-                  onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
+                  value={profile?.avatar_url || ""}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, avatar_url: e.target.value } : null)}
                   placeholder="https://exemplo.com/avatar.jpg"
                 />
               </div>
@@ -173,193 +355,197 @@ const Settings = () => {
                 <Label htmlFor="first_name">Nome</Label>
                 <Input
                   id="first_name"
-                  value={profile.first_name || ""}
-                  onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
+                  value={profile?.first_name || ""}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, first_name: e.target.value } : null)}
+                  placeholder="Seu nome"
                 />
               </div>
               <div>
                 <Label htmlFor="last_name">Sobrenome</Label>
                 <Input
                   id="last_name"
-                  value={profile.last_name || ""}
-                  onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
+                  value={profile?.last_name || ""}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, last_name: e.target.value } : null)}
+                  placeholder="Seu sobrenome"
                 />
               </div>
             </div>
             
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" value={email} disabled />
+              <Input
+                id="email"
+                value={email}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                O email não pode ser alterado.
+              </p>
             </div>
             
-            <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar Alterações"}
+            <Button type="submit" disabled={saving}>
+              {saving ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* Núcleos Financeiros */}
+      {/* Workspaces Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Núcleos Financeiros</CardTitle>
-          <CardDescription>
-            Gerencie seus núcleos financeiros e permissões.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Núcleos Financeiros</CardTitle>
+              <CardDescription>
+                Gerencie seus núcleos financeiros e permissões.
+              </CardDescription>
+            </div>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Novo Núcleo
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {workspaces.map((workspace) => (
-              <div key={workspace.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium truncate">{workspace.name}</h3>
-                      {currentWorkspace?.id === workspace.id && (
-                        <Badge variant="secondary" className="text-xs">Ativo</Badge>
-                      )}
+          {loadingWorkspaces ? (
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {workspaces.map((workspace) => (
+                <div
+                  key={workspace.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-medium">{workspace.name}</h3>
+                      <Badge variant={workspace.is_shared ? "default" : "secondary"}>
+                        {workspace.is_shared ? "Compartilhado" : "Pessoal"}
+                      </Badge>
+                      <Badge variant={getRoleBadgeVariant(workspace.user_role || "user")}>
+                        {getRoleLabel(workspace.user_role || "user")}
+                      </Badge>
                     </div>
                     {workspace.description && (
                       <p className="text-sm text-muted-foreground mt-1">
                         {workspace.description}
                       </p>
                     )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Criado: {new Date(workspace.created_at).toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {(workspace.user_role === "owner" || workspace.user_role === "admin") && (
+                        <DropdownMenuItem>
+                          <Users className="h-4 w-4 mr-2" />
+                          Gerenciar Usuários
+                        </DropdownMenuItem>
+                      )}
+                      {workspace.user_role === "owner" ? (
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteWorkspace(workspace.id, workspace.name)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir Núcleo
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onClick={() => handleLeaveWorkspace(workspace.id, workspace.name)}
+                          className="text-red-600"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Deixar Núcleo
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <span className="font-medium">Tipo:</span>
-                    <Badge 
-                      variant={workspace.is_shared ? "default" : "secondary"} 
-                      className="ml-2 text-xs"
-                    >
-                      {getWorkspaceType(workspace)}
-                    </Badge>
-                  </div>
-                  <div>
-                    <span className="font-medium">Papel:</span>
-                    <Badge 
-                      variant={getWorkspaceRole(workspace) === "Proprietário" ? "default" : "outline"} 
-                      className="ml-2 text-xs"
-                    >
-                      {getWorkspaceRole(workspace)}
-                    </Badge>
-                  </div>
-                  <div className="text-muted-foreground">
-                    <span className="font-medium">Criado:</span>
-                    <span className="ml-2">{formatCreatedDate(workspace.created_at)}</span>
-                  </div>
+              ))}
+              
+              {workspaces.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Nenhum núcleo financeiro encontrado.</p>
+                  <p className="text-sm">Crie seu primeiro núcleo para começar!</p>
                 </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Workspace Modal */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Núcleo Financeiro</DialogTitle>
+            <DialogDescription>
+              Crie um novo núcleo para organizar suas finanças.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateWorkspace}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Nome do Núcleo</Label>
+                <Input
+                  id="name"
+                  value={createFormData.name}
+                  onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                  placeholder="Ex: Família, Empresa, Pessoal..."
+                  autoFocus={false}
+                  required
+                />
               </div>
-            ))}
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/workspaces')}
-                className="flex-1 sm:flex-none"
-              >
-                Gerenciar Núcleos
+              <div className="grid gap-2">
+                <Label htmlFor="description">Descrição (opcional)</Label>
+                <Input
+                  id="description"
+                  value={createFormData.description}
+                  onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                  placeholder="Descreva o propósito deste núcleo..."
+                  autoFocus={false}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="type">Tipo</Label>
+                <Select
+                  value={createFormData.type}
+                  onValueChange={(value) => setCreateFormData({ ...createFormData, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">Pessoal</SelectItem>
+                    <SelectItem value="shared">Compartilhado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                Cancelar
               </Button>
-              <Button 
-                onClick={() => navigate('/workspaces/new')}
-                className="flex-1 sm:flex-none"
-              >
-                Criar Novo Núcleo
+              <Button type="submit" disabled={creatingWorkspace || !createFormData.name}>
+                {creatingWorkspace ? "Criando..." : "Criar Núcleo"}
               </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Aparência */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Aparência</CardTitle>
-          <CardDescription>
-            Personalize a aparência do aplicativo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant={theme === "light" ? "default" : "outline"}
-              onClick={() => setTheme("light")}
-              className="flex-1 sm:flex-none"
-            >
-              <Sun className="mr-2 h-4 w-4" />
-              Claro
-            </Button>
-            <Button
-              variant={theme === "dark" ? "default" : "outline"}
-              onClick={() => setTheme("dark")}
-              className="flex-1 sm:flex-none"
-            >
-              <Moon className="mr-2 h-4 w-4" />
-              Escuro
-            </Button>
-            <Button
-              variant={theme === "system" ? "default" : "outline"}
-              onClick={() => setTheme("system")}
-              className="flex-1 sm:flex-none"
-            >
-              <Monitor className="mr-2 h-4 w-4" />
-              Sistema
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Alterar Senha */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Alterar Senha</CardTitle>
-          <CardDescription>
-            Atualize sua senha de acesso.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleUpdatePassword} className="space-y-4">
-            <div>
-              <Label htmlFor="current_password">Senha Atual</Label>
-              <Input
-                id="current_password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Digite sua senha atual"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="new_password">Nova Senha</Label>
-              <Input
-                id="new_password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Digite a nova senha"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="confirm_password">Confirmar Nova Senha</Label>
-              <Input
-                id="confirm_password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirme a nova senha"
-              />
-            </div>
-            
-            <Button type="submit" disabled={loading}>
-              {loading ? "Atualizando..." : "Atualizar Senha"}
-            </Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
