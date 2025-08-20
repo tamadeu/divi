@@ -82,29 +82,52 @@ const AddMemberModal = ({ workspace, isOpen, onClose, onMemberAdded }: AddMember
     setIsSubmitting(true);
 
     try {
-      // Buscar usuário pelo email usando auth.users (via RPC ou função)
-      // Por enquanto, vamos tentar adicionar diretamente e tratar o erro
+      // Buscar usuário usando a função edge
+      const { data: userData, error: findError } = await supabase.functions.invoke('find-user-by-email', {
+        body: { email: values.email }
+      });
+
+      if (findError) {
+        console.error('Error finding user:', findError);
+        showError('Erro ao buscar usuário: ' + findError.message);
+        return;
+      }
+
+      if (!userData?.user) {
+        showError('Usuário não encontrado na plataforma. Verifique o email ou crie um usuário fantasma.');
+        return;
+      }
+
+      // Verificar se o usuário já é membro do workspace
+      const { data: existingMember, error: memberError } = await supabase
+        .from('workspace_users')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .eq('user_id', userData.user.id)
+        .single();
+
+      if (memberError && memberError.code !== 'PGRST116') {
+        throw memberError;
+      }
+
+      if (existingMember) {
+        showError('Este usuário já é membro deste núcleo.');
+        return;
+      }
+
+      // Adicionar o usuário ao workspace
       const { error: insertError } = await supabase
         .from('workspace_users')
         .insert({
           workspace_id: workspace.id,
-          user_id: values.email, // Temporário - idealmente seria o UUID do usuário
+          user_id: userData.user.id,
           role: values.role,
           is_ghost_user: false,
         });
 
-      if (insertError) {
-        if (insertError.code === '23503') {
-          showError('Usuário não encontrado na plataforma. Verifique o email ou crie um usuário fantasma.');
-        } else if (insertError.code === '23505') {
-          showError('Este usuário já é membro deste núcleo.');
-        } else {
-          throw insertError;
-        }
-        return;
-      }
+      if (insertError) throw insertError;
 
-      showSuccess('Usuário adicionado com sucesso!');
+      showSuccess(`Usuário ${userData.user.email} adicionado com sucesso!`);
       realUserForm.reset();
       onMemberAdded();
       onClose();
@@ -134,7 +157,7 @@ const AddMemberModal = ({ workspace, isOpen, onClose, onMemberAdded }: AddMember
 
       if (error) throw error;
 
-      showSuccess('Usuário fantasma criado com sucesso!');
+      showSuccess(`Usuário fantasma "${values.name}" criado com sucesso!`);
       ghostUserForm.reset();
       onMemberAdded();
       onClose();

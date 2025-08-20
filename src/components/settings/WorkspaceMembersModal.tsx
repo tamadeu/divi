@@ -60,28 +60,45 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Primeiro, buscar todos os workspace_users
+      const { data: workspaceUsers, error: usersError } = await supabase
         .from('workspace_users')
-        .select(`
-          id,
-          user_id,
-          role,
-          joined_at,
-          is_ghost_user,
-          ghost_user_name,
-          ghost_user_email,
-          profiles:user_id (
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('workspace_id', workspace.id)
         .order('joined_at', { ascending: true });
 
-      if (error) throw error;
+      if (usersError) throw usersError;
 
-      setMembers(data || []);
+      // Depois, para cada usuário real, buscar o perfil
+      const membersWithProfiles = [];
+      
+      for (const user of workspaceUsers || []) {
+        if (user.is_ghost_user || !user.user_id) {
+          // Usuário fantasma - adicionar diretamente
+          membersWithProfiles.push({
+            ...user,
+            profile: null
+          });
+        } else {
+          // Usuário real - buscar perfil
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, avatar_url')
+            .eq('id', user.user_id)
+            .single();
+
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error('Error fetching profile for user:', user.user_id, profileError);
+          }
+
+          membersWithProfiles.push({
+            ...user,
+            profile: profile || null
+          });
+        }
+      }
+
+      setMembers(membersWithProfiles);
     } catch (error: any) {
       console.error('Error fetching members:', error);
       showError('Erro ao carregar membros do núcleo');
