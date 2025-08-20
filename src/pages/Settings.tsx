@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { ThemeOptions } from "@/components/settings/ThemeOptions";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
@@ -11,6 +13,24 @@ import {
 } from "@/components/ui/card";
 
 const SettingsPage = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Verificar se há uma âncora na URL e fazer scroll para ela
+    if (location.hash) {
+      const element = document.getElementById(location.hash.substring(1));
+      if (element) {
+        // Aguardar um pouco para garantir que o elemento foi renderizado
+        setTimeout(() => {
+          element.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 100);
+      }
+    }
+  }, [location.hash]);
+
   return (
     <>
       <div className="flex items-center">
@@ -27,7 +47,9 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
         
-        <WorkspaceManagement />
+        <div id="workspace-management">
+          <WorkspaceManagement />
+        </div>
         
         <Card>
           <CardHeader>
