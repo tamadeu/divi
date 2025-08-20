@@ -6,9 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Transaction, Company } from "@/types/database"; // Importar Company
+import { Transaction, Company } from "@/types/database";
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
-import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -30,17 +29,18 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, ArrowRightLeft } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
-import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
+import { getCompanyLogo } from "@/utils/transaction-helpers";
 import { useIsMobile } from "@/hooks/use-mobile";
+import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
 
 const ITEMS_PER_PAGE = 10;
 
 const TransactionsPage = () => {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]); // Novo estado para empresas
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
 
@@ -136,11 +136,11 @@ const TransactionsPage = () => {
 
   const handleRowClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    setIsDetailsModalOpen(true);
+    setIsEditModalOpen(true); // Abrir o modal de edição
   };
 
-  const closeDetailsModal = () => {
-    setIsDetailsModalOpen(false);
+  const closeEditModal = () => { // Renomeado para closeEditModal
+    setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
@@ -249,8 +249,8 @@ const TransactionsPage = () => {
               </div>
               <AllTransactionsTable
                 transactions={paginatedTransactions}
-                onRowClick={handleRowClick}
-                companies={companies} // Passar companies
+                onEditTransaction={handleRowClick} // Pass the new function
+                companies={companies}
               />
               {totalPages > 1 && (
                 <div className="mt-4">
@@ -297,10 +297,11 @@ const TransactionsPage = () => {
           )}
         </CardContent>
       </Card>
-      <TransactionDetailsModal
+      <EditTransactionModal
         transaction={selectedTransaction}
-        isOpen={isDetailsModalOpen}
-        onClose={closeDetailsModal}
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        onTransactionUpdated={fetchTransactions} // Recarregar dados após edição/exclusão
       />
     </>
   );
