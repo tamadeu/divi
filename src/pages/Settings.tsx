@@ -1,48 +1,48 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "@/contexts/SessionContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
-import { 
-  User, 
-  Mail, 
-  Shield, 
-  Palette, 
-  Bell, 
-  Lock, 
-  Download,
-  Trash2,
-  LogOut,
-  Brain
-} from "lucide-react";
+import { Plus, MoreHorizontal, Users } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Settings = () => {
   const { session } = useSession();
   const { profile } = useProfile();
+  const { workspaces, currentWorkspace } = useWorkspace();
   const [loading, setLoading] = useState(false);
-  const [firstName, setFirstName] = useState(profile?.first_name || "");
-  const [lastName, setLastName] = useState(profile?.last_name || "");
-  const [aiProvider, setAiProvider] = useState(profile?.ai_provider || "gemini");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    if (profile) {
+      setFirstName(profile.first_name || "");
+      setLastName(profile.last_name || "");
+    }
+  }, [profile]);
 
   const handleUpdateProfile = async () => {
     if (!session?.user?.id) return;
@@ -55,7 +55,6 @@ const Settings = () => {
           id: session.user.id,
           first_name: firstName,
           last_name: lastName,
-          ai_provider: aiProvider,
           updated_at: new Date().toISOString(),
         });
 
@@ -69,237 +68,228 @@ const Settings = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
+  const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      showError('As senhas não coincidem');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showError('A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      showSuccess('Senha atualizada com sucesso!');
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      showError('Erro ao atualizar senha: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getDisplayName = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
-    }
-    if (profile?.first_name) {
-      return profile.first_name;
-    }
-    return session?.user?.email?.split('@')[0] || 'Usuário';
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const getInitials = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+  const getWorkspaceRole = (workspace: any) => {
+    if (workspace.workspace_owner === session?.user?.id) {
+      return 'Proprietário';
     }
-    if (profile?.first_name) {
-      return profile.first_name[0].toUpperCase();
+    // Aqui você pode buscar o papel do usuário no workspace
+    return 'Usuário';
+  };
+
+  const getWorkspaceType = (workspace: any) => {
+    if (workspace.workspace_owner === session?.user?.id) {
+      return 'Pessoal';
     }
-    return session?.user?.email?.[0]?.toUpperCase() || 'U';
+    return 'Compartilhado';
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h3 className="text-lg font-medium">Configurações</h3>
-        <p className="text-sm text-muted-foreground">
-          Gerencie sua conta e preferências da aplicação.
-        </p>
+        <h1 className="text-2xl font-bold">Configurações</h1>
       </div>
-      <Separator />
-      
-      {/* Perfil do Usuário */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Perfil
-          </CardTitle>
-          <CardDescription>
-            Suas informações pessoais e configurações de conta.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={profile?.avatar_url || ""} alt={getDisplayName()} />
-              <AvatarFallback className="text-lg">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-1">
-              <h4 className="text-lg font-medium">{getDisplayName()}</h4>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                {session?.user?.email}
-              </p>
-              {profile?.user_type === 'admin' && (
-                <Badge variant="default" className="gap-1">
-                  <Shield className="h-3 w-3" />
-                  Administrador
-                </Badge>
-              )}
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Nome</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Seu nome"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Sobrenome</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Seu sobrenome"
-              />
-            </div>
+      {/* Perfil */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Perfil</h2>
+          <p className="text-sm text-muted-foreground">
+            Atualize suas informações pessoais.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">Nome</Label>
+            <Input
+              id="firstName"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Digite seu nome"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Sobrenome</Label>
+            <Input
+              id="lastName"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Digite seu sobrenome"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Email</Label>
+          <Input
+            value={session?.user?.email || ""}
+            disabled
+            className="bg-muted"
+          />
+        </div>
+
+        <Button onClick={handleUpdateProfile} disabled={loading}>
+          {loading ? "Salvando..." : "Salvar Alterações"}
+        </Button>
+      </div>
+
+      {/* Núcleos Financeiros */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Núcleos Financeiros</h2>
+            <p className="text-sm text-muted-foreground">
+              Gerencie seus núcleos financeiros. Você pode criar, editar e excluir núcleos.
+            </p>
+          </div>
+          <Button size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Criar Núcleo
+          </Button>
+        </div>
+
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Papel</TableHead>
+                <TableHead>Criado em</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workspaces.map((workspace) => (
+                <TableRow key={workspace.id}>
+                  <TableCell className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    {workspace.name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getWorkspaceType(workspace) === 'Pessoal' ? 'default' : 'secondary'}>
+                      {getWorkspaceType(workspace)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{getWorkspaceRole(workspace)}</TableCell>
+                  <TableCell>{formatDate(workspace.created_at)}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem>Compartilhar</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Aparência */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Aparência</h2>
+          <p className="text-sm text-muted-foreground">
+            Personalize a aparência do aplicativo.
+          </p>
+        </div>
+
+        <ThemeToggle variant="buttons" />
+      </div>
+
+      {/* Alterar Senha */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Alterar Senha</h2>
+          <p className="text-sm text-muted-foreground">
+            Atualize sua senha de acesso.
+          </p>
+        </div>
+
+        <div className="space-y-4 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword">Senha Atual</Label>
+            <Input
+              id="currentPassword"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Digite sua senha atual"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="aiProvider" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              Provedor de IA Preferido
-            </Label>
-            <Select value={aiProvider} onValueChange={setAiProvider}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o provedor de IA" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gemini">Google Gemini</SelectItem>
-                <SelectItem value="openai">OpenAI GPT</SelectItem>
-                <SelectItem value="anthropic">Anthropic Claude</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Este provedor será usado para análise de transações e outras funcionalidades de IA.
-            </p>
+            <Label htmlFor="newPassword">Nova Senha</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Digite a nova senha"
+            />
           </div>
 
-          <Button onClick={handleUpdateProfile} disabled={loading}>
-            {loading ? "Salvando..." : "Salvar Alterações"}
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirme a nova senha"
+            />
+          </div>
+
+          <Button onClick={handleUpdatePassword} disabled={loading}>
+            {loading ? "Atualizando..." : "Atualizar Senha"}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Aparência */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Aparência
-          </CardTitle>
-          <CardDescription>
-            Personalize a aparência da aplicação.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ThemeToggle />
-        </CardContent>
-      </Card>
-
-      {/* Notificações */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notificações
-          </CardTitle>
-          <CardDescription>
-            Configure como você deseja receber notificações.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Configurações de notificação serão implementadas em breve.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Segurança */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Segurança
-          </CardTitle>
-          <CardDescription>
-            Gerencie a segurança da sua conta.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button variant="outline" disabled>
-            Alterar Senha
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Funcionalidade de alteração de senha será implementada em breve.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Dados */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Seus Dados
-          </CardTitle>
-          <CardDescription>
-            Exporte ou exclua seus dados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button variant="outline" disabled>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar Dados
-          </Button>
-          
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="gap-2">
-                <Trash2 className="h-4 w-4" />
-                Excluir Conta
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. Isso excluirá permanentemente sua
-                  conta e removerá seus dados de nossos servidores.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Excluir Conta
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
-      </Card>
-
-      {/* Sair */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <LogOut className="h-5 w-5" />
-            Sair da Conta
-          </CardTitle>
-          <CardDescription>
-            Desconecte-se da sua conta.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
