@@ -14,7 +14,11 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-const NavLinks = () => {
+interface NavLinksProps {
+  onLinkClick?: () => void;
+}
+
+const NavLinks = ({ onLinkClick }: NavLinksProps = {}) => {
   const location = useLocation();
   const [transactionCount, setTransactionCount] = useState(0);
   const { currentWorkspace } = useWorkspace();
@@ -83,6 +87,7 @@ const NavLinks = () => {
           <Link
             key={item.label}
             to={item.to}
+            onClick={onLinkClick}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
               isActive && "bg-primary text-primary-foreground"

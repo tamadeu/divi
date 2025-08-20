@@ -44,18 +44,22 @@ const Layout = () => {
   // Don't render the name if it's empty or still loading
   const shouldShowName = !loading && platformName;
 
+  const closeMobileSidebar = () => {
+    setMobileSidebarOpen(false);
+  };
+
   return (
     <>
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <Sidebar />
         <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-          <SheetContent side="left" className="flex flex-col w-[280px] sm:w-[350px]">
-            <nav className="grid gap-2 text-lg font-medium">
+          <SheetContent side="left" className="flex flex-col w-full p-0">
+            <div className="flex flex-col h-full">
               {/* Header do sidebar mobile com logo da plataforma */}
-              <div className="flex items-center mb-4 pb-2 border-b">
+              <div className="flex items-center justify-between p-4 border-b">
                 <Link
                   to="/"
-                  onClick={() => setMobileSidebarOpen(false)}
+                  onClick={closeMobileSidebar}
                   className="flex items-center gap-2 text-lg font-semibold"
                 >
                   {platformLogo ? (
@@ -73,15 +77,17 @@ const Layout = () => {
               </div>
               
               {/* Card do usuário */}
-              <div className="mb-4">
+              <div className="p-2">
                 <UserCard />
               </div>
               
               {/* Links de navegação */}
-              <div onClick={() => setMobileSidebarOpen(false)}>
-                <NavLinks />
-              </div>
-            </nav>
+              <nav className="flex-1 px-4 pb-4">
+                <div onClick={closeMobileSidebar}>
+                  <NavLinks />
+                </div>
+              </nav>
+            </div>
           </SheetContent>
         </Sheet>
 
