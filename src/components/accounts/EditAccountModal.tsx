@@ -62,6 +62,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableBanks, setAvailableBanks] = useState<Bank[]>([]);
   const [showCustomBankInput, setShowCustomBankInput] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const form = useForm<EditAccountFormValues>({
     resolver: zodResolver(editAccountSchema),
@@ -74,6 +75,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
     },
   });
 
+  // Fetch banks when modal opens
   useEffect(() => {
     const fetchBanks = async () => {
       const { data, error } = await supabase
@@ -87,35 +89,42 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
       }
     };
 
-    if (isOpen && account) {
-      fetchBanks().then(() => {
-        // Check if the account's bank exists in the banks table
-        const existingBank = availableBanks.find(bank => bank.name === account.bank);
-        
-        if (existingBank) {
-          // Bank exists in the table
-          form.reset({
-            name: account.name,
-            bank_selection: existingBank.id,
-            custom_bank_name: "",
-            type: account.type,
-            balance: account.balance,
-          });
-          setShowCustomBankInput(false);
-        } else {
-          // Bank doesn't exist in table, use custom input
-          form.reset({
-            name: account.name,
-            bank_selection: "custom_bank_input",
-            custom_bank_name: account.bank,
-            type: account.type,
-            balance: account.balance,
-          });
-          setShowCustomBankInput(true);
-        }
-      });
+    if (isOpen) {
+      fetchBanks();
+      setIsInitialized(false);
     }
-  }, [isOpen, account, form, availableBanks]);
+  }, [isOpen]);
+
+  // Initialize form with account data only once when both account and banks are available
+  useEffect(() => {
+    if (isOpen && account && availableBanks.length > 0 && !isInitialized) {
+      // Check if the account's bank exists in the banks table
+      const existingBank = availableBanks.find(bank => bank.name === account.bank);
+      
+      if (existingBank) {
+        // Bank exists in the table
+        form.reset({
+          name: account.name,
+          bank_selection: existingBank.id,
+          custom_bank_name: "",
+          type: account.type,
+          balance: account.balance,
+        });
+        setShowCustomBankInput(false);
+      } else {
+        // Bank doesn't exist in table, use custom input
+        form.reset({
+          name: account.name,
+          bank_selection: "custom_bank_input",
+          custom_bank_name: account.bank,
+          type: account.type,
+          balance: account.balance,
+        });
+        setShowCustomBankInput(true);
+      }
+      setIsInitialized(true);
+    }
+  }, [isOpen, account, availableBanks, form, isInitialized]);
 
   const handleSubmit = async (values: EditAccountFormValues) => {
     if (!account) return;
