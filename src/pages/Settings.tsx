@@ -2,34 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/contexts/SessionContext";
 import { useProfile } from "@/hooks/useProfile";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
-import { Plus, MoreHorizontal, Users } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { WorkspaceManagement } from "@/components/settings/WorkspaceManagement";
 
 const Settings = () => {
   const { session } = useSession();
   const { profile } = useProfile();
-  const { workspaces, currentWorkspace } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -98,25 +80,6 @@ const Settings = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const getWorkspaceRole = (workspace: any) => {
-    if (workspace.workspace_owner === session?.user?.id) {
-      return 'Proprietário';
-    }
-    // Aqui você pode buscar o papel do usuário no workspace
-    return 'Usuário';
-  };
-
-  const getWorkspaceType = (workspace: any) => {
-    if (workspace.workspace_owner === session?.user?.id) {
-      return 'Pessoal';
-    }
-    return 'Compartilhado';
-  };
-
   return (
     <div className="space-y-8">
       <div>
@@ -167,68 +130,8 @@ const Settings = () => {
         </Button>
       </div>
 
-      {/* Núcleos Financeiros */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Núcleos Financeiros</h2>
-            <p className="text-sm text-muted-foreground">
-              Gerencie seus núcleos financeiros. Você pode criar, editar e excluir núcleos.
-            </p>
-          </div>
-          <Button size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Criar Núcleo
-          </Button>
-        </div>
-
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Papel</TableHead>
-                <TableHead>Criado em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {workspaces.map((workspace) => (
-                <TableRow key={workspace.id}>
-                  <TableCell className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    {workspace.name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getWorkspaceType(workspace) === 'Pessoal' ? 'default' : 'secondary'}>
-                      {getWorkspaceType(workspace)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{getWorkspaceRole(workspace)}</TableCell>
-                  <TableCell>{formatDate(workspace.created_at)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
-                        <DropdownMenuItem>Compartilhar</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      {/* Núcleos Financeiros - usando o componente existente */}
+      <WorkspaceManagement />
 
       {/* Aparência */}
       <div className="space-y-4">
