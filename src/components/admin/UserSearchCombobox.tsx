@@ -1,24 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown, Search, X } from "lucide-react"
+import { Check, ChevronsUpDown, X, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { supabase } from "@/integrations/supabase/client"
-import { Badge } from "@/components/ui/badge"
 
 interface User {
   id: string;
@@ -62,27 +55,29 @@ export function UserSearchCombobox({
 
     setLoading(true)
     try {
-      console.log('Searching for:', query) // Debug log
+      console.log('🔍 Searching for:', query)
       
       const { data, error } = await supabase.functions.invoke('admin-list-users', {
         body: { search: query, limit: 10 }
       })
 
-      console.log('Search response:', data, error) // Debug log
+      console.log('📡 Search response:', data, error)
 
       if (error) {
-        console.error('Error searching users:', error)
+        console.error('❌ Error searching users:', error)
+        setUsers([])
         return
       }
 
       if (data && data.users) {
-        console.log('Setting users:', data.users) // Debug log
+        console.log('✅ Setting users:', data.users.length, 'users found')
         setUsers(data.users)
       } else {
+        console.log('⚠️ No users in response')
         setUsers([])
       }
     } catch (error) {
-      console.error('Error in searchUsers:', error)
+      console.error('💥 Error in searchUsers:', error)
       setUsers([])
     } finally {
       setLoading(false)
@@ -98,7 +93,6 @@ export function UserSearchCombobox({
   }, [searchQuery, searchUsers])
 
   const getDisplayName = (user: User) => {
-    // Try profile first, then profiles
     const profile = user.profile || user.profiles
     if (profile?.first_name && profile?.last_name) {
       return `${profile.first_name} ${profile.last_name}`
@@ -114,10 +108,15 @@ export function UserSearchCombobox({
     return name !== user.email.split('@')[0] ? `${name} (${user.email})` : user.email
   }
 
-  const handleSelectUser = (userId: string) => {
-    console.log('Selecting user:', userId) // Debug log
-    onValueChange(userId === value ? null : userId)
+  const handleSelectUser = (user: User) => {
+    console.log('👤 Selecting user:', user.id, user.email)
+    onValueChange(user.id === value ? null : user.id)
     setOpen(false)
+  }
+
+  const handleClearSelection = () => {
+    console.log('🗑️ Clearing selection')
+    onValueChange(null)
   }
 
   return (
@@ -140,47 +139,63 @@ export function UserSearchCombobox({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0">
-          <Command shouldFilter={false}>
-            <CommandInput 
-              placeholder="Digite email ou nome do usuário..." 
+          <div className="p-3 border-b">
+            <Input
+              placeholder="Digite email ou nome do usuário..."
               value={searchQuery}
-              onValueChange={setSearchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full"
             />
-            <CommandList>
-              <CommandEmpty>
-                {loading ? (
-                  "Buscando usuários..."
-                ) : searchQuery.length < 2 ? (
-                  "Digite pelo menos 2 caracteres"
-                ) : users.length === 0 ? (
-                  "Nenhum usuário encontrado."
-                ) : null}
-              </CommandEmpty>
-              {users.length > 0 && (
-                <CommandGroup>
+          </div>
+          
+          <ScrollArea className="max-h-[200px]">
+            <div className="p-2">
+              {loading && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Buscando usuários...</span>
+                </div>
+              )}
+              
+              {!loading && searchQuery.length < 2 && (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  Digite pelo menos 2 caracteres
+                </div>
+              )}
+              
+              {!loading && searchQuery.length >= 2 && users.length === 0 && (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  Nenhum usuário encontrado
+                </div>
+              )}
+              
+              {!loading && users.length > 0 && (
+                <div className="space-y-1">
                   {users.map((user) => (
-                    <CommandItem
+                    <div
                       key={user.id}
-                      value={user.email} // Use email as value for better matching
-                      onSelect={() => handleSelectUser(user.id)}
-                      className="cursor-pointer"
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-accent transition-colors",
+                        value === user.id && "bg-accent"
+                      )}
+                      onClick={() => handleSelectUser(user)}
                     >
                       <Check
                         className={cn(
-                          "mr-2 h-4 w-4",
+                          "h-4 w-4",
                           value === user.id ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      <div className="flex flex-col flex-1">
-                        <span className="font-medium">{getDisplayName(user)}</span>
-                        <span className="text-sm text-muted-foreground">{user.email}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{getDisplayName(user)}</div>
+                        <div className="text-sm text-muted-foreground truncate">{user.email}</div>
                       </div>
-                    </CommandItem>
+                    </div>
                   ))}
-                </CommandGroup>
+                </div>
               )}
-            </CommandList>
-          </Command>
+            </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
       
@@ -188,7 +203,7 @@ export function UserSearchCombobox({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onValueChange(null)}
+          onClick={handleClearSelection}
           disabled={disabled}
           className="h-10 w-10"
         >
