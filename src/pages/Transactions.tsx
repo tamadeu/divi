@@ -163,7 +163,6 @@ const TransactionsPage = () => {
         account:accounts (name, type),
         transfer_id
       `)
-      .eq("user_id", user.id)
       .eq("workspace_id", currentWorkspace.id)
       .order("date", { ascending: false });
 
