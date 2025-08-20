@@ -35,7 +35,8 @@ import EditTransactionModal from "@/components/transactions/EditTransactionModal
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet";
-import { format, subMonths } from "date-fns"; // Adicionado subMonths aqui
+import { format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale"; // Adicionado ptBR aqui
 
 const ITEMS_PER_PAGE = 10;
 
