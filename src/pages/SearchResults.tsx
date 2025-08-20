@@ -7,21 +7,55 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Transaction } from "@/types/database";
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Calendar } from "lucide-react";
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
 
   const [searchResults, setSearchResults] = useState<Transaction[]>([]);
+  const [filteredResults, setFilteredResults] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
+
+  // Gerar lista de meses para o filtro
+  const generateMonthOptions = () => {
+    const months = [];
+    const currentDate = new Date();
+    
+    // Adicionar os últimos 12 meses
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleDateString('pt-BR', { 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      
+      months.push({
+        value: monthKey,
+        label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)
+      });
+    }
+    
+    return months;
+  };
+
+  const monthOptions = generateMonthOptions();
 
   useEffect(() => {
     const fetchSearchResults = async () => {
@@ -125,6 +159,23 @@ const SearchResultsPage = () => {
     fetchSearchResults();
   }, [query]);
 
+  // Filtrar resultados por mês
+  useEffect(() => {
+    if (selectedMonth === "all") {
+      setFilteredResults(searchResults);
+    } else {
+      const [year, month] = selectedMonth.split("-");
+      const filtered = searchResults.filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        const transactionYear = transactionDate.getFullYear().toString();
+        const transactionMonth = String(transactionDate.getMonth() + 1).padStart(2, '0');
+        
+        return transactionYear === year && transactionMonth === month;
+      });
+      setFilteredResults(filtered);
+    }
+  }, [searchResults, selectedMonth]);
+
   const handleRowClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setIsModalOpen(true);
@@ -135,12 +186,12 @@ const SearchResultsPage = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  // Calcular totais
-  const totalIncome = searchResults
+  // Calcular totais baseado nos resultados filtrados
+  const totalIncome = filteredResults
     .filter(t => Number(t.amount) > 0)
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
-  const totalExpenses = searchResults
+  const totalExpenses = filteredResults
     .filter(t => Number(t.amount) < 0)
     .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
@@ -153,6 +204,31 @@ const SearchResultsPage = () => {
 
   return (
     <>
+      {/* Filtro de Mês */}
+      <Card className="mb-6">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Filtrar por Mês
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-full md:w-64">
+              <SelectValue placeholder="Selecione um mês" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os meses</SelectItem>
+              {monthOptions.map((month) => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <Card>
@@ -172,7 +248,7 @@ const SearchResultsPage = () => {
               {loading ? (
                 <Skeleton className="h-4 w-16" />
               ) : (
-                `${searchResults.filter(t => Number(t.amount) > 0).length} transação(ões)`
+                `${filteredResults.filter(t => Number(t.amount) > 0).length} transação(ões)`
               )}
             </p>
           </CardContent>
@@ -195,7 +271,7 @@ const SearchResultsPage = () => {
               {loading ? (
                 <Skeleton className="h-4 w-16" />
               ) : (
-                `${searchResults.filter(t => Number(t.amount) < 0).length} transação(ões)`
+                `${filteredResults.filter(t => Number(t.amount) < 0).length} transação(ões)`
               )}
             </p>
           </CardContent>
@@ -209,10 +285,15 @@ const SearchResultsPage = () => {
           <CardDescription>
             {loading
               ? "Buscando..."
-              : searchResults.length > 0
-              ? `Exibindo ${searchResults.length} resultado(s) para `
+              : filteredResults.length > 0
+              ? `Exibindo ${filteredResults.length} resultado(s) para `
               : `Nenhum resultado encontrado para `}
             <span className="font-semibold">"{query}"</span>
+            {selectedMonth !== "all" && (
+              <span className="text-muted-foreground">
+                {" "}em {monthOptions.find(m => m.value === selectedMonth)?.label.toLowerCase()}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -220,7 +301,7 @@ const SearchResultsPage = () => {
             <Skeleton className="h-64 w-full" />
           ) : (
             <AllTransactionsTable
-              transactions={searchResults}
+              transactions={filteredResults}
               onRowClick={handleRowClick}
             />
           )}
