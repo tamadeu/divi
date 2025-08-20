@@ -28,7 +28,7 @@ interface TransactionDetailsModalProps {
   transaction: Transaction | null;
   isOpen: boolean;
   onClose: () => void;
-  onEdit: (transaction: Transaction) => void;
+  onEdit?: (transaction: Transaction) => void; // Tornando opcional para evitar erro
   onTransactionDeleted: () => void;
 }
 
@@ -51,8 +51,12 @@ const TransactionDetailsModal = ({
   } as const;
 
   const handleEdit = () => {
-    onEdit(transaction);
-    onClose();
+    if (onEdit && typeof onEdit === 'function') {
+      onEdit(transaction);
+      onClose();
+    } else {
+      console.error('onEdit function not provided or not a function');
+    }
   };
 
   const handleDelete = async () => {
@@ -153,14 +157,16 @@ const TransactionDetailsModal = ({
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <div className="flex gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                onClick={handleEdit}
-                className="flex-1 sm:flex-none"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
+              {onEdit && (
+                <Button
+                  variant="outline"
+                  onClick={handleEdit}
+                  className="flex-1 sm:flex-none"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteDialog(true)}

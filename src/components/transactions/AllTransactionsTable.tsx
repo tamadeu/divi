@@ -7,15 +7,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction, Company } from "@/types/database"; // Importar Company
+import { Transaction, Company } from "@/types/database";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "./TransactionCardList";
-import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
+import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
   onRowClick: (transaction: Transaction) => void;
-  companies: Company[]; // Adicionar prop companies
+  companies: Company[];
 }
 
 const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransactionsTableProps) => {
