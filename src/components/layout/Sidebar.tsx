@@ -1,10 +1,14 @@
-import { Bell, Package } from "lucide-react";
+import { Bell, Package, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import NavLinks from "./NavLinks";
 import UserCard from "./UserCard";
 
 const Sidebar = () => {
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
   return (
     <div className="hidden border-r bg-card md:block">
       <div className="flex h-full max-h-screen flex-col gap-2">
