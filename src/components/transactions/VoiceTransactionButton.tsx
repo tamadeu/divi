@@ -105,11 +105,8 @@ const VoiceTransactionButton = () => {
     };
   }, []);
 
-  const startRecording = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("🎤 Função startRecording chamada");
+  const startRecording = async () => {
+    console.log("🎤 Função startRecording chamada - INÍCIO");
     
     try {
       // Verificar se o navegador suporta getUserMedia
@@ -218,10 +215,7 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const stopRecording = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const stopRecording = () => {
     console.log("🎤 Tentando parar gravação...");
     
     if (mediaRecorderRef.current && isRecording) {
@@ -237,10 +231,7 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const discardRecording = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const discardRecording = () => {
     console.log("🎤 Descartando gravação...");
     setHasRecording(false);
     setAudioBlob(null);
@@ -248,10 +239,7 @@ const VoiceTransactionButton = () => {
     audioChunksRef.current = [];
   };
 
-  const sendRecording = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const sendRecording = async () => {
     if (!audioBlob || !currentWorkspace || isProcessing) {
       if (!audioBlob) showError("Nenhuma gravação para enviar.");
       if (!currentWorkspace) showError("Nenhum núcleo financeiro selecionado.");
@@ -402,17 +390,12 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const closeModal = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+  const closeModal = () => {
     console.log("🔥 Fechando modal");
     
     // Parar gravação se estiver ativa
     if (isRecording) {
-      stopRecording(e as any);
+      stopRecording();
     }
     
     setShowModal(false);
@@ -423,19 +406,6 @@ const VoiceTransactionButton = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleModalContentClick = (e: React.MouseEvent) => {
-    // IMPORTANTE: Parar propagação para evitar que cliques no conteúdo fechem o modal
-    e.stopPropagation();
-  };
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    // Só fechar se clicar EXATAMENTE no backdrop (não em elementos filhos)
-    if (e.target === e.currentTarget && !isRecording && !isProcessing) {
-      console.log("🔥 Clique no backdrop - fechando modal");
-      closeModal(e);
-    }
   };
 
   const modalContent = showModal ? (
@@ -451,14 +421,9 @@ const VoiceTransactionButton = () => {
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        touchAction: 'none',
       }}
-      onClick={handleBackdropClick}
     >
-      <div 
-        className="w-full max-w-sm mx-auto"
-        onClick={handleModalContentClick}
-      >
+      <div className="w-full max-w-sm mx-auto">
         <Card className="relative bg-white shadow-2xl border-2">
           <CardContent className="p-6 text-center">
             <Button
@@ -484,42 +449,46 @@ const VoiceTransactionButton = () => {
                   <p className="text-xs text-gray-500 italic">"Gastei 50 reais no Uber hoje"</p>
                   <p className="text-xs text-gray-500 italic">"Recebi 2000 reais de salário"</p>
                   
-                  <button
-                    onClick={startRecording}
-                    onTouchEnd={startRecording}
-                    className="mt-4 bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                    style={{ 
-                      WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'manipulation'
-                    }}
-                  >
-                    <Mic className="h-6 w-6" />
-                  </button>
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      onClick={startRecording}
+                      className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full w-16 h-16 flex items-center justify-center transition-colors focus:outline-none focus:ring-4 focus:ring-red-300"
+                      style={{ 
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Mic className="h-6 w-6" style={{ margin: 0, padding: 0 }} />
+                    </button>
+                  </div>
                 </div>
               )}
               
               {/* Estado: Gravando */}
               {isRecording && (
                 <div>
-                  <div className="relative mb-4">
-                    <Mic className="h-16 w-16 text-red-500 mx-auto" />
+                  <div className="relative mb-4 flex justify-center">
+                    <Mic className="h-16 w-16 text-red-500" />
                     <div className="absolute inset-0 rounded-full border-4 border-red-500 animate-ping"></div>
                   </div>
                   <h3 className="text-lg font-semibold text-red-600 mb-2">Gravando...</h3>
                   <p className="text-2xl font-mono text-red-600 mb-4">{formatTime(recordingTime)}</p>
                   <p className="text-sm text-gray-600 mb-4">Fale sobre sua transação</p>
                   
-                  <button
-                    onClick={stopRecording}
-                    onTouchEnd={stopRecording}
-                    className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-16 h-16 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                    style={{ 
-                      WebkitTapHighlightColor: 'transparent',
-                      touchAction: 'manipulation'
-                    }}
-                  >
-                    <Square className="h-6 w-6" />
-                  </button>
+                  <div className="flex justify-center">
+                    <button
+                      onClick={stopRecording}
+                      className="bg-gray-500 hover:bg-gray-600 active:bg-gray-700 text-white rounded-full w-16 h-16 flex items-center justify-center transition-colors focus:outline-none focus:ring-4 focus:ring-gray-300"
+                      style={{ 
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Square className="h-6 w-6" style={{ margin: 0, padding: 0 }} />
+                    </button>
+                  </div>
                 </div>
               )}
               
@@ -536,12 +505,12 @@ const VoiceTransactionButton = () => {
                   <div className="flex justify-center gap-3">
                     <button
                       onClick={discardRecording}
-                      onTouchEnd={discardRecording}
-                      className="border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-full w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                      className="border border-gray-300 hover:bg-gray-50 active:bg-gray-100 text-gray-700 rounded-full w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus:ring-4 focus:ring-gray-200"
                       disabled={isProcessing}
                       style={{ 
                         WebkitTapHighlightColor: 'transparent',
-                        touchAction: 'manipulation'
+                        touchAction: 'manipulation',
+                        userSelect: 'none'
                       }}
                     >
                       <Trash2 className="h-5 w-5" />
@@ -549,12 +518,12 @@ const VoiceTransactionButton = () => {
                     
                     <button
                       onClick={sendRecording}
-                      onTouchEnd={sendRecording}
-                      className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                      className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-full w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus:ring-4 focus:ring-green-300"
                       disabled={isProcessing}
                       style={{ 
                         WebkitTapHighlightColor: 'transparent',
-                        touchAction: 'manipulation'
+                        touchAction: 'manipulation',
+                        userSelect: 'none'
                       }}
                     >
                       <Send className="h-5 w-5" />
