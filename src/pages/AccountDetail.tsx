@@ -11,7 +11,6 @@ import {
 import AccountTransactionsTable from "@/components/accounts/AccountTransactionsTable";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -28,8 +27,9 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { supabase } from "@/integrations/supabase/client";
-import { Account, Transaction, Company } from "@/types/database"; // Importar Company
+import { Account, Transaction, Company } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
+import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
 
 const ITEMS_PER_PAGE = 5;
 
@@ -37,77 +37,77 @@ const AccountDetailPage = () => {
   const { accountId } = useParams<{ accountId: string }>();
   const [account, setAccount] = useState<Account | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]); // Novo estado para empresas
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    const fetchAccountData = async () => {
-      if (!accountId) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-
-      // Fetch companies first
-      const { data: companiesData, error: companiesError } = await supabase
-        .from("companies")
-        .select("name, logo_url");
-      if (companiesError) {
-        console.error("Error fetching companies:", companiesError);
-      } else {
-        setCompanies(companiesData || []);
-      }
-
-      const { data: accountData, error: accountError } = await supabase
-        .from("accounts")
-        .select("*")
-        .eq("id", accountId)
-        .single();
-
-      if (accountError) {
-        console.error("Error fetching account details:", accountError);
-        setAccount(null);
-      } else {
-        setAccount(accountData);
-      }
-
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from("transactions")
-        .select(`
-          id,
-          account_id,
-          date,
-          name,
-          amount,
-          status,
-          description,
-          category:categories (name),
-          transfer_id
-        `)
-        .eq("account_id", accountId)
-        .order("date", { ascending: false });
-
-      if (transactionsError) {
-        console.error("Error fetching transactions:", transactionsError);
-      } else {
-        const formattedData = transactionsData.map((t: any) => ({
-          ...t,
-          category: t.category?.name || "Sem categoria",
-        }));
-        setTransactions(formattedData);
-      }
-
+  const fetchAccountData = async () => {
+    if (!accountId) {
       setLoading(false);
-    };
+      return;
+    }
+    setLoading(true);
 
+    // Fetch companies first
+    const { data: companiesData, error: companiesError } = await supabase
+      .from("companies")
+      .select("name, logo_url");
+    if (companiesError) {
+      console.error("Error fetching companies:", companiesError);
+    } else {
+      setCompanies(companiesData || []);
+    }
+
+    const { data: accountData, error: accountError } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("id", accountId)
+      .single();
+
+    if (accountError) {
+      console.error("Error fetching account details:", accountError);
+      setAccount(null);
+    } else {
+      setAccount(accountData);
+    }
+
+    const { data: transactionsData, error: transactionsError } = await supabase
+      .from("transactions")
+      .select(`
+        id,
+        account_id,
+        date,
+        name,
+        amount,
+        status,
+        description,
+        category:categories (name),
+        transfer_id
+      `)
+      .eq("account_id", accountId)
+      .order("date", { ascending: false });
+
+    if (transactionsError) {
+      console.error("Error fetching transactions:", transactionsError);
+    } else {
+      const formattedData = transactionsData.map((t: any) => ({
+        ...t,
+        category: t.category?.name || "Sem categoria",
+      }));
+      setTransactions(formattedData);
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchAccountData();
   }, [accountId]);
 
@@ -141,11 +141,11 @@ const AccountDetailPage = () => {
 
   const handleRowClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true); // Abrir o modal de edição
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closeEditModal = () => { // Renomeado para closeEditModal
+    setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
@@ -274,7 +274,7 @@ const AccountDetailPage = () => {
             <AccountTransactionsTable
               transactions={paginatedTransactions}
               onRowClick={handleRowClick}
-              companies={companies} // Passar companies para a tabela
+              companies={companies}
             />
             {totalPages > 1 && (
               <div className="mt-4">
@@ -320,10 +320,11 @@ const AccountDetailPage = () => {
           </CardContent>
         </Card>
       </div>
-      <TransactionDetailsModal
+      <EditTransactionModal
         transaction={selectedTransaction}
-        isOpen={isModalOpen}
-        onClose={closeModal}
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        onTransactionUpdated={fetchAccountData} // Recarregar dados após edição/exclusão
       />
     </>
   );
