@@ -66,6 +66,8 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
     setLoading(true);
     try {
+      console.log('Fetching members for workspace:', workspace.id);
+      
       // Primeiro, buscar todos os workspace_users
       const { data: workspaceUsers, error: usersError } = await supabase
         .from('workspace_users')
@@ -73,11 +75,60 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
         .eq('workspace_id', workspace.id)
         .order('joined_at', { ascending: true });
 
-      if (usersError) throw usersError;
+      if (usersError) {
+        console.error('Error fetching workspace users:', usersError);
+        throw usersError;
+      }
 
-      // Depois, para cada usuário real, buscar o perfil e email
-      const membersWithProfiles = [];
+      console.log('Found workspace users:', workspaceUsers);
+
+      // Buscar informações do proprietário do workspace
+      const { data: ownerProfile, error: ownerError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url')
+        .eq('id', workspace.workspace_owner)
+        .single();
+
+      if (ownerError) {
+        console.error('Error fetching owner profile:', ownerError);
+      }
+
+      // Buscar email do proprietário
+      let ownerEmail = null;
+      try {
+        const { data: ownerData, error: ownerEmailError } = await supabase.functions.invoke('get-user-email', {
+          body: { userId: workspace.workspace_owner }
+        });
+        
+        if (!ownerEmailError && ownerData?.email) {
+          ownerEmail = ownerData.email;
+        }
+      } catch (emailError) {
+        console.error('Error fetching owner email:', emailError);
+      }
+
+      // Criar entrada para o proprietário (se não estiver na lista de workspace_users)
+      const ownerInWorkspaceUsers = workspaceUsers?.find(wu => wu.user_id === workspace.workspace_owner);
       
+      const membersWithProfiles = [];
+
+      // Adicionar proprietário se não estiver na lista de workspace_users
+      if (!ownerInWorkspaceUsers) {
+        membersWithProfiles.push({
+          id: `owner-${workspace.workspace_owner}`,
+          workspace_id: workspace.id,
+          user_id: workspace.workspace_owner,
+          role: 'admin',
+          joined_at: workspace.created_at,
+          is_ghost_user: false,
+          ghost_user_name: null,
+          ghost_user_email: null,
+          profile: ownerProfile,
+          email: ownerEmail
+        });
+      }
+      
+      // Processar todos os workspace_users
       for (const user of workspaceUsers || []) {
         if (user.is_ghost_user || !user.user_id) {
           // Usuário fantasma - adicionar diretamente
@@ -122,6 +173,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
         }
       }
 
+      console.log('Final members list:', membersWithProfiles);
       setMembers(membersWithProfiles);
     } catch (error: any) {
       console.error('Error fetching members:', error);
