@@ -15,18 +15,11 @@ const PullToRefreshWrapper = ({ children, onRefresh }: PullToRefreshWrapperProps
   const [pullDistance, setPullDistance] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const startYRef = useRef(0);
-  const canPullRef = useRef(false);
-  const touchStartedAtTopRef = useRef(false);
+  const startScrollTopRef = useRef(0);
+  const isValidPullRef = useRef(false);
 
   const PULL_THRESHOLD = 80;
   const MAX_PULL_DISTANCE = 120;
-
-  // Função para verificar se está realmente no topo
-  const isAtTop = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return false;
-    return container.scrollTop <= 0;
-  }, []);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (isRefreshing) return;
@@ -34,65 +27,65 @@ const PullToRefreshWrapper = ({ children, onRefresh }: PullToRefreshWrapperProps
     const container = containerRef.current;
     if (!container) return;
 
-    // Verifica se está no topo no momento do touch start
-    const atTop = isAtTop();
-    touchStartedAtTopRef.current = atTop;
-    canPullRef.current = atTop;
+    // Armazena posições iniciais
+    startYRef.current = e.touches[0].clientY;
+    startScrollTopRef.current = container.scrollTop;
     
-    if (atTop) {
-      startYRef.current = e.touches[0].clientY;
-    }
+    // Só é válido se começar exatamente no topo
+    isValidPullRef.current = startScrollTopRef.current === 0;
     
-    // Reset states se não estiver no topo
-    if (!atTop) {
+    // Reset states se não for válido
+    if (!isValidPullRef.current) {
       setPullDistance(0);
       setIsPulling(false);
     }
-  }, [isRefreshing, isAtTop]);
+  }, [isRefreshing]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (isRefreshing || !touchStartedAtTopRef.current) return;
+    if (isRefreshing || !isValidPullRef.current) return;
 
     const container = containerRef.current;
     if (!container) return;
 
     const currentY = e.touches[0].clientY;
     const deltaY = currentY - startYRef.current;
+    const currentScrollTop = container.scrollTop;
 
-    // Se não está mais no topo, cancela tudo
-    if (!isAtTop()) {
-      canPullRef.current = false;
-      touchStartedAtTopRef.current = false;
+    // Se não está mais no topo ou movimento é para cima, invalida
+    if (currentScrollTop > 0 || deltaY <= 0) {
+      isValidPullRef.current = false;
       setPullDistance(0);
       setIsPulling(false);
       return;
     }
 
-    // Se está tentando fazer scroll para cima (deltaY negativo), não faz nada
-    if (deltaY <= 0) {
-      setPullDistance(0);
-      setIsPulling(false);
-      return;
-    }
-
-    // Se pode fazer pull E está puxando para baixo E ainda está no topo
-    if (canPullRef.current && deltaY > 0 && isAtTop()) {
-      e.preventDefault();
+    // Só aplica pull-to-refresh se:
+    // 1. Ainda está no topo (scrollTop === 0)
+    // 2. Movimento é para baixo (deltaY > 0)
+    // 3. Começou no topo (isValidPullRef.current)
+    if (currentScrollTop === 0 && deltaY > 0 && isValidPullRef.current) {
+      // Só previne o default se realmente está fazendo pull
+      if (deltaY > 5) { // Pequena tolerância para evitar interferir com scroll normal
+        e.preventDefault();
+      }
       
       const distance = Math.min(deltaY * 0.4, MAX_PULL_DISTANCE);
       setPullDistance(distance);
       setIsPulling(distance > 10);
     }
-  }, [isRefreshing, isAtTop, MAX_PULL_DISTANCE]);
+  }, [isRefreshing, MAX_PULL_DISTANCE]);
 
   const handleTouchEnd = useCallback(async () => {
-    if (isRefreshing || !touchStartedAtTopRef.current) return;
+    if (isRefreshing || !isValidPullRef.current) {
+      isValidPullRef.current = false;
+      return;
+    }
 
-    // Reset flags
-    canPullRef.current = false;
-    touchStartedAtTopRef.current = false;
+    const container = containerRef.current;
+    if (!container) return;
 
-    if (pullDistance >= PULL_THRESHOLD && isAtTop()) {
+    // Só executa refresh se ainda estiver no topo
+    if (pullDistance >= PULL_THRESHOLD && container.scrollTop === 0) {
       setIsRefreshing(true);
       setIsPulling(false);
       
@@ -110,21 +103,22 @@ const PullToRefreshWrapper = ({ children, onRefresh }: PullToRefreshWrapperProps
       setIsPulling(false);
       setPullDistance(0);
     }
-  }, [pullDistance, PULL_THRESHOLD, onRefresh, isRefreshing, isAtTop]);
+
+    isValidPullRef.current = false;
+  }, [pullDistance, PULL_THRESHOLD, onRefresh, isRefreshing]);
 
   // Listener para cancelar pull quando scroll muda
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Se não está mais no topo, cancela qualquer pull em andamento
-    if (!isAtTop()) {
-      canPullRef.current = false;
-      touchStartedAtTopRef.current = false;
+    // Se saiu do topo, cancela qualquer pull em andamento
+    if (container.scrollTop > 0) {
+      isValidPullRef.current = false;
       setPullDistance(0);
       setIsPulling(false);
     }
-  }, [isAtTop]);
+  }, []);
 
   useEffect(() => {
     if (!isMobile) return;
@@ -132,7 +126,7 @@ const PullToRefreshWrapper = ({ children, onRefresh }: PullToRefreshWrapperProps
     const container = containerRef.current;
     if (!container) return;
 
-    // Usa passive: false apenas para touchmove para poder preventDefault
+    // Todos os listeners como passive, exceto touchmove que precisa do preventDefault
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -167,7 +161,7 @@ const PullToRefreshWrapper = ({ children, onRefresh }: PullToRefreshWrapperProps
       className="h-full overflow-auto relative"
       style={{ 
         WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain'
+        overscrollBehavior: 'auto'
       }}
     >
       <AnimatePresence>
