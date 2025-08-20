@@ -32,7 +32,7 @@ import VoiceTransactionButton from "@/components/transactions/VoiceTransactionBu
 import { getCompanyLogo } from "@/utils/transaction-helpers";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import AddTransferModal from "@/components/transfers/AddTransferModal"; // Importar AddTransferModal
+import TransferModal from "@/components/transfers/TransferModal"; // Updated import
 import { showError } from "@/utils/toast"; // Importar showError
 
 const ITEMS_PER_PAGE = 10;
@@ -43,7 +43,8 @@ const TransactionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAddTransferModalOpen, setIsAddTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
+  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null); // State for transfer data
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Changed state name
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
 
@@ -137,10 +138,33 @@ const TransactionsPage = () => {
     return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
 
-  const handleRowClick = (transaction: Transaction) => {
+  const handleRowClick = async (transaction: Transaction) => {
     if (transaction.transfer_id) {
-      showError("A edição de transferências ainda não é suportada. Este modal é para novas transferências.");
-      setIsAddTransferModalOpen(true); // Abre o modal de adicionar transferência
+      // Fetch both transactions related to this transfer_id
+      const { data: transferTransactions, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('transfer_id', transaction.transfer_id)
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        showError("Erro ao carregar detalhes da transferência: " + error.message);
+        return;
+      }
+
+      if (transferTransactions && transferTransactions.length === 2) {
+        const fromTransaction = transferTransactions.find(t => t.amount < 0);
+        const toTransaction = transferTransactions.find(t => t.amount > 0);
+
+        if (fromTransaction && toTransaction) {
+          setSelectedTransferData({ fromTransaction, toTransaction });
+          setIsTransferModalOpen(true);
+        } else {
+          showError("Não foi possível identificar as transações de origem e destino da transferência.");
+        }
+      } else {
+        showError("Não foi possível encontrar as duas transações para esta transferência.");
+      }
     } else {
       setSelectedTransaction(transaction);
       setIsEditModalOpen(true);
@@ -152,8 +176,9 @@ const TransactionsPage = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  const closeAddTransferModal = () => {
-    setIsAddTransferModalOpen(false);
+  const closeTransferModal = () => { // Changed function name
+    setIsTransferModalOpen(false);
+    setTimeout(() => setSelectedTransferData(null), 300);
   };
 
   const handlePageChange = (page: number) => {
@@ -315,10 +340,11 @@ const TransactionsPage = () => {
         onClose={closeEditModal}
         onTransactionUpdated={fetchTransactions}
       />
-      <AddTransferModal
-        isOpen={isAddTransferModalOpen}
-        onClose={closeAddTransferModal}
-        onTransferAdded={fetchTransactions}
+      <TransferModal // Changed to TransferModal
+        isOpen={isTransferModalOpen} // Changed state name
+        onClose={closeTransferModal} // Changed function name
+        onTransferCompleted={fetchTransactions} // Changed prop name
+        initialTransferData={selectedTransferData} // Pass initial data
       />
     </>
   );

@@ -12,7 +12,7 @@ import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
-import AddTransferModal from "@/components/transfers/AddTransferModal";
+import TransferModal from "@/components/transfers/TransferModal"; // Updated import
 import UserCard from "./UserCard";
 
 const Layout = () => {
@@ -32,6 +32,7 @@ const Layout = () => {
     isAddTransferModalOpen,
     closeAddTransferModal,
     onTransferAdded,
+    addTransferInitialData, // Added to get initial data for transfer modal
   } = useModal();
 
   return (
@@ -95,10 +96,11 @@ const Layout = () => {
         onClose={closeAddCategoryModal}
         onCategoryAdded={onCategoryAdded}
       />
-      <AddTransferModal
+      <TransferModal // Changed to TransferModal
         isOpen={isAddTransferModalOpen}
         onClose={closeAddTransferModal}
-        onTransferAdded={onTransferAdded}
+        onTransferCompleted={onTransferAdded} // Changed prop name
+        initialTransferData={addTransferInitialData} // Pass initial data
       />
     </>
   );
