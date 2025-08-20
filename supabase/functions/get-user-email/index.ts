@@ -21,7 +21,7 @@ serve(async (req) => {
 
     if (!userId) {
       return new Response(
-        JSON.stringify({ error: 'User ID é obrigatório' }),
+        JSON.stringify({ error: 'userId is required' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -29,25 +29,15 @@ serve(async (req) => {
       )
     }
 
-    // Buscar usuário pelo ID usando o service role
-    const { data: { user }, error } = await supabaseClient.auth.admin.getUserById(userId)
+    // Buscar o usuário usando o service role key
+    const { data: user, error } = await supabaseClient.auth.admin.getUserById(userId)
 
     if (error) {
-      console.error('Error getting user:', error)
+      console.error('Error fetching user:', error)
       return new Response(
-        JSON.stringify({ error: 'Erro ao buscar usuário' }),
+        JSON.stringify({ error: 'User not found' }),
         { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
-    if (!user) {
-      return new Response(
-        JSON.stringify({ email: null }),
-        { 
-          status: 200, 
+          status: 404, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
@@ -55,11 +45,10 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        email: user.email,
-        id: user.id
+        email: user.user?.email,
+        id: user.user?.id 
       }),
       { 
-        status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
@@ -67,7 +56,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in get-user-email function:', error)
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

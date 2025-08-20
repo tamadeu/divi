@@ -21,7 +21,7 @@ serve(async (req) => {
 
     if (!email) {
       return new Response(
-        JSON.stringify({ error: 'Email é obrigatório' }),
+        JSON.stringify({ error: 'Email is required' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -29,13 +29,13 @@ serve(async (req) => {
       )
     }
 
-    // Buscar usuário pelo email usando o service role
-    const { data: { users }, error } = await supabaseClient.auth.admin.listUsers()
+    // Buscar usuário por email usando service role
+    const { data: users, error } = await supabaseClient.auth.admin.listUsers()
 
     if (error) {
       console.error('Error listing users:', error)
       return new Response(
-        JSON.stringify({ error: 'Erro ao buscar usuários' }),
+        JSON.stringify({ error: 'Error searching users' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -44,13 +44,12 @@ serve(async (req) => {
     }
 
     // Encontrar usuário com o email específico
-    const user = users.find(u => u.email === email)
+    const user = users.users.find(u => u.email === email)
 
     if (!user) {
       return new Response(
         JSON.stringify({ user: null }),
         { 
-          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
@@ -65,7 +64,6 @@ serve(async (req) => {
         }
       }),
       { 
-        status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
@@ -73,7 +71,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in find-user-by-email function:', error)
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

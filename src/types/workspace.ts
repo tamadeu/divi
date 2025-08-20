@@ -17,10 +17,17 @@ export interface WorkspaceWithRole extends Workspace {
 export interface WorkspaceUser {
   id: string;
   workspace_id: string;
-  user_id: string;
+  user_id: string | null;
   role: 'admin' | 'user';
   joined_at: string;
   is_ghost_user: boolean;
   ghost_user_name: string | null;
   ghost_user_email: string | null;
+  // Campos adicionais para exibição
+  profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
+  email?: string | null;
 }
