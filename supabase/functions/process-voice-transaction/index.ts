@@ -7,7 +7,9 @@ const corsHeaders = {
 }
 
 interface VoiceTransactionRequest {
-  text: string;
+  audio_data?: string;
+  audio_type?: string;
+  text?: string; // Manter compatibilidade com versão anterior
   workspace_id: string;
 }
 
@@ -26,17 +28,23 @@ serve(async (req) => {
   }
 
   try {
-    const { text, workspace_id }: VoiceTransactionRequest = await req.json()
+    const { audio_data, audio_type, text, workspace_id }: VoiceTransactionRequest = await req.json()
     
-    if (!text || !workspace_id) {
+    if (!workspace_id) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Texto e workspace_id são obrigatórios' }),
+        JSON.stringify({ success: false, error: 'workspace_id é obrigatório' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
-    console.log('Processando texto:', text)
-    console.log('Workspace ID:', workspace_id)
+    if (!audio_data && !text) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'audio_data ou text são obrigatórios' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    console.log('Processando áudio/texto para workspace:', workspace_id)
 
     // Inicializar cliente Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -53,12 +61,29 @@ serve(async (req) => {
     const expenseCategories = categories?.filter(c => c.type === 'expense').map(c => c.name) || []
     const incomeCategories = categories?.filter(c => c.type === 'income').map(c => c.name) || []
 
+    let transcribedText = text || '';
+
+    // Se temos áudio, primeiro precisamos transcrever
+    if (audio_data) {
+      console.log('Transcrevendo áudio...')
+      transcribedText = await transcribeAudio(audio_data, audio_type || 'audio/webm')
+      
+      if (!transcribedText) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Não foi possível transcrever o áudio' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+      
+      console.log('Texto transcrito:', transcribedText)
+    }
+
     // Preparar prompt para IA
     const prompt = `
 Você é um assistente especializado em processar transações financeiras por voz em português brasileiro.
 
-Analise o seguinte texto e extraia as informações de uma transação financeira:
-"${text}"
+Analise o seguinte texto transcrito de áudio e extraia as informações de uma transação financeira:
+"${transcribedText}"
 
 Categorias de despesa disponíveis: ${expenseCategories.join(', ')}
 Categorias de receita disponíveis: ${incomeCategories.join(', ')}
@@ -178,7 +203,7 @@ Regras:
     if (!aiResponse) {
       // Fallback: processamento simples baseado em regras
       console.log('Usando fallback de processamento simples')
-      const transaction = processWithFallback(text, categoryNames)
+      const transaction = processWithFallback(transcribedText, categoryNames)
       
       return new Response(
         JSON.stringify({ success: true, transaction }),
@@ -233,7 +258,7 @@ Regras:
       console.error('Resposta original:', aiResponse)
       
       // Usar fallback em caso de erro
-      const transaction = processWithFallback(text, categoryNames)
+      const transaction = processWithFallback(transcribedText, categoryNames)
       
       return new Response(
         JSON.stringify({ success: true, transaction }),
@@ -253,6 +278,49 @@ Regras:
     )
   }
 })
+
+// Função para transcrever áudio usando OpenAI Whisper
+async function transcribeAudio(audioBase64: string, audioType: string): Promise<string | null> {
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+  
+  if (!openaiApiKey) {
+    console.log('OpenAI API key não encontrada, tentando fallback...')
+    return null
+  }
+
+  try {
+    // Converter base64 para blob
+    const audioBuffer = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0))
+    
+    // Criar FormData para enviar para Whisper
+    const formData = new FormData()
+    const audioFile = new File([audioBuffer], 'audio.webm', { type: audioType })
+    formData.append('file', audioFile)
+    formData.append('model', 'whisper-1')
+    formData.append('language', 'pt')
+    formData.append('response_format', 'text')
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+      },
+      body: formData
+    })
+
+    if (response.ok) {
+      const transcription = await response.text()
+      console.log('Transcrição do Whisper:', transcription)
+      return transcription.trim()
+    } else {
+      console.error('Erro na transcrição:', await response.text())
+      return null
+    }
+  } catch (error) {
+    console.error('Erro ao transcrever áudio:', error)
+    return null
+  }
+}
 
 // Função de fallback para processamento simples baseado em regras
 function processWithFallback(text: string, categories: string[]): TransactionData {
