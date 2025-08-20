@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { ArrowRight, PlusCircle, Star, Pencil, Calculator, CalculatorOff } from "lucide-react";
+import { ArrowRight, PlusCircle, Star, Pencil, Calculator, MinusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Account } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -158,7 +158,7 @@ const AccountsPage = () => {
                       {account.include_in_total ? (
                         <Calculator className="h-4 w-4 text-green-600" title="Incluído no saldo total" />
                       ) : (
-                        <CalculatorOff className="h-4 w-4 text-gray-400" title="Não incluído no saldo total" />
+                        <MinusCircle className="h-4 w-4 text-gray-400" title="Não incluído no saldo total" />
                       )}
                     </span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
@@ -191,7 +191,7 @@ const AccountsPage = () => {
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-gray-500">
-                      <CalculatorOff className="mr-1 h-3 w-3" />
+                      <MinusCircle className="mr-1 h-3 w-3" />
                       Fora do Total
                     </Badge>
                   )}

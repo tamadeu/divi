@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Account } from "@/types/database";
-import { Pencil, Trash2, Star, Eye, Calculator, CalculatorOff } from "lucide-react";
+import { Pencil, Trash2, Star, Eye, Calculator, MinusCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface AccountsTableProps {
@@ -51,7 +51,7 @@ const AccountsTable = ({
                       {account.include_in_total ? (
                         <Calculator className="h-3 w-3 text-green-600" title="Incluído no saldo total" />
                       ) : (
-                        <CalculatorOff className="h-3 w-3 text-gray-400" title="Não incluído no saldo total" />
+                        <MinusCircle className="h-3 w-3 text-gray-400" title="Não incluído no saldo total" />
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground lg:hidden">
@@ -120,7 +120,7 @@ const AccountsTable = ({
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-gray-500">
-                        <CalculatorOff className="mr-1 h-3 w-3" />
+                        <MinusCircle className="mr-1 h-3 w-3" />
                         Fora do Total
                       </Badge>
                     )}
