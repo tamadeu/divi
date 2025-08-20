@@ -100,6 +100,7 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         console.error("Error fetching banks:", banksError);
         showError("Erro ao carregar bancos");
         setBanks([]);
+        // Set other form data, but bank_id will be empty
         setFormData({
           name: account.name,
           bank_id: "", 
@@ -195,7 +196,10 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
                 onValueChange={(value) => setFormData({ ...formData, bank_id: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingBanks ? "Carregando bancos..." : "Selecione o banco"} />
+                  <SelectValue placeholder={loadingBanks ? "Carregando bancos..." : "Selecione o banco"}>
+                    {/* Explicitly render the selected bank name */}
+                    {!loadingBanks && formData.bank_id && banks.find(b => b.id === formData.bank_id)?.name}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((bank) => (
@@ -227,7 +231,10 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
                 onValueChange={(value) => setFormData({ ...formData, type: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
+                  <SelectValue placeholder="Selecione o tipo">
+                    {/* Explicitly render the selected type */}
+                    {formData.type}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {accountTypes.map((type) => (
@@ -237,6 +244,21 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="initialBalance">Saldo Inicial</Label>
+              <Input
+                id="initialBalance"
+                type="number"
+                step="0.01"
+                value={formData.initialBalance}
+                onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+                autoFocus={false}
+              />
+              <p className="text-xs text-muted-foreground">
+                Se informado, será criada uma transação de saldo inicial.
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
