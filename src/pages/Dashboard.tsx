@@ -1,14 +1,15 @@
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import MobileSummaryCards from "@/components/dashboard/MobileSummaryCards";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import BudgetSummaryTable from "@/components/dashboard/BudgetSummaryTable"; // Importar o novo componente
+import BudgetSummaryTable from "@/components/dashboard/BudgetSummaryTable";
+import MonthPicker from "@/components/budgets/MonthPicker"; // Importar MonthPicker
 import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useCallback } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Transaction, Company, BudgetWithSpending } from "@/types/database"; // Adicionar BudgetWithSpending
+import { Transaction, Company, BudgetWithSpending } from "@/types/database";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 
 interface SummaryData {
@@ -21,10 +22,11 @@ const Dashboard = () => {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]); // Novo estado para orçamentos
+  const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date()); // Novo estado para o mês selecionado
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -34,13 +36,16 @@ const Dashboard = () => {
     setIsEditModalOpen(true);
   };
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (month: Date) => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
       return;
     }
+
+    const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+    const nextMonthStart = new Date(month.getFullYear(), month.getMonth() + 1, 1);
 
     // Fetch companies
     const { data: companiesData, error: companiesError } = await supabase
@@ -52,8 +57,10 @@ const Dashboard = () => {
       setCompanies(companiesData || []);
     }
 
-    // Fetch summary
-    const { data: summaryData, error: summaryError } = await supabase.rpc('get_dashboard_summary');
+    // Fetch summary for the selected month
+    const { data: summaryData, error: summaryError } = await supabase.rpc('get_dashboard_summary', {
+      summary_month: monthStart.toISOString(),
+    });
     if (summaryError) {
       console.error("Error fetching summary data:", summaryError);
       setSummary({ total_balance: 0, monthly_income: 0, monthly_expenses: 0 });
@@ -61,7 +68,7 @@ const Dashboard = () => {
       setSummary(summaryData[0]);
     }
 
-    // Fetch recent transactions
+    // Fetch recent transactions for the selected month
     const { data: transactionsData, error: transactionsError } = await supabase
       .from("transactions")
       .select(`
@@ -76,6 +83,8 @@ const Dashboard = () => {
         transfer_id
       `)
       .eq("user_id", user.id)
+      .gte("date", monthStart.toISOString())
+      .lt("date", nextMonthStart.toISOString())
       .order("date", { ascending: false })
       .limit(6);
 
@@ -89,12 +98,9 @@ const Dashboard = () => {
       setTransactions(formattedData);
     }
 
-    // Fetch budgets for the current month
-    const currentMonth = new Date();
-    currentMonth.setDate(1); // Define para o primeiro dia do mês
-    currentMonth.setHours(0, 0, 0, 0); // Zera o tempo para evitar problemas com o RPC
+    // Fetch budgets for the selected month
     const { data: budgetsData, error: budgetsError } = await supabase.rpc('get_budgets_with_spending', {
-      budget_month: currentMonth.toISOString(),
+      budget_month: monthStart.toISOString(),
     });
 
     if (budgetsError) {
@@ -108,8 +114,8 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchDashboardData(selectedMonth);
+  }, [fetchDashboardData, selectedMonth]);
 
   const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number') return "R$ 0,00";
@@ -121,8 +127,9 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
+        <MonthPicker selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
       </div>
       {loading ? (
         <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -170,7 +177,6 @@ const Dashboard = () => {
           <RecentTransactions transactions={transactions} loading={loading} onRowClick={handleTransactionClick} companies={companies} />
         </div>
         <div className="lg:col-span-2">
-          {/* Substituindo SpendingChart por BudgetSummaryTable */}
           <BudgetSummaryTable budgets={budgets} loading={loading} />
         </div>
       </div>
