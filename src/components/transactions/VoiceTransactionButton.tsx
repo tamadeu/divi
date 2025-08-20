@@ -13,6 +13,7 @@ interface VoiceTransactionData {
   amount: number;
   type: 'income' | 'expense';
   category?: string;
+  category_id?: string;
   description?: string;
   date?: string;
 }
@@ -212,6 +213,15 @@ const VoiceTransactionButton = () => {
       if (data && data.success) {
         const transactionData: VoiceTransactionData = data.transaction;
         
+        // Buscar conta padrão do workspace
+        const { data: accounts } = await supabase
+          .from("accounts")
+          .select("id, is_default")
+          .eq("workspace_id", currentWorkspace.id)
+          .order("is_default", { ascending: false });
+        
+        const defaultAccount = accounts?.find(acc => acc.is_default);
+        
         // Fechar modal de voz
         setShowModal(false);
         resetModal();
@@ -224,6 +234,8 @@ const VoiceTransactionButton = () => {
             amount: transactionData.amount,
             description: transactionData.description || `Criado por voz (${formatTime(recordingTime)})`,
             date: transactionData.date ? new Date(transactionData.date) : new Date(),
+            account_id: defaultAccount?.id || "",
+            category_id: transactionData.category_id || "",
           });
         }, 500);
         

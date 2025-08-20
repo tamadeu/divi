@@ -18,6 +18,7 @@ interface TransactionData {
   amount: number;
   type: 'income' | 'expense';
   category?: string;
+  category_id?: string;
   description?: string;
   date?: string;
 }
@@ -87,12 +88,12 @@ serve(async (req) => {
     // Buscar categorias do workspace para ajudar na classificação
     const { data: categories } = await supabase
       .from('categories')
-      .select('name, type')
+      .select('id, name, type')
       .eq('workspace_id', workspace_id)
 
     const categoryNames = categories?.map(c => c.name) || []
-    const expenseCategories = categories?.filter(c => c.type === 'expense').map(c => c.name) || []
-    const incomeCategories = categories?.filter(c => c.type === 'income').map(c => c.name) || []
+    const expenseCategories = categories?.filter(c => c.type === 'expense').map(c => ({ id: c.id, name: c.name })) || []
+    const incomeCategories = categories?.filter(c => c.type === 'income').map(c => ({ id: c.id, name: c.name })) || []
 
     let transcribedText = text || '';
 
@@ -112,33 +113,43 @@ serve(async (req) => {
       console.log('Texto transcrito:', transcribedText)
     }
 
-    // Preparar prompt para IA
+    // Preparar prompt melhorado para IA
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
     const prompt = `
 Você é um assistente especializado em processar transações financeiras por voz em português brasileiro.
+
+Data atual: ${today.toISOString().split('T')[0]} (hoje)
+Data de ontem: ${yesterday.toISOString().split('T')[0]} (ontem)
 
 Analise o seguinte texto transcrito de áudio e extraia as informações de uma transação financeira:
 "${transcribedText}"
 
-Categorias de despesa disponíveis: ${expenseCategories.join(', ')}
-Categorias de receita disponíveis: ${incomeCategories.join(', ')}
+Categorias de despesa disponíveis: ${expenseCategories.map(c => `"${c.name}" (ID: ${c.id})`).join(', ')}
+Categorias de receita disponíveis: ${incomeCategories.map(c => `"${c.name}" (ID: ${c.id})`).join(', ')}
 
 Retorne APENAS um JSON válido com a seguinte estrutura:
 {
   "name": "nome da transação (ex: Uber, Salário, Supermercado)",
   "amount": número positivo (ex: 50.00),
   "type": "expense" ou "income",
-  "category": "categoria mais apropriada da lista disponível ou null se não encontrar",
+  "category_name": "nome exato da categoria da lista disponível ou null se não encontrar",
+  "category_id": "ID da categoria correspondente ou null",
   "description": "descrição adicional se houver ou null",
-  "date": "data no formato ISO se mencionada ou null para usar hoje"
+  "date": "data no formato YYYY-MM-DD ou null para usar hoje"
 }
 
-Regras:
+Regras importantes:
 - Se mencionar "gastei", "paguei", "comprei" = expense
 - Se mencionar "recebi", "ganhei", "salário" = income  
-- Extraia valores numéricos (50 reais = 50.00)
-- Use a categoria mais próxima da lista ou null
+- Extraia valores numéricos: "50 reais" = 50.00, "49 e 58" = 49.58
+- Use EXATAMENTE o nome da categoria da lista ou null
+- Para datas: "hoje" = ${today.toISOString().split('T')[0]}, "ontem" = ${yesterday.toISOString().split('T')[0]}
+- Se mencionar "segunda", "terça", etc, calcule a data mais próxima
 - Nome deve ser conciso (máximo 3 palavras)
-- Não inclua explicações, apenas o JSON
+- Não inclua explicações, apenas o JSON válido
 `
 
     // Tentar usar diferentes provedores de IA
@@ -165,7 +176,7 @@ Regras:
     if (!aiResult.success) {
       // Fallback: processamento simples baseado em regras
       console.log('Usando fallback de processamento simples')
-      const transaction = processWithFallback(transcribedText, categoryNames)
+      const transaction = processWithFallback(transcribedText, categories || [])
       
       // Log do fallback
       await logAIRequest({
@@ -182,6 +193,16 @@ Regras:
         JSON.stringify({ success: true, transaction }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Mapear categoria_name para category_id se necessário
+    if (aiResult.transaction && aiResult.transaction.category && !aiResult.transaction.category_id) {
+      const matchedCategory = categories?.find(c => 
+        c.name.toLowerCase() === aiResult.transaction!.category!.toLowerCase()
+      )
+      if (matchedCategory) {
+        aiResult.transaction.category_id = matchedCategory.id
+      }
     }
 
     return new Response(
@@ -553,7 +574,7 @@ function parseAIResponse(aiResponse: string): TransactionData {
 }
 
 // Função de fallback para processamento simples baseado em regras
-function processWithFallback(text: string, categories: string[]): TransactionData {
+function processWithFallback(text: string, categories: any[]): TransactionData {
   const lowerText = text.toLowerCase()
   
   // Detectar tipo
@@ -581,11 +602,25 @@ function processWithFallback(text: string, categories: string[]): TransactionDat
   
   // Tentar encontrar categoria
   let category = null
+  let category_id = null
   for (const cat of categories) {
-    if (lowerText.includes(cat.toLowerCase())) {
-      category = cat
+    if (lowerText.includes(cat.name.toLowerCase())) {
+      category = cat.name
+      category_id = cat.id
       break
     }
+  }
+  
+  // Processar datas
+  let date = null
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  
+  if (/\bhoje\b/.test(lowerText)) {
+    date = today.toISOString().split('T')[0]
+  } else if (/\bontem\b/.test(lowerText)) {
+    date = yesterday.toISOString().split('T')[0]
   }
   
   return {
@@ -593,6 +628,8 @@ function processWithFallback(text: string, categories: string[]): TransactionDat
     amount,
     type,
     category,
-    description: `Processado por voz: "${text}"`
+    category_id,
+    description: `Processado por voz: "${text}"`,
+    date
   }
 }
