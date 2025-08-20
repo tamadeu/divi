@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Plus, Users, Trash2, LogOut, MoreVertical } from "lucide-react";
+import { Plus, Users, Trash2, LogOut, MoreVertical, Moon, Sun, Monitor, Key } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTheme } from "next-themes";
 
 interface Profile {
   first_name: string | null;
@@ -57,15 +58,23 @@ const Settings = () => {
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const { refreshWorkspaces } = useWorkspace();
+  const { theme, setTheme } = useTheme();
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [createFormData, setCreateFormData] = useState({
     name: "",
     description: "",
     type: "personal",
   });
+  const [passwordFormData, setPasswordFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -104,12 +113,12 @@ const Settings = () => {
       .select("*")
       .eq("workspace_owner", user.id);
 
-    // Buscar workspaces onde o usuário é membro
+    // Buscar workspaces onde o usuário é membro (mas não owner)
     const { data: memberWorkspaces, error: memberError } = await supabase
       .from("workspace_users")
       .select(`
         role,
-        workspaces (
+        workspaces!inner (
           id,
           name,
           description,
@@ -118,7 +127,8 @@ const Settings = () => {
           workspace_owner
         )
       `)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .neq("workspaces.workspace_owner", user.id); // Excluir workspaces onde já é owner
 
     if (ownedError || memberError) {
       console.error("Error fetching workspaces:", ownedError || memberError);
@@ -140,7 +150,7 @@ const Settings = () => {
       });
     }
 
-    // Adicionar workspaces onde é membro
+    // Adicionar workspaces onde é membro (mas não owner)
     if (memberWorkspaces) {
       memberWorkspaces.forEach(item => {
         if (item.workspaces) {
@@ -184,6 +194,41 @@ const Settings = () => {
     }
 
     setSaving(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+      showError("As senhas não coincidem");
+      return;
+    }
+
+    if (passwordFormData.newPassword.length < 6) {
+      showError("A nova senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+
+    setChangingPassword(true);
+
+    const { error } = await supabase.auth.updateUser({
+      password: passwordFormData.newPassword
+    });
+
+    if (error) {
+      showError("Erro ao alterar senha");
+      console.error("Error changing password:", error);
+    } else {
+      showSuccess("Senha alterada com sucesso!");
+      setIsPasswordModalOpen(false);
+      setPasswordFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    }
+
+    setChangingPassword(false);
   };
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
@@ -298,6 +343,17 @@ const Settings = () => {
     return "U";
   };
 
+  const getThemeIcon = (themeValue: string) => {
+    switch (themeValue) {
+      case "light":
+        return <Sun className="h-4 w-4" />;
+      case "dark":
+        return <Moon className="h-4 w-4" />;
+      default:
+        return <Monitor className="h-4 w-4" />;
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -388,6 +444,64 @@ const Settings = () => {
               {saving ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Security Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Segurança</CardTitle>
+          <CardDescription>
+            Gerencie sua senha e configurações de segurança.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => setIsPasswordModalOpen(true)}>
+            <Key className="h-4 w-4 mr-2" />
+            Alterar Senha
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Appearance Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Aparência</CardTitle>
+          <CardDescription>
+            Personalize a aparência da aplicação.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="theme">Tema</Label>
+              <Select value={theme} onValueChange={setTheme}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o tema" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      Claro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="dark">
+                    <div className="flex items-center gap-2">
+                      <Moon className="h-4 w-4" />
+                      Escuro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="system">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4" />
+                      Sistema
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -541,6 +655,54 @@ const Settings = () => {
               </Button>
               <Button type="submit" disabled={creatingWorkspace || !createFormData.name}>
                 {creatingWorkspace ? "Criando..." : "Criar Núcleo"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Modal */}
+      <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+            <DialogDescription>
+              Digite sua nova senha. Ela deve ter pelo menos 6 caracteres.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="newPassword">Nova Senha</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={passwordFormData.newPassword}
+                  onChange={(e) => setPasswordFormData({ ...passwordFormData, newPassword: e.target.value })}
+                  placeholder="Digite sua nova senha"
+                  autoFocus={false}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordFormData.confirmPassword}
+                  onChange={(e) => setPasswordFormData({ ...passwordFormData, confirmPassword: e.target.value })}
+                  placeholder="Confirme sua nova senha"
+                  autoFocus={false}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsPasswordModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={changingPassword || !passwordFormData.newPassword || !passwordFormData.confirmPassword}>
+                {changingPassword ? "Alterando..." : "Alterar Senha"}
               </Button>
             </DialogFooter>
           </form>
