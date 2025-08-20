@@ -56,34 +56,58 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
 
-  // Initialize form data when account changes
-  useEffect(() => {
-    if (account && isOpen) {
-      setFormData({
-        name: account.name,
-        bank: account.bank,
-        type: account.type,
-        includeInTotal: account.include_in_total,
-      });
-      fetchBanks();
+  // Helper function to map database account type to display type
+  const mapAccountTypeForDisplay = (dbType: string) => {
+    const normalizedType = dbType.trim().toLowerCase();
+    switch (normalizedType) {
+      case "conta corrente": return "Conta Corrente";
+      case "poupança": return "Poupança";
+      case "investimento": return "Investimento";
+      case "cartão de crédito": return "Cartão de Crédito";
+      case "dinheiro": return "Dinheiro";
+      case "outros": return "Outros";
+      default: return ""; // Fallback for unknown types
     }
-  }, [account, isOpen]);
-
-  const fetchBanks = async () => {
-    setLoadingBanks(true);
-    const { data, error } = await supabase
-      .from("banks")
-      .select("id, name, logo_url, color")
-      .order("name");
-
-    if (error) {
-      console.error("Error fetching banks:", error);
-      showError("Erro ao carregar bancos");
-    } else {
-      setBanks(data || []);
-    }
-    setLoadingBanks(false);
   };
+
+  // Helper function to find the exact bank name from the fetched list
+  const getExactBankName = (dbBankName: string, availableBanks: Bank[]) => {
+    const foundBank = availableBanks.find(
+      (bank) => bank.name.trim().toLowerCase() === dbBankName.trim().toLowerCase()
+    );
+    return foundBank ? foundBank.name : ""; // Return the exact name from the list, or empty string
+  };
+
+  // Initialize form data when account changes or modal opens
+  useEffect(() => {
+    const initializeFormData = async () => {
+      if (account && isOpen) {
+        setLoadingBanks(true);
+        const { data, error } = await supabase
+          .from("banks")
+          .select("id, name, logo_url, color")
+          .order("name");
+
+        if (error) {
+          console.error("Error fetching banks:", error);
+          showError("Erro ao carregar bancos");
+          setBanks([]);
+        } else {
+          setBanks(data || []);
+          const exactBankName = getExactBankName(account.bank, data || []);
+          setFormData({
+            name: account.name,
+            bank: exactBankName, // Use the exact name from the fetched list
+            type: mapAccountTypeForDisplay(account.type), // Map type for the Select component
+            includeInTotal: account.include_in_total,
+          });
+        }
+        setLoadingBanks(false);
+      }
+    };
+
+    initializeFormData();
+  }, [account, isOpen]); // Depend on 'account' and 'isOpen'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
