@@ -7,6 +7,7 @@ import AdminNavLinks from "./AdminNavLinks";
 import AdminUserCard from "./AdminUserCard";
 import AdminHeader from "./AdminHeader";
 import BottomNav from "./AdminBottomNav";
+import { ThemeToggle } from "@/components/settings/ThemeToggle";
 
 const AdminLayout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -44,6 +45,11 @@ const AdminLayout = () => {
               <AdminNavLinks />
             </nav>
           </div>
+
+          {/* Theme Toggle at bottom */}
+          <div className="border-t p-2 lg:p-4">
+            <ThemeToggle variant="compact" />
+          </div>
         </div>
       </div>
 
@@ -71,6 +77,11 @@ const AdminLayout = () => {
             
             <div onClick={() => setMobileSidebarOpen(false)}>
               <AdminNavLinks />
+            </div>
+
+            {/* Theme Toggle for mobile */}
+            <div className="border-t pt-4 mt-4">
+              <ThemeToggle variant="compact" />
             </div>
           </nav>
         </SheetContent>

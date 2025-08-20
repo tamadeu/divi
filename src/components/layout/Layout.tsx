@@ -14,6 +14,7 @@ import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import UserCard from "./UserCard";
+import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -109,6 +110,11 @@ const Layout = () => {
               <nav className="flex-1 px-4 pb-4">
                 <NavLinks onLinkClick={closeMobileSidebar} />
               </nav>
+
+              {/* Theme Toggle for mobile */}
+              <div className="border-t p-4">
+                <ThemeToggle variant="compact" />
+              </div>
             </div>
           </SheetContent>
         </Sheet>

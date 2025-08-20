@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import NavLinks from "./NavLinks";
 import UserCard from "./UserCard";
+import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -47,6 +48,11 @@ const Sidebar = () => {
         <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
           <NavLinks />
         </nav>
+      </div>
+
+      {/* Theme Toggle at bottom */}
+      <div className="border-t p-2 lg:p-4">
+        <ThemeToggle variant="compact" />
       </div>
     </div>
   );
