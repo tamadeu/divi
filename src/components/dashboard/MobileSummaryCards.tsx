@@ -39,7 +39,7 @@ const MobileSummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses }: Mo
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <p className="text-green-100 text-xs font-medium">Renda</p>
-                <p className="text-lg font-bold truncate">{formatCurrency(monthlyIncome)}</p>
+                <p className="text-sm font-bold truncate">{formatCurrency(monthlyIncome)}</p>
               </div>
               <div className="bg-white/20 p-1.5 rounded-full ml-2">
                 <TrendingUp className="h-4 w-4" />
@@ -53,7 +53,7 @@ const MobileSummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses }: Mo
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <p className="text-red-100 text-xs font-medium">Despesas</p>
-                <p className="text-lg font-bold truncate">{formatCurrency(Math.abs(monthlyExpenses))}</p>
+                <p className="text-sm font-bold truncate">{formatCurrency(Math.abs(monthlyExpenses))}</p>
               </div>
               <div className="bg-white/20 p-1.5 rounded-full ml-2">
                 <TrendingDown className="h-4 w-4" />
