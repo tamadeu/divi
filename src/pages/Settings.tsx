@@ -1,7 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import ProfileSettings from "@/components/settings/ProfileSettings";
-import AIProviderSettings from "@/components/settings/AIProviderSettings";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import WorkspaceDebug from "@/components/debug/WorkspaceDebug";
 
@@ -20,9 +18,6 @@ const Settings = () => {
       <WorkspaceDebug />
       
       <div className="grid gap-6">
-        <ProfileSettings />
-        <AIProviderSettings />
-        
         <Card>
           <CardHeader>
             <CardTitle>Aparência</CardTitle>
