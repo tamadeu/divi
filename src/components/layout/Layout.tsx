@@ -78,14 +78,12 @@ const Layout = () => {
               
               {/* Card do usuário */}
               <div className="p-2">
-                <UserCard />
+                <UserCard onActionClick={closeMobileSidebar} />
               </div>
               
               {/* Links de navegação */}
               <nav className="flex-1 px-4 pb-4">
-                <div onClick={closeMobileSidebar}>
-                  <NavLinks />
-                </div>
+                <NavLinks onLinkClick={closeMobileSidebar} />
               </nav>
             </div>
           </SheetContent>

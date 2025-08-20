@@ -26,7 +26,11 @@ interface Profile {
   avatar_url: string | null;
 }
 
-const UserCard = () => {
+interface UserCardProps {
+  onActionClick?: () => void;
+}
+
+const UserCard = ({ onActionClick }: UserCardProps = {}) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -65,6 +69,12 @@ const UserCard = () => {
       showSuccess("Você saiu com sucesso!");
       navigate('/login');
     }
+    onActionClick?.();
+  };
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    onActionClick?.();
   };
 
   const getInitials = () => {
@@ -131,12 +141,12 @@ const UserCard = () => {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
+              <DropdownMenuItem onClick={() => handleNavigate('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 Configurações
               </DropdownMenuItem>
               {isAdmin && (
-                <DropdownMenuItem onClick={() => navigate('/admin')}>
+                <DropdownMenuItem onClick={() => handleNavigate('/admin')}>
                   <Shield className="mr-2 h-4 w-4" />
                   Painel Administrativo
                 </DropdownMenuItem>
@@ -155,7 +165,7 @@ const UserCard = () => {
           <div className="text-xs text-muted-foreground mb-2 px-1">
             Núcleo Financeiro
           </div>
-          <WorkspaceSwitcher />
+          <WorkspaceSwitcher onWorkspaceChange={onActionClick} />
         </div>
       </CardContent>
     </Card>
