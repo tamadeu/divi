@@ -200,6 +200,7 @@ const Index = () => {
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
+    closeTransactionDetailsModal(); // Fechar o modal de detalhes primeiro
     openEditTransactionModal(transaction);
   };
 
