@@ -90,7 +90,6 @@ const Dashboard = () => {
         category:categories (name),
         transfer_id
       `)
-      .eq("user_id", user.id)
       .eq("workspace_id", currentWorkspace.id)
       .gte("date", monthStart.toISOString())
       .lt("date", nextMonthStart.toISOString())
