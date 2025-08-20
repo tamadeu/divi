@@ -156,7 +156,7 @@ const Dashboard = () => {
         <MonthPicker selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
       </div>
       {loading ? (
-        <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4"> {/* Added mb-4 here */}
           <Skeleton className="h-24" />
           <Skeleton className="h-24 md:hidden" />
           <div className="grid grid-cols-2 gap-3 md:hidden">
@@ -174,7 +174,7 @@ const Dashboard = () => {
             monthlyExpenses={summary?.monthly_expenses || 0}
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4"> {/* Added mb-4 here */}
             <SummaryCard
               title="Saldo Total"
               value={formatCurrency(summary?.total_balance)}
