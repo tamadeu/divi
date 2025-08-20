@@ -224,15 +224,26 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
     setShowCalculator(false);
   };
 
-  const handleCategoryAdded = (newCategory: Category | null) => {
-    // Atualizar a lista de categorias
-    fetchData().then(() => {
-      // Se uma nova categoria foi criada, selecioná-la automaticamente
-      if (newCategory) {
+  const handleCategoryAdded = async (newCategory: Category | null) => {
+    setIsAddCategoryModalOpen(false);
+    
+    if (newCategory) {
+      // Primeiro, atualizar a lista de categorias
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: categoriesData } = await supabase
+          .from("categories")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("type", "income")
+          .order("name", { ascending: true });
+        
+        setIncomeCategories(categoriesData || []);
+        
+        // Depois, selecionar a nova categoria
         form.setValue('category_id', newCategory.id, { shouldValidate: true });
       }
-    });
-    setIsAddCategoryModalOpen(false);
+    }
   };
 
   return (
