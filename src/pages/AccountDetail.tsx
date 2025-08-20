@@ -28,7 +28,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { supabase } from "@/integrations/supabase/client";
-import { Account, Transaction } from "@/types/database";
+import { Account, Transaction, Company } from "@/types/database"; // Importar Company
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ITEMS_PER_PAGE = 5;
@@ -37,6 +37,7 @@ const AccountDetailPage = () => {
   const { accountId } = useParams<{ accountId: string }>();
   const [account, setAccount] = useState<Account | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]); // Novo estado para empresas
   const [loading, setLoading] = useState(true);
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -54,6 +55,16 @@ const AccountDetailPage = () => {
         return;
       }
       setLoading(true);
+
+      // Fetch companies first
+      const { data: companiesData, error: companiesError } = await supabase
+        .from("companies")
+        .select("name, logo_url");
+      if (companiesError) {
+        console.error("Error fetching companies:", companiesError);
+      } else {
+        setCompanies(companiesData || []);
+      }
 
       const { data: accountData, error: accountError } = await supabase
         .from("accounts")
@@ -263,6 +274,7 @@ const AccountDetailPage = () => {
             <AccountTransactionsTable
               transactions={paginatedTransactions}
               onRowClick={handleRowClick}
+              companies={companies} // Passar companies para a tabela
             />
             {totalPages > 1 && (
               <div className="mt-4">

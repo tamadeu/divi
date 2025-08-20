@@ -7,16 +7,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction } from "@/types/database";
+import { Transaction, Company } from "@/types/database"; // Importar Company
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "@/components/transactions/TransactionCardList";
 
 interface AccountTransactionsTableProps {
   transactions: Transaction[];
   onRowClick: (transaction: Transaction) => void;
+  companies: Company[]; // Adicionar prop companies
 }
 
-const AccountTransactionsTable = ({ transactions, onRowClick }: AccountTransactionsTableProps) => {
+const AccountTransactionsTable = ({ transactions, onRowClick, companies }: AccountTransactionsTableProps) => {
   const isMobile = useIsMobile();
 
   const statusVariant = {
@@ -27,7 +28,7 @@ const AccountTransactionsTable = ({ transactions, onRowClick }: AccountTransacti
 
   // Renderizar cards no mobile
   if (isMobile) {
-    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} />;
+    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} companies={companies} loading={false} />;
   }
 
   // Renderizar tabela no desktop
