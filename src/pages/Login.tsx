@@ -15,9 +15,12 @@ import { Label } from "@/components/ui/label";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { Package } from "lucide-react";
 import { showError } from "@/utils/toast";
+import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const LoginPage = () => {
   const { session, loading: sessionLoading } = useSession();
+  const { getPlatformName, getPlatformTagline, getPlatformLogo } = usePublicPlatformSettings();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,16 +48,30 @@ const LoginPage = () => {
     return <Navigate to="/" replace />;
   }
 
+  const platformName = getPlatformName();
+  const platformTagline = getPlatformTagline();
+  const platformLogo = getPlatformLogo();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-2 mb-4">
-            <Package className="h-8 w-8" />
-            <h1 className="text-2xl font-bold">Finance Inc</h1>
+            {platformLogo ? (
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={platformLogo} alt={platformName} />
+                <AvatarFallback>
+                  <Package className="h-6 w-6" />
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <Package className="h-8 w-8" />
+            )}
+            <h1 className="text-2xl font-bold">{platformName}</h1>
           </div>
           <CardTitle className="text-2xl">Bem-vindo de volta!</CardTitle>
           <CardDescription>
+            {platformTagline ? `${platformTagline}. ` : ''}
             Entre com seus dados para acessar sua conta.
           </CardDescription>
         </CardHeader>

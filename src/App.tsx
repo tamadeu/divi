@@ -7,6 +7,7 @@ import { ModalProvider } from "@/contexts/ModalContext";
 import Layout from "@/components/layout/Layout";
 import AdminLayout from "@/components/admin/AdminLayout";
 import AdminRoute from "@/components/admin/AdminRoute";
+import PlatformMetaUpdater from "@/components/PlatformMetaUpdater";
 import Dashboard from "./pages/Dashboard";
 import AccountsPage from "./pages/Accounts";
 import AccountDetailPage from "./pages/AccountDetail";
@@ -77,6 +78,7 @@ const AdminProtectedRoute = () => {
 function AppRoutes() {
   return (
     <Router>
+      <PlatformMetaUpdater />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />

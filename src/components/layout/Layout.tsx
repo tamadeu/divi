@@ -12,12 +12,15 @@ import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
-import TransferModal from "@/components/transfers/TransferModal"; // Updated import
+import TransferModal from "@/components/transfers/TransferModal";
 import UserCard from "./UserCard";
+import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
+  const { getPlatformName, getPlatformLogo } = usePublicPlatformSettings();
   const {
     isAddTransactionModalOpen,
     closeAddTransactionModal,
@@ -32,8 +35,11 @@ const Layout = () => {
     isAddTransferModalOpen,
     closeAddTransferModal,
     onTransferAdded,
-    addTransferInitialData, // Added to get initial data for transfer modal
+    addTransferInitialData,
   } = useModal();
+
+  const platformName = getPlatformName();
+  const platformLogo = getPlatformLogo();
 
   return (
     <>
@@ -42,15 +48,24 @@ const Layout = () => {
         <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent side="left" className="flex flex-col w-[280px] sm:w-[350px]">
             <nav className="grid gap-2 text-lg font-medium">
-              {/* Header do sidebar mobile apenas com logo */}
+              {/* Header do sidebar mobile com logo da plataforma */}
               <div className="flex items-center mb-4 pb-2 border-b">
                 <Link
                   to="/"
                   onClick={() => setMobileSidebarOpen(false)}
                   className="flex items-center gap-2 text-lg font-semibold"
                 >
-                  <Package2 className="h-6 w-6" />
-                  <span>Divi</span>
+                  {platformLogo ? (
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={platformLogo} alt={platformName} />
+                      <AvatarFallback>
+                        <Package2 className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <Package2 className="h-6 w-6" />
+                  )}
+                  <span>{platformName}</span>
                 </Link>
               </div>
               
@@ -96,11 +111,11 @@ const Layout = () => {
         onClose={closeAddCategoryModal}
         onCategoryAdded={onCategoryAdded}
       />
-      <TransferModal // Changed to TransferModal
+      <TransferModal
         isOpen={isAddTransferModalOpen}
         onClose={closeAddTransferModal}
-        onTransferCompleted={onTransferAdded} // Changed prop name
-        initialTransferData={addTransferInitialData} // Pass initial data
+        onTransferCompleted={onTransferAdded}
+        initialTransferData={addTransferInitialData}
       />
     </>
   );
