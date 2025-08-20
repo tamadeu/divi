@@ -2,13 +2,14 @@ import SummaryCard from "@/components/dashboard/SummaryCard";
 import MobileSummaryCards from "@/components/dashboard/MobileSummaryCards";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import BudgetSummaryTable from "@/components/dashboard/BudgetSummaryTable";
-import MonthPicker from "@/components/budgets/MonthPicker"; // Importar MonthPicker
+import MonthPicker from "@/components/budgets/MonthPicker";
 import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useCallback } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Transaction, Company, BudgetWithSpending } from "@/types/database";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 
@@ -25,8 +26,9 @@ const Dashboard = () => {
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
+  const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date()); // Novo estado para o mês selecionado
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -37,6 +39,11 @@ const Dashboard = () => {
   };
 
   const fetchDashboardData = useCallback(async (month: Date) => {
+    if (!currentWorkspace) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -57,9 +64,10 @@ const Dashboard = () => {
       setCompanies(companiesData || []);
     }
 
-    // Fetch summary for the selected month
+    // Fetch summary for the selected month and workspace
     const { data: summaryData, error: summaryError } = await supabase.rpc('get_dashboard_summary', {
       summary_month: monthStart.toISOString(),
+      workspace_id_param: currentWorkspace.id
     });
     if (summaryError) {
       console.error("Error fetching summary data:", summaryError);
@@ -68,7 +76,7 @@ const Dashboard = () => {
       setSummary(summaryData[0]);
     }
 
-    // Fetch recent transactions for the selected month
+    // Fetch recent transactions for the selected month and workspace
     const { data: transactionsData, error: transactionsError } = await supabase
       .from("transactions")
       .select(`
@@ -83,6 +91,7 @@ const Dashboard = () => {
         transfer_id
       `)
       .eq("user_id", user.id)
+      .eq("workspace_id", currentWorkspace.id)
       .gte("date", monthStart.toISOString())
       .lt("date", nextMonthStart.toISOString())
       .order("date", { ascending: false })
@@ -98,7 +107,7 @@ const Dashboard = () => {
       setTransactions(formattedData);
     }
 
-    // Fetch budgets for the selected month
+    // Fetch budgets for the selected month and workspace
     const { data: budgetsData, error: budgetsError } = await supabase.rpc('get_budgets_with_spending', {
       budget_month: monthStart.toISOString(),
     });
@@ -107,15 +116,23 @@ const Dashboard = () => {
       console.error("Error fetching budgets data:", budgetsError);
       setBudgets([]);
     } else {
-      setBudgets(budgetsData || []);
+      // Filter budgets by workspace (since the RPC doesn't support workspace filtering yet)
+      const workspaceBudgets = budgetsData?.filter((budget: any) => {
+        // We'll need to check if the budget belongs to the current workspace
+        // For now, we'll show all budgets until we update the RPC function
+        return true;
+      }) || [];
+      setBudgets(workspaceBudgets);
     }
 
     setLoading(false);
-  }, []);
+  }, [currentWorkspace]);
 
   useEffect(() => {
-    fetchDashboardData(selectedMonth);
-  }, [fetchDashboardData, selectedMonth]);
+    if (currentWorkspace) {
+      fetchDashboardData(selectedMonth);
+    }
+  }, [fetchDashboardData, selectedMonth, currentWorkspace]);
 
   const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number') return "R$ 0,00";
@@ -124,6 +141,14 @@ const Dashboard = () => {
       currency: "BRL",
     });
   };
+
+  if (!currentWorkspace) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Skeleton className="w-32 h-8" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -185,7 +210,7 @@ const Dashboard = () => {
         transaction={selectedTransaction}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onTransactionUpdated={fetchDashboardData}
+        onTransactionUpdated={() => fetchDashboardData(selectedMonth)}
       />
     </>
   );

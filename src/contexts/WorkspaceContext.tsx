@@ -32,37 +32,51 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // Buscar workspaces onde o usuário é owner ou membro
-      const { data: workspacesData, error } = await supabase
+      // Primeiro, buscar workspaces onde o usuário é owner
+      const { data: ownedWorkspaces, error: ownedError } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('created_by', session.user.id)
+        .order('created_at', { ascending: true });
+
+      if (ownedError) throw ownedError;
+
+      // Depois, buscar workspaces onde o usuário é membro
+      const { data: memberWorkspaces, error: memberError } = await supabase
         .from('workspaces')
         .select(`
           *,
           workspace_users!inner(role)
         `)
-        .or(`created_by.eq.${session.user.id},workspace_users.user_id.eq.${session.user.id}`)
+        .eq('workspace_users.user_id', session.user.id)
+        .neq('created_by', session.user.id) // Excluir os que já são owned
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (memberError) throw memberError;
 
-      const formattedWorkspaces: WorkspaceWithRole[] = workspacesData?.map(workspace => {
-        const isOwner = workspace.created_by === session.user.id;
-        const userRole = isOwner ? 'owner' : workspace.workspace_users[0]?.role || 'user';
-        
-        return {
+      // Combinar os resultados
+      const allWorkspaces = [
+        ...(ownedWorkspaces || []).map(workspace => ({
           ...workspace,
-          user_role: userRole as 'admin' | 'user' | 'owner',
-          is_owner: isOwner
-        };
-      }) || [];
+          user_role: 'owner' as const,
+          is_owner: true,
+          workspace_users: []
+        })),
+        ...(memberWorkspaces || []).map(workspace => ({
+          ...workspace,
+          user_role: workspace.workspace_users[0]?.role || 'user' as const,
+          is_owner: false
+        }))
+      ];
 
-      setWorkspaces(formattedWorkspaces);
+      setWorkspaces(allWorkspaces);
 
       // Se não há workspace atual, selecionar o primeiro
-      if (!currentWorkspace && formattedWorkspaces.length > 0) {
+      if (!currentWorkspace && allWorkspaces.length > 0) {
         const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
         const workspaceToSelect = savedWorkspaceId 
-          ? formattedWorkspaces.find(w => w.id === savedWorkspaceId) || formattedWorkspaces[0]
-          : formattedWorkspaces[0];
+          ? allWorkspaces.find(w => w.id === savedWorkspaceId) || allWorkspaces[0]
+          : allWorkspaces[0];
         
         setCurrentWorkspace(workspaceToSelect);
         localStorage.setItem('currentWorkspaceId', workspaceToSelect.id);

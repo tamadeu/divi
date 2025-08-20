@@ -33,6 +33,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
 import { Bank } from "@/types/database";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const accountSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -63,6 +64,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableBanks, setAvailableBanks] = useState<Bank[]>([]);
   const [showCustomBankInput, setShowCustomBankInput] = useState(false);
+  const { currentWorkspace } = useWorkspace();
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
@@ -97,6 +99,11 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
   }, [isOpen, form]);
 
   const handleSubmit = async (values: AccountFormValues) => {
+    if (!currentWorkspace) {
+      showError("Nenhum núcleo financeiro selecionado.");
+      return;
+    }
+
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -119,6 +126,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
       type: values.type,
       balance: values.balance,
       user_id: user.id,
+      workspace_id: currentWorkspace.id,
       include_in_total: values.include_in_total,
     });
 
@@ -132,6 +140,10 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
     }
     setIsSubmitting(false);
   };
+
+  if (!currentWorkspace) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

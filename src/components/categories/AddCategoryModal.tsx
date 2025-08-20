@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
 import { Category } from "@/types/database";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Nome da categoria é obrigatório."),
@@ -56,6 +57,7 @@ const AddCategoryModal = ({
   defaultType 
 }: AddCategoryModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currentWorkspace } = useWorkspace();
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
@@ -76,6 +78,11 @@ const AddCategoryModal = ({
   }, [isOpen, defaultType, form]);
 
   const handleSubmit = async (values: CategoryFormValues) => {
+    if (!currentWorkspace) {
+      showError("Nenhum núcleo financeiro selecionado.");
+      return;
+    }
+
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -88,6 +95,7 @@ const AddCategoryModal = ({
       .from("categories")
       .insert({
         user_id: user.id,
+        workspace_id: currentWorkspace.id,
         name: values.name,
         type: values.type,
       })
@@ -105,6 +113,10 @@ const AddCategoryModal = ({
     onClose();
     setIsSubmitting(false);
   };
+
+  if (!currentWorkspace) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

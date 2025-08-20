@@ -44,6 +44,7 @@ import AddCategoryModal from "../categories/AddCategoryModal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Calculator } from "@/components/ui/calculator";
 
 const transactionSchema = z.object({
@@ -77,6 +78,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFutureDate, setIsFutureDate] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
   const form = useForm<TransactionFormValues>({
@@ -119,24 +121,31 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   }, [categories, transactionType]);
 
   const fetchData = useCallback(async () => {
+    if (!currentWorkspace) return { accounts: [], categories: [] };
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { accounts: [], categories: [] };
 
-    const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
+    const { data: accountsData } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("workspace_id", currentWorkspace.id);
     setAccounts(accountsData || []);
 
     const { data: categoriesData } = await supabase
       .from("categories")
       .select("*")
       .eq("user_id", user.id)
+      .eq("workspace_id", currentWorkspace.id)
       .order("name", { ascending: true });
     setCategories(categoriesData || []);
 
     return { accounts: accountsData || [], categories: categoriesData || [] };
-  }, []);
+  }, [currentWorkspace]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && currentWorkspace) {
       fetchData().then(({ accounts: fetchedAccounts }) => {
         const defaultAccountId = fetchedAccounts.find(acc => acc.is_default)?.id || "";
 
@@ -156,11 +165,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
         }
       });
     }
-  }, [isOpen, initialData, form, fetchData]);
+  }, [isOpen, initialData, form, fetchData, currentWorkspace]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (!isOpen || !transactionType) return;
+      if (!isOpen || !transactionType || !currentWorkspace) return;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -169,6 +178,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
         .from('transactions')
         .select('name, amount')
         .eq('user_id', user.id)
+        .eq('workspace_id', currentWorkspace.id)
         .limit(500);
 
       if (error) {
@@ -186,7 +196,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
     };
 
     fetchSuggestions();
-  }, [isOpen, transactionType]);
+  }, [isOpen, transactionType, currentWorkspace]);
 
   const filteredNameSuggestions = useMemo(() => {
     if (!nameValue) return [];
@@ -211,6 +221,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   }, [accounts, transactionType, form, initialData]);
 
   const handleSubmit = async (values: TransactionFormValues) => {
+    if (!currentWorkspace) {
+      showError("Nenhum núcleo financeiro selecionado.");
+      return;
+    }
+
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -230,6 +245,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       status: values.status,
       description: values.description,
       user_id: user.id,
+      workspace_id: currentWorkspace.id,
     });
 
     if (transactionError) {
@@ -266,6 +282,10 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
     }
     setShowCalculator(false);
   };
+
+  if (!currentWorkspace) {
+    return null;
+  }
 
   return (
     <>
