@@ -230,23 +230,23 @@ const SearchResultsPage = () => {
       </Card>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Receitas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-xs md:text-sm font-medium">Total de Receitas</CardTitle>
+            <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-lg md:text-2xl font-bold text-green-600">
               {loading ? (
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-6 md:h-8 w-20 md:w-24" />
               ) : (
                 formatCurrency(totalIncome)
               )}
             </div>
             <p className="text-xs text-muted-foreground">
               {loading ? (
-                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-3 md:h-4 w-12 md:w-16" />
               ) : (
                 `${filteredResults.filter(t => Number(t.amount) > 0).length} transação(ões)`
               )}
@@ -256,20 +256,20 @@ const SearchResultsPage = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Despesas</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-xs md:text-sm font-medium">Total de Despesas</CardTitle>
+            <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-lg md:text-2xl font-bold text-red-600">
               {loading ? (
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-6 md:h-8 w-20 md:w-24" />
               ) : (
                 formatCurrency(totalExpenses)
               )}
             </div>
             <p className="text-xs text-muted-foreground">
               {loading ? (
-                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-3 md:h-4 w-12 md:w-16" />
               ) : (
                 `${filteredResults.filter(t => Number(t.amount) < 0).length} transação(ões)`
               )}
