@@ -9,7 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User } from "@/types/database";
-import { Shield, User as UserIcon } from "lucide-react";
+import { Shield, User as UserIcon, Eye, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface UsersTableProps {
   users: User[];
@@ -55,7 +56,13 @@ const UsersTable = ({ users, onChangeUserType, loading }: UsersTableProps) => {
                     ) : (
                       <UserIcon className="h-4 w-4 text-gray-500" />
                     )}
-                    {getDisplayName(user)}
+                    <Link 
+                      to={`/admin/users/${user.id}`}
+                      className="hover:underline flex items-center gap-1"
+                    >
+                      {getDisplayName(user)}
+                      <ExternalLink className="h-3 w-3 opacity-50" />
+                    </Link>
                   </div>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
@@ -66,19 +73,31 @@ const UsersTable = ({ users, onChangeUserType, loading }: UsersTableProps) => {
                 </TableCell>
                 <TableCell>{formatDate(user.created_at)}</TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => 
-                      onChangeUserType(
-                        user.id, 
-                        user.profile?.user_type === 'admin' ? 'user' : 'admin'
-                      )
-                    }
-                    disabled={loading}
-                  >
-                    {user.profile?.user_type === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      asChild
+                      disabled={loading}
+                    >
+                      <Link to={`/admin/users/${user.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => 
+                        onChangeUserType(
+                          user.id, 
+                          user.profile?.user_type === 'admin' ? 'user' : 'admin'
+                        )
+                      }
+                      disabled={loading}
+                    >
+                      {user.profile?.user_type === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))

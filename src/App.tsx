@@ -19,6 +19,7 @@ import SettingsPage from "./pages/Settings";
 import CreditCardsPage from "./pages/CreditCards";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminPlans from "./pages/admin/AdminPlans";
 import AdminPlanDetail from "./pages/admin/AdminPlanDetail";
 import AdminBanks from "./pages/admin/AdminBanks";
@@ -106,6 +107,7 @@ function AppRoutes() {
         <Route path="/admin" element={<AdminProtectedRoute />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="users/:userId" element={<AdminUserDetail />} />
           <Route path="plans" element={<AdminPlans />} />
           <Route path="plans/:planId" element={<AdminPlanDetail />} />
           <Route path="banks" element={<AdminBanks />} />
