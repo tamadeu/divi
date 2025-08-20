@@ -1,79 +1,115 @@
-import { useEffect } from 'react';
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { useSession } from '@/contexts/SessionContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from "react";
+import { Link, Navigate } from "react-router-dom";
+import { useSession } from "@/contexts/SessionContext";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import { Package } from "lucide-react";
+import { showError } from "@/utils/toast";
 
-const Login = () => {
-  const { session } = useSession();
-  const navigate = useNavigate();
+const LoginPage = () => {
+  const { session, loading: sessionLoading } = useSession();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (session) {
-      navigate('/');
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      showError(error.message);
     }
-  }, [session, navigate]);
+    // On success, the SessionProvider will handle the redirect
+    setLoading(false);
+  };
+
+  if (sessionLoading) {
+    return null; // Or a loading spinner
+  }
+
+  if (session) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Bem-vindo</CardTitle>
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <Package className="h-8 w-8" />
+            <h1 className="text-2xl font-bold">Finance Inc</h1>
+          </div>
+          <CardTitle className="text-2xl">Bem-vindo de volta!</CardTitle>
           <CardDescription>
-            Faça login para acessar sua conta
+            Entre com seus dados para acessar sua conta.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Auth
-            supabaseClient={supabase}
-            providers={['google']}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: 'hsl(var(--primary))',
-                    brandAccent: 'hsl(var(--primary))',
-                  },
-                },
-              },
-            }}
-            theme="light"
-            localization={{
-              variables: {
-                sign_in: {
-                  email_label: 'Email',
-                  password_label: 'Senha',
-                  button_label: 'Entrar',
-                  loading_button_label: 'Entrando...',
-                  social_provider_text: 'Entrar com {{provider}}',
-                  link_text: 'Já tem uma conta? Entre aqui',
-                },
-                sign_up: {
-                  email_label: 'Email',
-                  password_label: 'Senha',
-                  button_label: 'Criar conta',
-                  loading_button_label: 'Criando conta...',
-                  social_provider_text: 'Entrar com {{provider}}',
-                  link_text: 'Não tem uma conta? Crie aqui',
-                  confirmation_text: 'Verifique seu email para confirmar sua conta',
-                },
-                forgotten_password: {
-                  email_label: 'Email',
-                  button_label: 'Enviar instruções',
-                  loading_button_label: 'Enviando...',
-                  link_text: 'Esqueceu sua senha?',
-                  confirmation_text: 'Verifique seu email para redefinir sua senha',
-                },
-              },
-            }}
-          />
+          <form onSubmit={handleLogin}>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="alex@example.com"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="password">Senha</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="ml-auto inline-block text-sm underline"
+                  >
+                    Esqueceu a senha?
+                  </Link>
+                </div>
+                <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
+            </div>
+          </form>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Ou continue com
+              </span>
+            </div>
+          </div>
+          <GoogleAuthButton />
+          <div className="mt-4 text-center text-sm">
+            Não tem uma conta?{" "}
+            <Link to="/signup" className="underline">
+              Cadastre-se
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default Login;
+export default LoginPage;
