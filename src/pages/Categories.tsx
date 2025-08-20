@@ -93,24 +93,42 @@ const Categories = () => {
     setEditingCategory(null);
   };
 
-  // Ajustado para ser insensível a maiúsculas/minúsculas
+  // Ajustado para ser insensível a maiúsculas/minúsculas e reconhecer 'income'/'expense'
   const getTypeColor = (type: string) => {
     const normalizedType = type.trim().toLowerCase();
-    return normalizedType === "receita" 
-      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+    if (normalizedType === "receita" || normalizedType === "income") {
+      return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+    } else if (normalizedType === "despesa" || normalizedType === "expense") {
+      return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+    }
+    return "bg-gray-100 text-gray-800"; // Default
   };
 
-  // Ajustado para retornar o rótulo correto, insensível a maiúsculas/minúsculas
+  // Ajustado para retornar o rótulo correto, insensível a maiúsculas/minúsculas e reconhecer 'income'/'expense'
   const getTypeLabel = (type: string) => {
     const normalizedType = type.trim().toLowerCase();
-    return normalizedType === "receita" ? "Receita" : "Despesa";
+    if (normalizedType === "receita" || normalizedType === "income") {
+      return "Receita";
+    } else if (normalizedType === "despesa" || normalizedType === "expense") {
+      return "Despesa";
+    }
+    return type; // Fallback
   };
 
-  // Ajustado para mapear e filtrar de forma insensível a maiúsculas/minúsculas
+  // Ajustado para mapear e filtrar de forma insensível a maiúsculas/minúsculas,
+  // considerando tanto os valores do banco de dados ('expense', 'income') quanto os do formulário ('Despesa', 'Receita')
   const getFilteredCategories = (tabType: string) => {
-    const actualCategoryType = tabType === "expense" ? "despesa" : "receita";
-    return categories.filter(category => category.type.trim().toLowerCase() === actualCategoryType);
+    const targetType = tabType.trim().toLowerCase(); // 'expense' or 'income'
+
+    return categories.filter(category => {
+      const normalizedCategoryType = category.type.trim().toLowerCase();
+      if (targetType === "expense") {
+        return normalizedCategoryType === "despesa" || normalizedCategoryType === "expense";
+      } else if (targetType === "income") {
+        return normalizedCategoryType === "receita" || normalizedCategoryType === "income";
+      }
+      return false;
+    });
   };
 
   const renderCategoryCards = (categoryList: Category[]) => (

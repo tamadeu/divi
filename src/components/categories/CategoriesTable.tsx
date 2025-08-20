@@ -37,14 +37,12 @@ const CategoriesTable = ({ categories, onCategoryUpdated }: CategoriesTableProps
 
   const getCategoryTypeColor = (type: string) => {
     const normalizedType = type.trim().toLowerCase();
-    switch (normalizedType) {
-      case 'receita':
-        return 'bg-green-100 text-green-800';
-      case 'despesa':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+    if (normalizedType === 'receita' || normalizedType === 'income') {
+      return 'bg-green-100 text-green-800';
+    } else if (normalizedType === 'despesa' || normalizedType === 'expense') {
+      return 'bg-red-100 text-red-800';
     }
+    return 'bg-gray-100 text-gray-800';
   };
 
   const handleDelete = async (categoryId: string) => {
