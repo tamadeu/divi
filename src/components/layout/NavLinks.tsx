@@ -8,16 +8,13 @@ import {
   LineChart,
   Settings,
   Tags,
-  Shield,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useAdmin } from "@/hooks/useAdmin";
 
 const NavLinks = () => {
   const location = useLocation();
-  const { isAdmin } = useAdmin();
   const [transactionCount, setTransactionCount] = useState(0);
 
   useEffect(() => {
@@ -63,15 +60,6 @@ const NavLinks = () => {
     { to: "/reports", icon: LineChart, label: "Relatórios" },
     { to: "/settings", icon: Settings, label: "Configurações" },
   ];
-
-  // Adicionar item admin se o usuário for admin
-  if (isAdmin) {
-    navItems.splice(-1, 0, { 
-      to: "/admin", 
-      icon: Shield, 
-      label: "Administração" 
-    });
-  }
 
   return (
     <>

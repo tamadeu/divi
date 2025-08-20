@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider, useSession } from "@/contexts/SessionContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import Layout from "@/components/layout/Layout";
+import AdminLayout from "@/components/admin/AdminLayout";
 import AdminRoute from "@/components/admin/AdminRoute";
 import Dashboard from "./pages/Dashboard";
 import AccountsPage from "./pages/Accounts";
@@ -13,7 +14,11 @@ import SearchResultsPage from "./pages/SearchResults";
 import BudgetsPage from "./pages/Budgets";
 import ReportsPage from "./pages/Reports";
 import SettingsPage from "./pages/Settings";
-import AdminPage from "./pages/Admin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminSystem from "./pages/admin/AdminSystem";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminSettings from "./pages/admin/AdminSettings";
 import LoginPage from "./pages/Login";
 import SignUpPage from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
@@ -40,6 +45,28 @@ const ProtectedRoute = () => {
   return <Layout />;
 };
 
+const AdminProtectedRoute = () => {
+  const { session, loading } = useSession();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Skeleton className="w-32 h-8" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <AdminRoute>
+      <AdminLayout />
+    </AdminRoute>
+  );
+};
+
 function AppRoutes() {
   return (
     <Router>
@@ -48,6 +75,8 @@ function AppRoutes() {
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        
+        {/* Main App Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/accounts" element={<AccountsPage />} />
@@ -58,12 +87,17 @@ function AppRoutes() {
           <Route path="/budgets" element={<BudgetsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/admin" element={
-            <AdminRoute>
-              <AdminPage />
-            </AdminRoute>
-          } />
         </Route>
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminProtectedRoute />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="system" element={<AdminSystem />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
