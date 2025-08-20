@@ -10,6 +10,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command"
 import {
   Popover,
@@ -113,6 +114,12 @@ export function UserSearchCombobox({
     return name !== user.email.split('@')[0] ? `${name} (${user.email})` : user.email
   }
 
+  const handleSelectUser = (userId: string) => {
+    console.log('Selecting user:', userId) // Debug log
+    onValueChange(userId === value ? null : userId)
+    setOpen(false)
+  }
+
   return (
     <div className="flex items-center gap-2">
       <Popover open={open} onOpenChange={setOpen}>
@@ -139,40 +146,40 @@ export function UserSearchCombobox({
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandEmpty>
-              {loading ? (
-                "Buscando usuários..."
-              ) : searchQuery.length < 2 ? (
-                "Digite pelo menos 2 caracteres"
-              ) : users.length === 0 ? (
-                "Nenhum usuário encontrado."
-              ) : null}
-            </CommandEmpty>
-            {users.length > 0 && (
-              <CommandGroup>
-                {users.map((user) => (
-                  <CommandItem
-                    key={user.id}
-                    value={user.id}
-                    onSelect={(currentValue) => {
-                      onValueChange(currentValue === value ? null : currentValue)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === user.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span>{getDisplayName(user)}</span>
-                      <span className="text-sm text-muted-foreground">{user.email}</span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            <CommandList>
+              <CommandEmpty>
+                {loading ? (
+                  "Buscando usuários..."
+                ) : searchQuery.length < 2 ? (
+                  "Digite pelo menos 2 caracteres"
+                ) : users.length === 0 ? (
+                  "Nenhum usuário encontrado."
+                ) : null}
+              </CommandEmpty>
+              {users.length > 0 && (
+                <CommandGroup>
+                  {users.map((user) => (
+                    <CommandItem
+                      key={user.id}
+                      value={user.email} // Use email as value for better matching
+                      onSelect={() => handleSelectUser(user.id)}
+                      className="cursor-pointer"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === user.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col flex-1">
+                        <span className="font-medium">{getDisplayName(user)}</span>
+                        <span className="text-sm text-muted-foreground">{user.email}</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
