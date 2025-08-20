@@ -80,9 +80,9 @@ const TransactionFiltersSheet = ({
             Aplique filtros para refinar sua lista de transações.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-4 py-4 flex-1 overflow-y-auto">
-          <div className="grid gap-2">
-            <label htmlFor="status-filter" className="text-sm font-medium">Status</label>
+        <div className="flex-1 overflow-y-auto px-4 py-4"> {/* Adicionado px-4 para padding horizontal */}
+          <div className="mb-4"> {/* Adicionado mb-4 para espaçamento entre os grupos de filtro */}
+            <label htmlFor="status-filter" className="text-sm font-medium block mb-2">Status</label> {/* Adicionado block e mb-2 */}
             <Select
               value={tempStatusFilter}
               onValueChange={setTempStatusFilter}
@@ -99,8 +99,8 @@ const TransactionFiltersSheet = ({
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <label htmlFor="category-filter" className="text-sm font-medium">Categoria</label>
+          <div className="mb-4"> {/* Adicionado mb-4 para espaçamento entre os grupos de filtro */}
+            <label htmlFor="category-filter" className="text-sm font-medium block mb-2">Categoria</label> {/* Adicionado block e mb-2 */}
             <Select
               value={tempCategoryFilter}
               onValueChange={setTempCategoryFilter}
@@ -119,8 +119,8 @@ const TransactionFiltersSheet = ({
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <label htmlFor="account-type-filter" className="text-sm font-medium">Tipo de Conta</label>
+          <div className="mb-4"> {/* Adicionado mb-4 para espaçamento entre os grupos de filtro */}
+            <label htmlFor="account-type-filter" className="text-sm font-medium block mb-2">Tipo de Conta</label> {/* Adicionado block e mb-2 */}
             <Select
               value={tempAccountTypeFilter}
               onValueChange={setTempAccountTypeFilter}
