@@ -50,7 +50,7 @@ const SearchResultsPage = () => {
           category:categories (name)
         `)
         .eq("user_id", user.id)
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%,category.name.ilike.%${query}%`);
 
       if (error) {
         console.error("Error fetching search results:", error);
