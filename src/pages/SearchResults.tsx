@@ -112,7 +112,6 @@ const SearchResultsPage = () => {
       const { data: categoryData, error: categoryError } = await supabase
         .from("categories")
         .select("id")
-        .eq("user_id", user.id)
         .ilike("name", `%${query}%`);
 
       if (categoryError) {
