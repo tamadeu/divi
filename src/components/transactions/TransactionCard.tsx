@@ -47,37 +47,21 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
     );
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("TransactionCard clicked:", {
-      transactionId: transaction.id,
-      transactionName: transaction.name,
-      onRowClickExists: !!onRowClick,
-      onRowClickType: typeof onRowClick
-    });
-
-    try {
-      if (onRowClick && typeof onRowClick === 'function') {
-        onRowClick(transaction);
-      } else {
-        console.warn("onRowClick is not a function or is undefined:", onRowClick);
-      }
-    } catch (error) {
-      console.error("Error calling onRowClick:", error);
+  const handleClick = () => {
+    console.log("TransactionCard clicked - onRowClick:", typeof onRowClick);
+    if (onRowClick && typeof onRowClick === 'function') {
+      console.log("Calling onRowClick with transaction:", transaction.id);
+      onRowClick(transaction);
+    } else {
+      console.log("onRowClick not available or not a function");
     }
   };
 
-  const isClickable = onRowClick && typeof onRowClick === 'function';
-
   return (
     <div
-      onClick={isClickable ? handleClick : undefined}
+      onClick={handleClick}
       className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm transition-shadow ${
-        isClickable 
-          ? 'cursor-pointer hover:shadow-md active:bg-muted/50' 
-          : 'cursor-default'
+        onRowClick ? 'cursor-pointer hover:shadow-md active:bg-muted/50' : 'cursor-default'
       }`}
       style={{
         WebkitTapHighlightColor: 'transparent',
