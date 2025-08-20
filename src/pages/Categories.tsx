@@ -40,7 +40,7 @@ const Categories = () => {
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("Despesa");
+  const [activeTab, setActiveTab] = useState("expense");
   const { openAddCategoryModal } = useModal();
   const { currentWorkspace } = useWorkspace();
 
@@ -94,9 +94,13 @@ const Categories = () => {
   };
 
   const getTypeColor = (type: string) => {
-    return type === "Receita" 
+    return type === "income" 
       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+  };
+
+  const getTypeLabel = (type: string) => {
+    return type === "income" ? "Receita" : "Despesa";
   };
 
   const getFilteredCategories = (type: string) => {
@@ -113,7 +117,7 @@ const Categories = () => {
                 <CardTitle className="text-lg">{category.name}</CardTitle>
               </div>
               <Badge className={getTypeColor(category.type)}>
-                {category.type}
+                {getTypeLabel(category.type)}
               </Badge>
             </div>
           </CardHeader>
@@ -164,9 +168,9 @@ const Categories = () => {
   const renderCategoryTable = (categoryList: Category[]) => (
     <Card className="hidden md:block">
       <CardHeader>
-        <CardTitle>Categorias de {activeTab}</CardTitle>
+        <CardTitle>Categorias de {activeTab === "expense" ? "Despesa" : "Receita"}</CardTitle>
         <CardDescription>
-          Gerencie suas categorias de {activeTab.toLowerCase()}.
+          Gerencie suas categorias de {activeTab === "expense" ? "despesa" : "receita"}.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -184,7 +188,7 @@ const Categories = () => {
                 <TableCell className="font-medium">{category.name}</TableCell>
                 <TableCell>
                   <Badge className={getTypeColor(category.type)}>
-                    {category.type}
+                    {getTypeLabel(category.type)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -284,16 +288,16 @@ const Categories = () => {
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="Despesa">
-              Despesas ({getFilteredCategories("Despesa").length})
+            <TabsTrigger value="expense">
+              Despesas ({getFilteredCategories("expense").length})
             </TabsTrigger>
-            <TabsTrigger value="Receita">
-              Receitas ({getFilteredCategories("Receita").length})
+            <TabsTrigger value="income">
+              Receitas ({getFilteredCategories("income").length})
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="Despesa" className="space-y-4">
-            {getFilteredCategories("Despesa").length === 0 ? (
+          <TabsContent value="expense" className="space-y-4">
+            {getFilteredCategories("expense").length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <div className="text-center space-y-2">
@@ -306,14 +310,14 @@ const Categories = () => {
               </Card>
             ) : (
               <>
-                {renderCategoryCards(getFilteredCategories("Despesa"))}
-                {renderCategoryTable(getFilteredCategories("Despesa"))}
+                {renderCategoryCards(getFilteredCategories("expense"))}
+                {renderCategoryTable(getFilteredCategories("expense"))}
               </>
             )}
           </TabsContent>
           
-          <TabsContent value="Receita" className="space-y-4">
-            {getFilteredCategories("Receita").length === 0 ? (
+          <TabsContent value="income" className="space-y-4">
+            {getFilteredCategories("income").length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <div className="text-center space-y-2">
@@ -326,8 +330,8 @@ const Categories = () => {
               </Card>
             ) : (
               <>
-                {renderCategoryCards(getFilteredCategories("Receita"))}
-                {renderCategoryTable(getFilteredCategories("Receita"))}
+                {renderCategoryCards(getFilteredCategories("income"))}
+                {renderCategoryTable(getFilteredCategories("income"))}
               </>
             )}
           </TabsContent>

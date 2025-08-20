@@ -71,6 +71,10 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
     setLoading(false);
   };
 
+  const getTypeLabel = (type: string) => {
+    return type === "income" ? "Receita" : "Despesa";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -102,8 +106,8 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Receita">Receita</SelectItem>
-                  <SelectItem value="Despesa">Despesa</SelectItem>
+                  <SelectItem value="income">Receita</SelectItem>
+                  <SelectItem value="expense">Despesa</SelectItem>
                 </SelectContent>
               </Select>
             </div>
