@@ -36,10 +36,11 @@ const CategoriesTable = ({ categories, onCategoryUpdated }: CategoriesTableProps
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const getCategoryTypeColor = (type: string) => {
-    switch (type) {
-      case 'Receita':
+    const normalizedType = type.trim().toLowerCase();
+    switch (normalizedType) {
+      case 'receita':
         return 'bg-green-100 text-green-800';
-      case 'Despesa':
+      case 'despesa':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';

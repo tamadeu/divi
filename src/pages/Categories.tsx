@@ -93,22 +93,24 @@ const Categories = () => {
     setEditingCategory(null);
   };
 
-  // Updated to use "Receita" and "Despesa" directly
+  // Ajustado para ser insensível a maiúsculas/minúsculas
   const getTypeColor = (type: string) => {
-    return type === "Receita" 
+    const normalizedType = type.trim().toLowerCase();
+    return normalizedType === "receita" 
       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
   };
 
-  // Updated to return the type directly as it's already "Receita" or "Despesa"
+  // Ajustado para retornar o rótulo correto, insensível a maiúsculas/minúsculas
   const getTypeLabel = (type: string) => {
-    return type;
+    const normalizedType = type.trim().toLowerCase();
+    return normalizedType === "receita" ? "Receita" : "Despesa";
   };
 
-  // Updated to map tab values ("expense", "income") to actual category types ("Despesa", "Receita")
+  // Ajustado para mapear e filtrar de forma insensível a maiúsculas/minúsculas
   const getFilteredCategories = (tabType: string) => {
-    const actualCategoryType = tabType === "expense" ? "Despesa" : "Receita";
-    return categories.filter(category => category.type === actualCategoryType);
+    const actualCategoryType = tabType === "expense" ? "despesa" : "receita";
+    return categories.filter(category => category.type.trim().toLowerCase() === actualCategoryType);
   };
 
   const renderCategoryCards = (categoryList: Category[]) => (
