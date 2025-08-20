@@ -18,7 +18,6 @@ interface AllTransactionsTableProps {
 
 const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTableProps) => {
   const isMobile = useIsMobile();
-  console.log("Is Mobile (AllTransactionsTable):", isMobile, "Window Width:", window.innerWidth); // Adicionado para depuração
   
   const statusVariant = {
     "Concluído": "default",

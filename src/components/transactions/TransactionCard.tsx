@@ -18,7 +18,7 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
 
   const getTransactionType = () => {
     if (transaction.transfer_id) {
-      return "Transfer";
+      return "Transferência"; // Changed to Portuguese
     }
     return transaction.category || "Sem categoria";
   };
@@ -60,24 +60,24 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
   return (
     <div
       onClick={() => onRowClick(transaction)}
-      className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      className="flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex items-center gap-3 flex-1">
         {getAvatarContent()}
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-gray-900 truncate">
+            <h3 className="font-medium text-foreground truncate">
               {transaction.name}
             </h3>
             <Badge variant={statusVariant[transaction.status]} className="text-xs">
               {transaction.status}
             </Badge>
           </div>
-          <p className="text-sm text-gray-500 truncate">
+          <p className="text-sm text-muted-foreground truncate">
             {getTransactionType()}
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             {new Date(transaction.date).toLocaleDateString("pt-BR")}
           </p>
         </div>
