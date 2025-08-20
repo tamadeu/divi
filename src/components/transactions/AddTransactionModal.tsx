@@ -532,7 +532,10 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
           if (newCategory) {
             // Adiciona a nova categoria ao estado local e a seleciona no formulário
             setCategories(prevCategories => [...prevCategories, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
-            form.setValue('category_id', newCategory.id, { shouldValidate: true });
+            // Adiciona um pequeno atraso para garantir que o Select tenha tempo de renderizar a nova opção
+            setTimeout(() => {
+              form.setValue('category_id', newCategory.id, { shouldValidate: true });
+            }, 0); 
           }
           setIsAddCategoryModalOpen(false);
         }}
