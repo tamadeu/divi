@@ -66,6 +66,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
   const [isDeleting, setIsDeleting] = useState(false);
   const [availableBanks, setAvailableBanks] = useState<Bank[]>([]);
   const [showCustomBankInput, setShowCustomBankInput] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   const form = useForm<EditAccountFormValues>({
     resolver: zodResolver(editAccountSchema),
@@ -79,6 +80,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
     },
   });
 
+  // Fetch banks when modal opens
   useEffect(() => {
     const fetchBanks = async () => {
       const { data, error } = await supabase
@@ -92,9 +94,15 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
       }
     };
 
-    if (isOpen && account) {
+    if (isOpen) {
       fetchBanks();
-      
+      setIsFormInitialized(false);
+    }
+  }, [isOpen]);
+
+  // Initialize form only once when both modal is open, account exists, and banks are loaded
+  useEffect(() => {
+    if (isOpen && account && availableBanks.length > 0 && !isFormInitialized) {
       // Find if the bank exists in our banks table
       const existingBank = availableBanks.find(b => b.name === account.bank);
       const bankSelection = existingBank ? existingBank.id : "custom_bank_input";
@@ -109,8 +117,9 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
       });
       
       setShowCustomBankInput(!existingBank);
+      setIsFormInitialized(true);
     }
-  }, [isOpen, account, form, availableBanks]);
+  }, [isOpen, account, availableBanks, isFormInitialized, form]);
 
   const handleSubmit = async (values: EditAccountFormValues) => {
     if (!account) return;
