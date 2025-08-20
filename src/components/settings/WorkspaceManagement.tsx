@@ -24,12 +24,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Users, User, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Plus, Users, User, Edit, Trash2, Shield } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { WorkspaceWithRole } from "@/types/workspace";
 import CreateWorkspaceModal from "@/components/workspace/CreateWorkspaceModal";
 import EditWorkspaceModal from "@/components/settings/EditWorkspaceModal";
 import DeleteWorkspaceModal from "@/components/settings/DeleteWorkspaceModal";
+import WorkspaceMembersModal from "@/components/settings/WorkspaceMembersModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,6 +40,7 @@ export function WorkspaceManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [deletingWorkspace, setDeletingWorkspace] = useState<WorkspaceWithRole | null>(null);
+  const [managingMembersWorkspace, setManagingMembersWorkspace] = useState<WorkspaceWithRole | null>(null);
 
   useEffect(() => {
     refreshWorkspaces();
@@ -52,12 +54,20 @@ export function WorkspaceManagement() {
     setDeletingWorkspace(workspace);
   };
 
+  const handleManageMembers = (workspace: WorkspaceWithRole) => {
+    setManagingMembersWorkspace(workspace);
+  };
+
   const canEdit = (workspace: WorkspaceWithRole) => {
     return workspace.is_owner || workspace.user_role === 'admin';
   };
 
   const canDelete = (workspace: WorkspaceWithRole) => {
     return workspace.is_owner;
+  };
+
+  const canManageMembers = (workspace: WorkspaceWithRole) => {
+    return workspace.is_shared && (workspace.is_owner || workspace.user_role === 'admin');
   };
 
   if (loading) {
@@ -161,6 +171,12 @@ export function WorkspaceManagement() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {canManageMembers(workspace) && (
+                            <DropdownMenuItem onClick={() => handleManageMembers(workspace)}>
+                              <Shield className="mr-2 h-4 w-4" />
+                              Gerenciar Membros
+                            </DropdownMenuItem>
+                          )}
                           {canEdit(workspace) && (
                             <DropdownMenuItem onClick={() => handleEdit(workspace)}>
                               <Edit className="mr-2 h-4 w-4" />
@@ -205,6 +221,14 @@ export function WorkspaceManagement() {
           workspace={deletingWorkspace}
           isOpen={!!deletingWorkspace}
           onClose={() => setDeletingWorkspace(null)}
+        />
+      )}
+
+      {managingMembersWorkspace && (
+        <WorkspaceMembersModal
+          workspace={managingMembersWorkspace}
+          isOpen={!!managingMembersWorkspace}
+          onClose={() => setManagingMembersWorkspace(null)}
         />
       )}
     </>

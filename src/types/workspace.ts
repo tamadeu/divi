@@ -11,9 +11,12 @@ export interface Workspace {
 export interface WorkspaceUser {
   id: string;
   workspace_id: string;
-  user_id: string;
+  user_id: string | null;
   role: 'admin' | 'user';
   joined_at: string;
+  is_ghost_user: boolean;
+  ghost_user_name?: string;
+  ghost_user_email?: string;
   profile?: {
     first_name?: string;
     last_name?: string;
