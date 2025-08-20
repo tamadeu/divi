@@ -63,9 +63,11 @@ const AccountsPage = () => {
     setSettingDefaultId(null);
   };
 
-  const handleEditAccount = (account: Account, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleEditAccount = (account: Account, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setEditingAccount(account);
   };
 
@@ -129,18 +131,10 @@ const AccountsPage = () => {
       ) : accounts.length > 0 ? (
         <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {accounts.map((account) => (
-            <Card key={account.id} className="flex flex-col relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-3 right-3 h-8 w-8 z-10 hover:bg-muted/50"
-                onClick={(e) => handleEditAccount(account, e)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+            <Card key={account.id} className="flex flex-col">
               <Link to={`/accounts/${account.id}`} className="flex-grow">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-base sm:text-lg pr-12">
+                  <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                     <span className="truncate">{account.name}</span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
                   </CardTitle>
@@ -157,23 +151,22 @@ const AccountsPage = () => {
                   </div>
                 </CardContent>
               </Link>
-              <div className="p-4 pt-0">
-                {account.is_default ? (
-                  <Badge className="w-full justify-center sm:w-auto">
+              <div className="p-4 pt-0 flex items-center justify-between">
+                {account.is_default && (
+                  <Badge className="flex items-center">
                     <Star className="mr-2 h-4 w-4" />
                     Padrão
                   </Badge>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => handleSetDefault(account.id)}
-                    disabled={settingDefaultId === account.id}
-                  >
-                    {settingDefaultId === account.id ? "Definindo..." : "Tornar Padrão"}
-                  </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`gap-2 ${account.is_default ? 'ml-auto' : 'w-full'}`}
+                  onClick={(e) => handleEditAccount(account, e)}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Editar
+                </Button>
               </div>
             </Card>
           ))}
