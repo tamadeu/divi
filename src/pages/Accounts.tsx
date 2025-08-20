@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Eye, Star, Trash2 } from "lucide-react";
+import { Plus, Edit, Eye, Star, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext";
@@ -39,11 +55,24 @@ interface Account {
   include_in_total: boolean;
 }
 
+interface DeleteValidation {
+  canDelete: boolean;
+  hasTransactions: boolean;
+  transactionCount: number;
+  isDefault: boolean;
+  hasBalance: boolean;
+  balance: number;
+}
+
 const Accounts = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeleteValidation | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [transferToAccountId, setTransferToAccountId] = useState<string>("");
   const { openAddAccountModal } = useModal();
   const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
@@ -72,11 +101,90 @@ const Accounts = () => {
     setLoading(false);
   };
 
-  const handleDeleteAccount = async (accountId: string) => {
+  const validateAccountDeletion = async (account: Account): Promise<DeleteValidation> => {
+    // Verificar se tem transações
+    const { count: transactionCount, error: transactionError } = await supabase
+      .from("transactions")
+      .select("*", { count: "exact", head: true })
+      .eq("account_id", account.id);
+
+    if (transactionError) {
+      console.error("Error checking transactions:", transactionError);
+      return {
+        canDelete: false,
+        hasTransactions: false,
+        transactionCount: 0,
+        isDefault: account.is_default,
+        hasBalance: Math.abs(account.balance) > 0.01,
+        balance: account.balance,
+      };
+    }
+
+    const hasTransactions = (transactionCount || 0) > 0;
+    const hasBalance = Math.abs(account.balance) > 0.01;
+    const isDefault = account.is_default;
+
+    return {
+      canDelete: !isDefault && !hasTransactions && !hasBalance,
+      hasTransactions,
+      transactionCount: transactionCount || 0,
+      isDefault,
+      hasBalance,
+      balance: account.balance,
+    };
+  };
+
+  const handleDeleteClick = async (account: Account) => {
+    const validation = await validateAccountDeletion(account);
+    setDeleteValidation(validation);
+    setAccountToDelete(account);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!accountToDelete || !deleteValidation) return;
+
+    // Se tem saldo e foi selecionada uma conta para transferir
+    if (deleteValidation.hasBalance && transferToAccountId) {
+      // Criar transação de transferência
+      const { error: transferError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          workspace_id: currentWorkspace?.id,
+          account_id: transferToAccountId,
+          name: `Transferência da conta ${accountToDelete.name}`,
+          amount: deleteValidation.balance,
+          date: new Date().toISOString(),
+          description: `Saldo transferido automaticamente ao excluir a conta ${accountToDelete.name}`,
+          status: "Concluído",
+        });
+
+      if (transferError) {
+        showError("Erro ao transferir saldo");
+        return;
+      }
+
+      // Atualizar saldo da conta de destino
+      const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+      if (targetAccount) {
+        const { error: updateError } = await supabase
+          .from("accounts")
+          .update({ balance: targetAccount.balance + deleteValidation.balance })
+          .eq("id", transferToAccountId);
+
+        if (updateError) {
+          showError("Erro ao atualizar saldo da conta de destino");
+          return;
+        }
+      }
+    }
+
+    // Excluir a conta
     const { error } = await supabase
       .from("accounts")
       .delete()
-      .eq("id", accountId);
+      .eq("id", accountToDelete.id);
 
     if (error) {
       showError("Erro ao excluir conta");
@@ -84,6 +192,11 @@ const Accounts = () => {
       showSuccess("Conta excluída com sucesso!");
       fetchAccounts();
     }
+
+    setIsDeleteDialogOpen(false);
+    setAccountToDelete(null);
+    setDeleteValidation(null);
+    setTransferToAccountId("");
   };
 
   const handleSetDefault = async (accountId: string) => {
@@ -130,6 +243,10 @@ const Accounts = () => {
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
+  };
+
+  const getAvailableAccountsForTransfer = () => {
+    return accounts.filter(acc => acc.id !== accountToDelete?.id);
   };
 
   if (loading) {
@@ -249,32 +366,15 @@ const Accounts = () => {
                         Definir Padrão
                       </Button>
                     )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir conta</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir a conta "{account.name}"? 
-                            Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteAccount(account.id)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteClick(account)}
+                      className="flex-1"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -347,31 +447,13 @@ const Accounts = () => {
                               <Star className="h-4 w-4" />
                             </Button>
                           )}
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir conta</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir a conta "{account.name}"? 
-                                  Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteAccount(account.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(account)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -382,6 +464,99 @@ const Accounts = () => {
           </Card>
         </>
       )}
+
+      {/* Complex Delete Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Excluir Conta
+            </DialogTitle>
+            <DialogDescription>
+              Verificando condições para exclusão da conta "{accountToDelete?.name}"
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteValidation && (
+            <div className="space-y-4">
+              {/* Validações */}
+              <div className="space-y-3">
+                {deleteValidation.isDefault && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    <span className="text-sm text-red-700">
+                      Esta é sua conta padrão. Defina outra conta como padrão antes de excluir.
+                    </span>
+                  </div>
+                )}
+
+                {deleteValidation.hasTransactions && (
+                  <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <span className="text-sm text-yellow-700">
+                      Esta conta possui {deleteValidation.transactionCount} transação(ões). 
+                      Todas as transações serão excluídas permanentemente.
+                    </span>
+                  </div>
+                )}
+
+                {deleteValidation.hasBalance && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm text-blue-700">
+                        Esta conta possui saldo de {formatCurrency(deleteValidation.balance)}. 
+                        Escolha uma conta para transferir o saldo:
+                      </span>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="transfer-account">Transferir saldo para:</Label>
+                      <Select value={transferToAccountId} onValueChange={setTransferToAccountId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma conta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableAccountsForTransfer().map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} - {account.bank}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {deleteValidation.canDelete && (
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <span className="text-sm text-green-700">
+                      ✓ Esta conta pode ser excluída sem problemas.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={
+                    deleteValidation.isDefault || 
+                    (deleteValidation.hasBalance && !transferToAccountId)
+                  }
+                >
+                  {deleteValidation.hasTransactions ? "Excluir Conta e Transações" : "Excluir Conta"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Account Modal */}
       {editingAccount && (
