@@ -50,16 +50,23 @@ const SearchResultsPage = () => {
           category:categories (name)
         `)
         .eq("user_id", user.id)
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%,categories.name.ilike.%${query}%`); // Corrigido para categories.name
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
 
       if (error) {
         console.error("Error fetching search results:", error);
         setSearchResults([]);
       } else {
-        const formattedData = data.map((t: any) => ({
-          ...t,
-          category: t.category?.name || "Sem categoria",
-        }));
+        // Filtrar também por categoria no lado do cliente
+        const formattedData = data
+          .map((t: any) => ({
+            ...t,
+            category: t.category?.name || "Sem categoria",
+          }))
+          .filter((t: any) => 
+            t.name.toLowerCase().includes(query.toLowerCase()) ||
+            (t.description && t.description.toLowerCase().includes(query.toLowerCase())) ||
+            t.category.toLowerCase().includes(query.toLowerCase())
+          );
         setSearchResults(formattedData);
       }
       setLoading(false);
