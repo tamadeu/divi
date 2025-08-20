@@ -31,8 +31,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { WorkspaceWithRole } from "@/types/workspace";
@@ -84,50 +82,27 @@ const AddMemberModal = ({ workspace, isOpen, onClose, onMemberAdded }: AddMember
     setIsSubmitting(true);
 
     try {
-      // Primeiro, verificar se o usuário existe na plataforma
-      const { data: existingUser, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', values.email) // Assumindo que o email é usado para buscar
-        .single();
-
-      if (userError && userError.code !== 'PGRST116') {
-        throw userError;
-      }
-
-      if (!existingUser) {
-        showError('Usuário não encontrado na plataforma. Verifique o email ou crie um usuário fantasma.');
-        return;
-      }
-
-      // Verificar se o usuário já é membro do workspace
-      const { data: existingMember, error: memberError } = await supabase
-        .from('workspace_users')
-        .select('id')
-        .eq('workspace_id', workspace.id)
-        .eq('user_id', existingUser.id)
-        .single();
-
-      if (memberError && memberError.code !== 'PGRST116') {
-        throw memberError;
-      }
-
-      if (existingMember) {
-        showError('Este usuário já é membro deste núcleo.');
-        return;
-      }
-
-      // Adicionar o usuário ao workspace
+      // Buscar usuário pelo email usando auth.users (via RPC ou função)
+      // Por enquanto, vamos tentar adicionar diretamente e tratar o erro
       const { error: insertError } = await supabase
         .from('workspace_users')
         .insert({
           workspace_id: workspace.id,
-          user_id: existingUser.id,
+          user_id: values.email, // Temporário - idealmente seria o UUID do usuário
           role: values.role,
           is_ghost_user: false,
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (insertError.code === '23503') {
+          showError('Usuário não encontrado na plataforma. Verifique o email ou crie um usuário fantasma.');
+        } else if (insertError.code === '23505') {
+          showError('Este usuário já é membro deste núcleo.');
+        } else {
+          throw insertError;
+        }
+        return;
+      }
 
       showSuccess('Usuário adicionado com sucesso!');
       realUserForm.reset();

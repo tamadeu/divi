@@ -46,19 +46,41 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         throw ownedError;
       }
 
-      // Buscar workspaces onde o usuário é membro (mas NÃO é owner)
-      const { data: memberWorkspaceUsers, error: memberError } = await supabase
+      // Buscar workspaces onde o usuário é membro
+      const { data: memberWorkspaces, error: memberError } = await supabase
         .from('workspace_users')
-        .select(`
-          workspace_id,
-          role,
-          workspaces:workspace_id (*)
-        `)
+        .select('workspace_id, role')
         .eq('user_id', session.user.id);
 
       if (memberError) {
         console.error('Error fetching member workspaces:', memberError);
         throw memberError;
+      }
+
+      // Para cada workspace onde é membro, buscar os detalhes do workspace
+      const memberWorkspaceDetails = [];
+      if (memberWorkspaces && memberWorkspaces.length > 0) {
+        const workspaceIds = memberWorkspaces.map(mw => mw.workspace_id);
+        const { data: workspaceDetails, error: detailsError } = await supabase
+          .from('workspaces')
+          .select('*')
+          .in('id', workspaceIds);
+
+        if (detailsError) {
+          console.error('Error fetching workspace details:', detailsError);
+        } else {
+          // Combinar detalhes do workspace com o papel do usuário
+          for (const workspace of workspaceDetails || []) {
+            const memberInfo = memberWorkspaces.find(mw => mw.workspace_id === workspace.id);
+            if (memberInfo) {
+              memberWorkspaceDetails.push({
+                ...workspace,
+                user_role: memberInfo.role as 'admin' | 'user',
+                is_owner: false,
+              });
+            }
+          }
+        }
       }
 
       // Combinar os resultados, evitando duplicatas
@@ -68,20 +90,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         ...workspace,
         user_role: 'owner' as const,
         is_owner: true,
-        workspace_users: []
       }));
 
       // Filtrar workspaces onde o usuário é membro mas NÃO é owner
-      const memberWorkspacesWithRole = (memberWorkspaceUsers || [])
-        .filter(wu => wu.workspaces && !ownedWorkspaceIds.has(wu.workspaces.id)) // Evitar duplicatas
-        .map(wu => ({
-          ...wu.workspaces,
-          user_role: wu.role as 'admin' | 'user',
-          is_owner: false,
-          workspace_users: []
-        }));
+      const filteredMemberWorkspaces = memberWorkspaceDetails.filter(
+        workspace => !ownedWorkspaceIds.has(workspace.id)
+      );
 
-      const allWorkspaces = [...ownedWorkspacesWithRole, ...memberWorkspacesWithRole];
+      const allWorkspaces = [...ownedWorkspacesWithRole, ...filteredMemberWorkspaces];
 
       setWorkspaces(allWorkspaces);
 
