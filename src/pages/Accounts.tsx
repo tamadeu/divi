@@ -17,13 +17,15 @@ import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess } from "@/utils/toast";
 import EditAccountModal from "@/components/accounts/EditAccountModal";
 import DeleteAccountAlert from "@/components/accounts/DeleteAccountAlert";
+import ConfirmDeleteAccountWithTransactionsModal from "@/components/accounts/ConfirmDeleteAccountWithTransactionsModal"; // New import
 
 const AccountsPage = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-  const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState<Account | null>(null); // For initial alert
+  const [accountToDeleteWithTransactions, setAccountToDeleteWithTransactions] = useState<Account | null>(null); // For complex deletion modal
   const { openAddAccountModal } = useModal();
 
   const fetchAccounts = async () => {
@@ -72,39 +74,55 @@ const AccountsPage = () => {
   };
 
   const handleDeleteAccount = (account: Account) => {
-    setDeletingAccount(account);
+    setDeletingAccount(account); // Open the initial confirmation alert
   };
 
   const handleConfirmDelete = async () => {
     if (!deletingAccount) return;
 
-    try {
-      // First delete all transactions associated with this account
-      const { error: transactionsError } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("account_id", deletingAccount.id);
-
-      if (transactionsError) {
-        throw transactionsError;
-      }
-
-      // Then delete the account
-      const { error: accountError } = await supabase
-        .from("accounts")
-        .delete()
-        .eq("id", deletingAccount.id);
-
-      if (accountError) {
-        throw accountError;
-      }
-
-      showSuccess("Conta excluída com sucesso!");
-      fetchAccounts();
-    } catch (error: any) {
-      showError("Erro ao excluir conta: " + error.message);
-    } finally {
+    // Check if the account has any transactions
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("Você precisa estar logado para excluir uma conta.");
       setDeletingAccount(null);
+      return;
+    }
+
+    const { count, error: countError } = await supabase
+      .from("transactions")
+      .select("id", { count: "exact" })
+      .eq("account_id", deletingAccount.id)
+      .eq("user_id", user.id);
+
+    if (countError) {
+      console.error("Error checking transactions:", countError);
+      showError("Erro ao verificar transações da conta.");
+      setDeletingAccount(null);
+      return;
+    }
+
+    setDeletingAccount(null); // Close the initial alert
+
+    if ((count || 0) > 0) {
+      // If there are transactions, open the complex modal
+      setAccountToDeleteWithTransactions(deletingAccount);
+    } else {
+      // If no transactions, proceed with direct deletion
+      try {
+        const { error: accountError } = await supabase
+          .from("accounts")
+          .delete()
+          .eq("id", deletingAccount.id);
+
+        if (accountError) {
+          throw accountError;
+        }
+
+        showSuccess("Conta excluída com sucesso!");
+        fetchAccounts();
+      } catch (error: any) {
+        showError("Erro ao excluir conta: " + error.message);
+      }
     }
   };
 
@@ -193,7 +211,7 @@ const AccountsPage = () => {
         onClose={() => setEditingAccount(null)}
         onAccountUpdated={fetchAccounts}
         account={editingAccount}
-        onDeleteRequest={handleDeleteAccount} // Pass the handleDeleteAccount function
+        onDeleteRequest={handleDeleteAccount}
       />
 
       <DeleteAccountAlert
@@ -201,6 +219,13 @@ const AccountsPage = () => {
         onClose={() => setDeletingAccount(null)}
         account={deletingAccount}
         onConfirm={handleConfirmDelete}
+      />
+
+      <ConfirmDeleteAccountWithTransactionsModal
+        isOpen={!!accountToDeleteWithTransactions}
+        onClose={() => setAccountToDeleteWithTransactions(null)}
+        account={accountToDeleteWithTransactions}
+        onAccountDeleted={fetchAccounts}
       />
     </>
   );
