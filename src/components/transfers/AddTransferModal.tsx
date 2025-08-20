@@ -84,6 +84,10 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
   });
 
   const amountValue = form.watch("amount");
+  const fromAccountId = form.watch("from_account_id");
+
+  // Filtrar contas de destino (excluir a conta de origem selecionada)
+  const availableToAccounts = accounts.filter(acc => acc.id !== fromAccountId);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -123,6 +127,14 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       fetchData();
     }
   }, [isOpen, fetchData, form]);
+
+  // Limpar conta de destino se ela for igual à conta de origem
+  useEffect(() => {
+    const toAccountId = form.getValues("to_account_id");
+    if (fromAccountId && toAccountId === fromAccountId) {
+      form.setValue("to_account_id", "", { shouldValidate: true });
+    }
+  }, [fromAccountId, form]);
 
   const handleSubmit = async (values: TransferFormValues) => {
     setIsSubmitting(true);
@@ -273,7 +285,7 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                            {availableToAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />
