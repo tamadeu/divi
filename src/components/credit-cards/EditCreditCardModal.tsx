@@ -38,11 +38,11 @@ interface CreditCard {
   closing_day: number;
   due_day: number;
   is_active: boolean;
+  account_id: string;
   account: {
     name: string;
     bank: string;
   };
-  account_id: string;
 }
 
 interface EditCreditCardModalProps {
@@ -68,21 +68,29 @@ const EditCreditCardModal = ({ isOpen, onClose, card, onCardUpdated }: EditCredi
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const { currentWorkspace } = useWorkspace();
 
+  // Inicializar dados do formulário quando o card ou modal abrir
   useEffect(() => {
-    if (isOpen && card && currentWorkspace) {
-      fetchAccounts();
+    if (isOpen && card) {
+      console.log('Card data:', card); // Debug
       setFormData({
-        name: card.name,
-        brand: card.brand,
-        lastFourDigits: card.last_four_digits,
-        creditLimit: card.credit_limit,
-        closingDay: card.closing_day,
-        dueDay: card.due_day,
-        accountId: card.account_id,
-        isActive: card.is_active,
+        name: card.name || "",
+        brand: card.brand || "",
+        lastFourDigits: card.last_four_digits || "",
+        creditLimit: card.credit_limit || 0,
+        closingDay: card.closing_day || 1,
+        dueDay: card.due_day || 10,
+        accountId: card.account_id || "",
+        isActive: card.is_active !== undefined ? card.is_active : true,
       });
     }
-  }, [isOpen, card, currentWorkspace]);
+  }, [isOpen, card]);
+
+  // Buscar contas quando o modal abrir
+  useEffect(() => {
+    if (isOpen && currentWorkspace) {
+      fetchAccounts();
+    }
+  }, [isOpen, currentWorkspace]);
 
   const fetchAccounts = async () => {
     if (!currentWorkspace) return;

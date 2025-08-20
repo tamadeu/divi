@@ -29,6 +29,7 @@ interface CreditCard {
   closing_day: number;
   due_day: number;
   is_active: boolean;
+  account_id: string;
   account: {
     name: string;
     bank: string;
@@ -55,7 +56,15 @@ const CreditCards = () => {
     const { data, error } = await supabase
       .from("credit_cards")
       .select(`
-        *,
+        id,
+        name,
+        brand,
+        last_four_digits,
+        credit_limit,
+        closing_day,
+        due_day,
+        is_active,
+        account_id,
         account:accounts(name, bank)
       `)
       .eq("workspace_id", currentWorkspace.id)
@@ -65,6 +74,7 @@ const CreditCards = () => {
       showError("Erro ao carregar cartões de crédito");
       console.error("Error fetching credit cards:", error);
     } else {
+      console.log("Credit cards data:", data); // Debug
       setCreditCards(data || []);
     }
     setLoading(false);
@@ -85,6 +95,7 @@ const CreditCards = () => {
   };
 
   const handleEditCard = (card: CreditCard) => {
+    console.log("Editing card:", card); // Debug
     setEditingCard(card);
     setIsEditModalOpen(true);
   };
@@ -188,7 +199,7 @@ const CreditCards = () => {
                       {card.name}
                     </CardTitle>
                     <CardDescription>
-                      {card.account.name} - {card.account.bank}
+                      {card.account?.name} - {card.account?.bank}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
