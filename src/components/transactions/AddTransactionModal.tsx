@@ -35,7 +35,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category } from "@/types/database";
-import { CalendarIcon, PlusCircle } from "lucide-react";
+import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon } from "lucide-react";
 import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,7 @@ import AddCategoryModal from "../categories/AddCategoryModal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Calculator } from "@/components/ui/calculator";
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -75,6 +76,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const [isNamePopoverOpen, setIsNamePopoverOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFutureDate, setIsFutureDate] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
   const isMobile = useIsMobile();
 
   const form = useForm<TransactionFormValues>({
@@ -94,6 +96,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const transactionType = form.watch("type");
   const nameValue = form.watch("name");
   const transactionDate = form.watch("date");
+  const amountValue = form.watch("amount");
 
   useEffect(() => {
     if (transactionDate) {
@@ -256,6 +259,14 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
     setIsSubmitting(false);
   };
 
+  const handleCalculatorValue = (value: string) => {
+    const numericValue = parseFloat(value);
+    if (!isNaN(numericValue)) {
+      form.setValue("amount", numericValue, { shouldValidate: true });
+    }
+    setShowCalculator(false);
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -378,7 +389,28 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
                     <FormItem>
                       <FormLabel>Valor</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        {isMobile ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="text"
+                              value={amountValue > 0 ? amountValue.toString() : ""}
+                              placeholder="0.00"
+                              readOnly
+                              className="cursor-pointer"
+                              onClick={() => setShowCalculator(true)}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setShowCalculator(true)}
+                            >
+                              <CalculatorIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        )}
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -555,6 +587,18 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal da Calculadora */}
+      <Dialog open={showCalculator} onOpenChange={setShowCalculator}>
+        <DialogContent className="p-0 w-[95vw] max-w-sm">
+          <Calculator
+            value={amountValue > 0 ? amountValue.toString() : "0"}
+            onChange={handleCalculatorValue}
+            onClose={() => setShowCalculator(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       <AddAccountModal
         isOpen={isAddAccountModalOpen}
         onClose={() => setIsAddAccountModalOpen(false)}
