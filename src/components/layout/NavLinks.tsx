@@ -8,6 +8,7 @@ import {
   LineChart,
   Settings,
   Tags,
+  CreditCard,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ const NavLinks = ({ onLinkClick }: NavLinksProps = {}) => {
       badge: transactionCount,
     },
     { to: "/accounts", icon: Package, label: "Contas" },
+    { to: "/credit-cards", icon: CreditCard, label: "Cartões" },
     { to: "/categories", icon: Tags, label: "Categorias" },
     { to: "/budgets", icon: Users, label: "Orçamentos" },
     { to: "/reports", icon: LineChart, label: "Relatórios" },

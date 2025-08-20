@@ -16,6 +16,7 @@ import SearchResultsPage from "./pages/SearchResults";
 import BudgetsPage from "./pages/Budgets";
 import ReportsPage from "./pages/Reports";
 import SettingsPage from "./pages/Settings";
+import CreditCardsPage from "./pages/CreditCards";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminBanks from "./pages/admin/AdminBanks";
@@ -94,6 +95,7 @@ function AppRoutes() {
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/budgets" element={<BudgetsPage />} />
+          <Route path="/credit-cards" element={<CreditCardsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

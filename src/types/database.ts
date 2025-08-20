@@ -44,6 +44,7 @@ export interface Transaction {
   description: string | null;
   status: string;
   transfer_id: string | null;
+  credit_card_bill_id: string | null;
   created_at: string;
 }
 
@@ -77,6 +78,42 @@ export interface Budget {
   amount: number;
   month: string;
   created_at: string;
+}
+
+export interface BudgetWithSpending extends Budget {
+  category_name: string;
+  spent_amount: number;
+}
+
+export interface CreditCard {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  account_id: string;
+  name: string;
+  brand: string;
+  last_four_digits: string;
+  credit_limit: number;
+  closing_day: number;
+  due_day: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreditCardBill {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  credit_card_id: string;
+  reference_month: string;
+  closing_date: string;
+  due_date: string;
+  total_amount: number;
+  paid_amount: number;
+  status: 'open' | 'closed' | 'paid' | 'overdue';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Workspace {
