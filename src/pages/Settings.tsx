@@ -358,6 +358,11 @@ const Settings = () => {
     return "U";
   };
 
+  // Função para verificar se pode gerenciar membros
+  const canManageMembers = (workspace: Workspace) => {
+    return workspace.is_shared && (workspace.user_role === "owner" || workspace.user_role === "admin");
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -508,7 +513,8 @@ const Settings = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {(workspace.user_role === "owner" || workspace.user_role === "admin") && (
+                      {/* Só mostrar "Gerenciar Usuários" se for workspace compartilhado */}
+                      {canManageMembers(workspace) && (
                         <DropdownMenuItem onClick={() => handleManageMembers(workspace)}>
                           <Users className="h-4 w-4 mr-2" />
                           Gerenciar Usuários
