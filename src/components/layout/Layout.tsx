@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ModeToggle } from "@/components/mode-toggle";
+import { ModeToggle } from "@/components/mode-toggle"; // Corrected import path
 import { useSession } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
@@ -45,7 +45,7 @@ import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import WorkspaceSwitcher from "@/components/workspace/WorkspaceSwitcher"; // Corrected import path
+import WorkspaceSwitcher from "@/components/workspace/WorkspaceSwitcher";
 import { Skeleton } from "../ui/skeleton";
 import VoiceTransactionButton from "../transactions/VoiceTransactionButton";
 
