@@ -34,14 +34,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
-import { Account, Category } from "@/types/database";
-import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon } from "lucide-react";
+import { Account, Category, Transaction } from "@/types/database";
+import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import AddCategoryModal from "../categories/AddCategoryModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Calculator } from "@/components/ui/calculator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const transferSchema = z.object({
   from_account_id: z.string().uuid("Selecione uma conta de origem."),
@@ -57,18 +67,21 @@ const transferSchema = z.object({
 
 type TransferFormValues = z.infer<typeof transferSchema>;
 
-interface AddTransferModalProps {
+interface TransferModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onTransferAdded: () => void;
+  onTransferCompleted: () => void; // Renomeado para ser mais genérico
+  initialTransferData?: { fromTransaction: Transaction, toTransaction: Transaction } | null; // Dados para edição
 }
 
-const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModalProps) => {
+const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferData }: TransferModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<Category[]>([]);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isMobile = useIsMobile();
 
   const form = useForm<TransferFormValues>({
@@ -104,29 +117,42 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       .order("name", { ascending: true });
     setIncomeCategories(categoriesData || []);
 
-    // Pré-selecionar conta padrão como origem
-    if (accountsData && accountsData.length > 0) {
+    // Pré-selecionar conta padrão como origem apenas se for uma nova transferência
+    if (!initialTransferData && accountsData && accountsData.length > 0) {
       const defaultAccount = accountsData.find(acc => acc.is_default);
       if (defaultAccount) {
         form.setValue('from_account_id', defaultAccount.id, { shouldValidate: true });
       }
     }
-  }, [form]);
+  }, [form, initialTransferData]);
 
   useEffect(() => {
     if (isOpen) {
-      // Reset form quando abrir o modal
-      form.reset({
-        amount: 0,
-        date: new Date(),
-        description: "",
-        from_account_id: "",
-        to_account_id: "",
-        category_id: "",
+      fetchData().then(() => {
+        if (initialTransferData) {
+          // Preencher o formulário com os dados da transferência existente
+          form.reset({
+            from_account_id: initialTransferData.fromTransaction.account_id || "",
+            to_account_id: initialTransferData.toTransaction.account_id || "",
+            amount: Math.abs(initialTransferData.fromTransaction.amount),
+            date: new Date(initialTransferData.fromTransaction.date),
+            category_id: initialTransferData.toTransaction.category_id || "",
+            description: initialTransferData.fromTransaction.description || "",
+          });
+        } else {
+          // Resetar para valores padrão para nova transferência
+          form.reset({
+            amount: 0,
+            date: new Date(),
+            description: "",
+            from_account_id: "",
+            to_account_id: "",
+            category_id: "",
+          });
+        }
       });
-      fetchData();
     }
-  }, [isOpen, fetchData, form]);
+  }, [isOpen, initialTransferData, fetchData, form]);
 
   // Limpar conta de destino se ela for igual à conta de origem
   useEffect(() => {
@@ -154,64 +180,156 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       return;
     }
 
-    const transferId = crypto.randomUUID();
     const amount = Math.abs(values.amount);
     const date = values.date.toISOString();
     const description = values.description || `Transferência de ${fromAccount.name} para ${toAccount.name}`;
 
-    const transactionsToInsert = [
-      // Débito da conta de origem
-      {
-        user_id: user.id,
-        account_id: fromAccount.id,
-        name: `Transferência para ${toAccount.name}`,
-        amount: -amount,
-        date,
-        description,
-        status: 'Concluído',
-        transfer_id: transferId,
-        category_id: null,
-      },
-      // Crédito na conta de destino
-      {
-        user_id: user.id,
-        account_id: toAccount.id,
-        name: `Transferência de ${fromAccount.name}`,
-        amount: amount,
-        date,
-        description,
-        status: 'Concluído',
-        transfer_id: transferId,
-        category_id: values.category_id,
-      },
-    ];
+    if (initialTransferData) {
+      // Lógica de EDIÇÃO de transferência
+      const oldFromTransaction = initialTransferData.fromTransaction;
+      const oldToTransaction = initialTransferData.toTransaction;
+      const oldAmount = Math.abs(oldFromTransaction.amount);
 
-    const { error: insertError } = await supabase.from("transactions").insert(transactionsToInsert);
+      // 1. Reverter o impacto da transferência antiga nos saldos
+      const { data: oldFromAccountData, error: oldFromAccountError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", oldFromTransaction.account_id)
+        .single();
+      const { data: oldToAccountData, error: oldToAccountError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", oldToTransaction.account_id)
+        .single();
 
-    if (insertError) {
-      showError("Erro ao criar transferência: " + insertError.message);
-      setIsSubmitting(false);
-      return;
-    }
+      if (oldFromAccountData && !oldFromAccountError) {
+        await supabase
+          .from("accounts")
+          .update({ balance: oldFromAccountData.balance + oldAmount }) // Adiciona de volta o que foi debitado
+          .eq("id", oldFromTransaction.account_id);
+      }
+      if (oldToAccountData && !oldToAccountError) {
+        await supabase
+          .from("accounts")
+          .update({ balance: oldToAccountData.balance - oldAmount }) // Remove o que foi creditado
+          .eq("id", oldToTransaction.account_id);
+      }
 
-    // Atualizar saldos
-    const { error: fromAccountError } = await supabase
-      .from("accounts")
-      .update({ balance: fromAccount.balance - amount })
-      .eq("id", fromAccount.id);
+      // 2. Atualizar as transações existentes
+      const { error: updateFromError } = await supabase
+        .from("transactions")
+        .update({
+          account_id: values.from_account_id,
+          name: `Transferência para ${toAccount.name}`,
+          amount: -amount,
+          date,
+          description,
+          category_id: null, // Transação de saída não tem categoria de receita
+        })
+        .eq("id", oldFromTransaction.id);
 
-    const { error: toAccountError } = await supabase
-      .from("accounts")
-      .update({ balance: toAccount.balance + amount })
-      .eq("id", toAccount.id);
+      const { error: updateToError } = await supabase
+        .from("transactions")
+        .update({
+          account_id: values.to_account_id,
+          name: `Transferência de ${fromAccount.name}`,
+          amount: amount,
+          date,
+          description,
+          category_id: values.category_id,
+        })
+        .eq("id", oldToTransaction.id);
 
-    if (fromAccountError || toAccountError) {
-      showError("Transferência registrada, mas houve um erro ao atualizar os saldos das contas.");
+      if (updateFromError || updateToError) {
+        showError("Erro ao atualizar transferência: " + (updateFromError?.message || updateToError?.message));
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 3. Aplicar o impacto da nova transferência nos saldos
+      const { data: currentFromAccountData, error: currentFromAccountError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", values.from_account_id)
+        .single();
+      const { data: currentToAccountData, error: currentToAccountError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", values.to_account_id)
+        .single();
+
+      if (currentFromAccountData && !currentFromAccountError) {
+        await supabase
+          .from("accounts")
+          .update({ balance: currentFromAccountData.balance - amount })
+          .eq("id", values.from_account_id);
+      }
+      if (currentToAccountData && !currentToAccountError) {
+        await supabase
+          .from("accounts")
+          .update({ balance: currentToAccountData.balance + amount })
+          .eq("id", values.to_account_id);
+      }
+
+      showSuccess("Transferência atualizada com sucesso!");
+
     } else {
-      showSuccess("Transferência realizada com sucesso!");
+      // Lógica de CRIAÇÃO de nova transferência
+      const transferId = crypto.randomUUID();
+      const transactionsToInsert = [
+        // Débito da conta de origem
+        {
+          user_id: user.id,
+          account_id: fromAccount.id,
+          name: `Transferência para ${toAccount.name}`,
+          amount: -amount,
+          date,
+          description,
+          status: 'Concluído',
+          transfer_id: transferId,
+          category_id: null,
+        },
+        // Crédito na conta de destino
+        {
+          user_id: user.id,
+          account_id: toAccount.id,
+          name: `Transferência de ${fromAccount.name}`,
+          amount: amount,
+          date,
+          description,
+          status: 'Concluído',
+          transfer_id: transferId,
+          category_id: values.category_id,
+        },
+      ];
+
+      const { error: insertError } = await supabase.from("transactions").insert(transactionsToInsert);
+
+      if (insertError) {
+        showError("Erro ao criar transferência: " + insertError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Atualizar saldos
+      const { error: fromAccountError } = await supabase
+        .from("accounts")
+        .update({ balance: fromAccount.balance - amount })
+        .eq("id", fromAccount.id);
+
+      const { error: toAccountError } = await supabase
+        .from("accounts")
+        .update({ balance: toAccount.balance + amount })
+        .eq("id", toAccount.id);
+
+      if (fromAccountError || toAccountError) {
+        showError("Transferência registrada, mas houve um erro ao atualizar os saldos das contas.");
+      } else {
+        showSuccess("Transferência realizada com sucesso!");
+      }
     }
 
-    onTransferAdded();
+    onTransferCompleted();
     onClose();
     setIsSubmitting(false);
   };
@@ -248,6 +366,69 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
     }
   };
 
+  const handleDeleteTransfer = async () => {
+    if (!initialTransferData) return;
+    setIsDeleting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        showError("Você precisa estar logado.");
+        return;
+      }
+
+      const fromTransaction = initialTransferData.fromTransaction;
+      const toTransaction = initialTransferData.toTransaction;
+      const amount = Math.abs(fromTransaction.amount);
+
+      // Reverter o impacto da transferência nos saldos das contas
+      const { data: fromAccountData, error: fromAccError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", fromTransaction.account_id)
+        .single();
+      const { data: toAccountData, error: toAccError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", toTransaction.account_id)
+        .single();
+
+      if (fromAccountData && !fromAccError) {
+        await supabase
+          .from("accounts")
+          .update({ balance: fromAccountData.balance + amount }) // Adiciona de volta o que foi debitado
+          .eq("id", fromTransaction.account_id);
+      }
+      if (toAccountData && !toAccError) {
+        await supabase
+          .from("accounts")
+          .update({ balance: toAccountData.balance - amount }) // Remove o que foi creditado
+          .eq("id", toTransaction.account_id);
+      }
+
+      // Deletar ambas as transações da transferência
+      const { error: deleteError } = await supabase
+        .from("transactions")
+        .delete()
+        .in("id", [fromTransaction.id, toTransaction.id])
+        .eq("user_id", user.id);
+
+      if (deleteError) {
+        showError("Erro ao excluir transferência: " + deleteError.message);
+        return;
+      }
+
+      showSuccess("Transferência excluída com sucesso!");
+      onTransferCompleted();
+      setShowDeleteDialog(false);
+      onClose();
+    } catch (error) {
+      showError("Erro inesperado ao excluir transferência.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -262,9 +443,9 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
           <DialogHeader className={cn(
             "px-6 py-4 border-b flex-shrink-0"
           )}>
-            <DialogTitle>Nova Transferência Entre Contas</DialogTitle>
+            <DialogTitle>{initialTransferData ? "Editar Transferência" : "Nova Transferência Entre Contas"}</DialogTitle>
             <DialogDescription>
-              Mova dinheiro de uma conta para outra.
+              {initialTransferData ? "Modifique os detalhes da sua transferência." : "Mova dinheiro de uma conta para outra."}
             </DialogDescription>
           </DialogHeader>
 
@@ -426,24 +607,38 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
           {/* Footer fixo */}
           <DialogFooter className={cn(
             "px-6 py-4 border-t flex-shrink-0",
-            isMobile && "flex-col gap-2 sm:flex-col"
+            isMobile ? "flex-col gap-2 sm:flex-col" : "flex-row justify-between"
           )}>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              onClick={form.handleSubmit(handleSubmit)}
-              className={cn(isMobile && "w-full order-1")}
-            >
-              {isSubmitting ? "Transferindo..." : "Confirmar Transferência"}
-            </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={onClose}
-              className={cn(isMobile && "w-full order-2")}
-            >
-              Cancelar
-            </Button>
+            {initialTransferData && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isSubmitting || isDeleting}
+                className={cn(isMobile && "w-full order-3", !isMobile && "mr-auto")}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </Button>
+            )}
+            <div className={cn(isMobile && "w-full flex flex-col gap-2 sm:flex-col", !isMobile && "flex gap-2", !initialTransferData && "w-full flex justify-end")}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || isDeleting}
+                onClick={form.handleSubmit(handleSubmit)}
+                className={cn(isMobile && "w-full order-1")}
+              >
+                {isSubmitting ? (initialTransferData ? "Salvando..." : "Transferindo...") : (initialTransferData ? "Salvar Alterações" : "Confirmar Transferência")}
+              </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={onClose}
+                className={cn(isMobile && "w-full order-2")}
+              >
+                Cancelar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -459,6 +654,30 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão da Transferência</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta transferência? Esta ação removerá ambas as transações vinculadas e ajustará os saldos das contas. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTransfer}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir Transferência"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
@@ -469,4 +688,4 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
   );
 };
 
-export default AddTransferModal;
+export default TransferModal;
