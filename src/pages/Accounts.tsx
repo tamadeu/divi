@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { ArrowRight, PlusCircle, Star } from "lucide-react";
+import { ArrowRight, PlusCircle, Star, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Account } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useModal } from "@/contexts/ModalContext";
 import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess } from "@/utils/toast";
-import AccountsTable from "@/components/accounts/AccountsTable";
 import EditAccountModal from "@/components/accounts/EditAccountModal";
 import DeleteAccountAlert from "@/components/accounts/DeleteAccountAlert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AccountsPage = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -65,7 +63,9 @@ const AccountsPage = () => {
     setSettingDefaultId(null);
   };
 
-  const handleEditAccount = (account: Account) => {
+  const handleEditAccount = (account: Account, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setEditingAccount(account);
   };
 
@@ -120,107 +120,80 @@ const AccountsPage = () => {
         </Button>
       </div>
 
-      <Tabs defaultValue="cards" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="cards">Cards</TabsTrigger>
-          <TabsTrigger value="table">Tabela</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="cards" className="space-y-4">
-          {loading ? (
-            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-48 w-full" />
-            </div>
-          ) : accounts.length > 0 ? (
-            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {accounts.map((account) => (
-                <Card key={account.id} className="flex flex-col">
-                  <Link to={`/accounts/${account.id}`} className="flex-grow">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center justify-between text-base sm:text-lg">
-                        <span className="truncate pr-2">{account.name}</span>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        {account.bank} - {account.type}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="text-xl sm:text-2xl font-bold">
-                        {account.balance.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
-                      </div>
-                    </CardContent>
-                  </Link>
-                  <div className="p-4 pt-0">
-                    {account.is_default ? (
-                      <Badge className="w-full justify-center sm:w-auto">
-                        <Star className="mr-2 h-4 w-4" />
-                        Padrão
-                      </Badge>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full sm:w-auto"
-                        onClick={() => handleSetDefault(account.id)}
-                        disabled={settingDefaultId === account.id}
-                      >
-                        {settingDefaultId === account.id ? "Definindo..." : "Tornar Padrão"}
-                      </Button>
-                    )}
+      {loading ? (
+        <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      ) : accounts.length > 0 ? (
+        <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {accounts.map((account) => (
+            <Card key={account.id} className="flex flex-col relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8 z-10"
+                onClick={(e) => handleEditAccount(account, e)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Link to={`/accounts/${account.id}`} className="flex-grow">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-base sm:text-lg pr-10">
+                    <span className="truncate pr-2">{account.name}</span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    {account.bank} - {account.type}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-xl sm:text-2xl font-bold">
+                    {account.balance.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
                   </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-12">
-              <div className="flex flex-col items-center gap-1 text-center px-4">
-                <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
-                  Nenhuma conta encontrada
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Comece adicionando sua primeira conta.
-                </p>
-                <Button onClick={() => openAddAccountModal(fetchAccounts)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Adicionar Conta
-                </Button>
+                </CardContent>
+              </Link>
+              <div className="p-4 pt-0">
+                {account.is_default ? (
+                  <Badge className="w-full justify-center sm:w-auto">
+                    <Star className="mr-2 h-4 w-4" />
+                    Padrão
+                  </Badge>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => handleSetDefault(account.id)}
+                    disabled={settingDefaultId === account.id}
+                  >
+                    {settingDefaultId === account.id ? "Definindo..." : "Tornar Padrão"}
+                  </Button>
+                )}
               </div>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="table" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Todas as Contas</CardTitle>
-              <CardDescription>
-                Gerencie todas as suas contas financeiras em uma tabela.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-64 w-full" />
-              ) : (
-                <div className="overflow-x-auto">
-                  <AccountsTable
-                    accounts={accounts}
-                    onEdit={handleEditAccount}
-                    onDelete={handleDeleteAccount}
-                    onSetDefault={handleSetDefault}
-                    settingDefaultId={settingDefaultId}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-12">
+          <div className="flex flex-col items-center gap-1 text-center px-4">
+            <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
+              Nenhuma conta encontrada
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Comece adicionando sua primeira conta.
+            </p>
+            <Button onClick={() => openAddAccountModal(fetchAccounts)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Adicionar Conta
+            </Button>
+          </div>
+        </div>
+      )}
 
       <EditAccountModal
         isOpen={!!editingAccount}
