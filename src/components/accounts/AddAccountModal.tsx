@@ -171,6 +171,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Conta Corrente Banco do Brasil"
+                autoFocus={false}
                 required
               />
             </div>
@@ -233,6 +234,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
                 value={formData.initialBalance}
                 onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
                 placeholder="0.00"
+                autoFocus={false}
               />
               <p className="text-xs text-muted-foreground">
                 Se informado, será criada uma transação de saldo inicial.

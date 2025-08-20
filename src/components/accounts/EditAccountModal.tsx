@@ -137,6 +137,7 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Conta Corrente Banco do Brasil"
+                autoFocus={false}
                 required
               />
             </div>

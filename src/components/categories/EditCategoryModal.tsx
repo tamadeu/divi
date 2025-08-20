@@ -96,6 +96,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Alimentação, Salário, Transporte..."
+                autoFocus={false}
                 required
               />
             </div>
