@@ -81,16 +81,18 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
             email: user.ghost_user_email || null
           });
         } else {
-          // Usuário real - buscar perfil
-          const { data: profile, error: profileError } = await supabase
+          // Usuário real - buscar perfil (sem usar .single() ou .maybeSingle())
+          const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('first_name, last_name, avatar_url')
-            .eq('id', user.user_id)
-            .maybeSingle(); // Use maybeSingle() ao invés de single()
+            .eq('id', user.user_id);
 
-          if (profileError && profileError.code !== 'PGRST116') {
+          if (profileError) {
             console.error('Error fetching profile for user:', user.user_id, profileError);
           }
+
+          // Pegar o primeiro perfil encontrado (se houver)
+          const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
           // Buscar email do usuário usando a função edge
           let userEmail = null;
@@ -108,7 +110,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
           membersWithProfiles.push({
             ...user,
-            profile: profile || null,
+            profile: profile,
             email: userEmail
           });
         }
