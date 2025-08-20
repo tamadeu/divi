@@ -14,7 +14,7 @@ import Login from '@/pages/Login';
 import Transactions from '@/pages/Transactions';
 import Accounts from '@/pages/Accounts';
 import Categories from '@/pages/Categories';
-import Budget from '@/pages/Budget';
+import Budget from '@/pages/Budgets';
 import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 
