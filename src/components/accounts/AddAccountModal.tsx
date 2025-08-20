@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
 import { Bank } from "@/types/database";
 
@@ -39,6 +40,7 @@ const accountSchema = z.object({
   custom_bank_name: z.string().optional(),
   type: z.string().min(1, "O tipo é obrigatório."),
   balance: z.coerce.number(),
+  include_in_total: z.boolean().default(true),
 }).refine(data => {
   if (data.bank_selection === "custom_bank_input") {
     return data.custom_bank_name && data.custom_bank_name.trim().length > 0;
@@ -70,6 +72,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
       custom_bank_name: "",
       type: "",
       balance: 0,
+      include_in_total: true,
     },
   });
 
@@ -116,6 +119,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
       type: values.type,
       balance: values.balance,
       user_id: user.id,
+      include_in_total: values.include_in_total,
     });
 
     if (error) {
@@ -242,6 +246,28 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
                     <Input type="number" step="0.01" placeholder="0.00" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="include_in_total"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Incluir no saldo total
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      O saldo desta conta será incluído no cálculo do saldo total da página inicial.
+                    </p>
+                  </div>
                 </FormItem>
               )}
             />

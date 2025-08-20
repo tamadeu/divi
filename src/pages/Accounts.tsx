@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { ArrowRight, PlusCircle, Star, Pencil } from "lucide-react";
+import { ArrowRight, PlusCircle, Star, Pencil, Calculator, CalculatorOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Account } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -153,7 +153,14 @@ const AccountsPage = () => {
               <Link to={`/accounts/${account.id}`} className="flex-grow">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between text-base sm:text-lg">
-                    <span className="truncate">{account.name}</span>
+                    <span className="truncate flex items-center gap-2">
+                      {account.name}
+                      {account.include_in_total ? (
+                        <Calculator className="h-4 w-4 text-green-600" title="Incluído no saldo total" />
+                      ) : (
+                        <CalculatorOff className="h-4 w-4 text-gray-400" title="Não incluído no saldo total" />
+                      )}
+                    </span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
                   </CardTitle>
                   <CardDescription className="text-sm">
@@ -170,16 +177,29 @@ const AccountsPage = () => {
                 </CardContent>
               </Link>
               <div className="p-4 pt-0 flex items-center justify-between">
-                {account.is_default && (
-                  <Badge className="flex items-center">
-                    <Star className="mr-2 h-4 w-4" />
-                    Padrão
-                  </Badge>
-                )}
+                <div className="flex flex-wrap gap-1">
+                  {account.is_default && (
+                    <Badge className="flex items-center">
+                      <Star className="mr-2 h-4 w-4" />
+                      Padrão
+                    </Badge>
+                  )}
+                  {account.include_in_total ? (
+                    <Badge variant="outline" className="text-green-600">
+                      <Calculator className="mr-1 h-3 w-3" />
+                      No Total
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-gray-500">
+                      <CalculatorOff className="mr-1 h-3 w-3" />
+                      Fora do Total
+                    </Badge>
+                  )}
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  className={`gap-2 ${account.is_default ? 'ml-auto' : 'w-full'}`}
+                  className="gap-2 ml-auto"
                   onClick={(e) => handleEditAccount(account, e)}
                 >
                   <Pencil className="h-4 w-4" />

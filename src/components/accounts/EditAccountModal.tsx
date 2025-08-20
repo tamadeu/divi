@@ -42,6 +42,7 @@ const editAccountSchema = z.object({
   type: z.string().min(1, "O tipo é obrigatório."),
   balance: z.coerce.number(),
   is_default: z.boolean().default(false),
+  include_in_total: z.boolean().default(true),
 }).refine(data => {
   if (data.bank_selection === "custom_bank_input") {
     return data.custom_bank_name && data.custom_bank_name.trim().length > 0;
@@ -77,6 +78,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account, onDelete
       type: "",
       balance: 0,
       is_default: false,
+      include_in_total: true,
     },
   });
 
@@ -114,6 +116,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account, onDelete
         type: account.type,
         balance: account.balance,
         is_default: account.is_default,
+        include_in_total: account.include_in_total ?? true, // Default to true if undefined
       });
       
       setShowCustomBankInput(!existingBank);
@@ -161,6 +164,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account, onDelete
           type: values.type,
           // balance is intentionally excluded - it should not be editable
           is_default: values.is_default,
+          include_in_total: values.include_in_total,
         })
         .eq("id", account.id);
 
@@ -331,6 +335,28 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account, onDelete
                     </FormLabel>
                     <p className="text-sm text-muted-foreground">
                       Esta conta será selecionada automaticamente ao criar transações.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="include_in_total"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Incluir no saldo total
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      O saldo desta conta será incluído no cálculo do saldo total da página inicial.
                     </p>
                   </div>
                 </FormItem>

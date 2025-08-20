@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Account } from "@/types/database";
-import { Pencil, Trash2, Star, Eye } from "lucide-react";
+import { Pencil, Trash2, Star, Eye, Calculator, CalculatorOff } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface AccountsTableProps {
@@ -46,11 +46,18 @@ const AccountsTable = ({
               <TableRow key={account.id}>
                 <TableCell className="font-medium">
                   <div>
-                    <div className="font-medium">{account.name}</div>
+                    <div className="font-medium flex items-center gap-2">
+                      {account.name}
+                      {account.include_in_total ? (
+                        <Calculator className="h-3 w-3 text-green-600" title="Incluído no saldo total" />
+                      ) : (
+                        <CalculatorOff className="h-3 w-3 text-gray-400" title="Não incluído no saldo total" />
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground lg:hidden">
                       {account.bank} - {account.type}
                     </div>
-                    <div className="lg:hidden mt-1">
+                    <div className="lg:hidden mt-1 flex flex-wrap gap-1">
                       {account.is_default ? (
                         <Badge variant="secondary" className="text-xs">
                           <Star className="mr-1 h-3 w-3" />
@@ -67,6 +74,15 @@ const AccountsTable = ({
                           {settingDefaultId === account.id ? "..." : "Tornar Padrão"}
                         </Button>
                       )}
+                      {account.include_in_total ? (
+                        <Badge variant="outline" className="text-xs text-green-600">
+                          No Total
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-gray-500">
+                          Fora do Total
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -81,21 +97,34 @@ const AccountsTable = ({
                   </div>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  {account.is_default ? (
-                    <Badge>
-                      <Star className="mr-1 h-3 w-3" />
-                      Padrão
-                    </Badge>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onSetDefault(account.id)}
-                      disabled={settingDefaultId === account.id}
-                    >
-                      {settingDefaultId === account.id ? "Definindo..." : "Tornar Padrão"}
-                    </Button>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {account.is_default ? (
+                      <Badge>
+                        <Star className="mr-1 h-3 w-3" />
+                        Padrão
+                      </Badge>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onSetDefault(account.id)}
+                        disabled={settingDefaultId === account.id}
+                      >
+                        {settingDefaultId === account.id ? "Definindo..." : "Tornar Padrão"}
+                      </Button>
+                    )}
+                    {account.include_in_total ? (
+                      <Badge variant="outline" className="text-green-600">
+                        <Calculator className="mr-1 h-3 w-3" />
+                        No Total
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-gray-500">
+                        <CalculatorOff className="mr-1 h-3 w-3" />
+                        Fora do Total
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
