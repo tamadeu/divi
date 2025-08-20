@@ -10,7 +10,6 @@ import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Plus, Users, Trash2, LogOut, MoreVertical, Moon, Sun, Monitor, Key } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +32,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTheme } from "next-themes";
+import WorkspaceMembersModal from "@/components/settings/WorkspaceMembersModal";
+import { WorkspaceWithRole } from "@/types/workspace";
 
 interface Profile {
   first_name: string | null;
@@ -60,11 +61,11 @@ const Settings = () => {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const { refreshWorkspaces } = useWorkspace();
   const { theme, setTheme } = useTheme();
-  const navigate = useNavigate();
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [managingMembersWorkspace, setManagingMembersWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [createFormData, setCreateFormData] = useState({
     name: "",
     description: "",
@@ -268,8 +269,16 @@ const Settings = () => {
     setCreatingWorkspace(false);
   };
 
-  const handleManageUsers = (workspaceId: string) => {
-    navigate(`/workspaces/${workspaceId}/users`);
+  const handleManageMembers = (workspace: Workspace) => {
+    // Converter para WorkspaceWithRole
+    const workspaceWithRole: WorkspaceWithRole = {
+      ...workspace,
+      created_by: workspace.workspace_owner,
+      updated_at: workspace.created_at,
+      user_role: workspace.user_role as 'owner' | 'admin' | 'user',
+      is_owner: workspace.user_role === 'owner'
+    };
+    setManagingMembersWorkspace(workspaceWithRole);
   };
 
   const handleDeleteWorkspace = async (workspaceId: string, workspaceName: string) => {
@@ -442,7 +451,7 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Workspaces Settings - MOVIDO PARA CIMA */}
+      {/* Workspaces Settings */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -500,7 +509,7 @@ const Settings = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {(workspace.user_role === "owner" || workspace.user_role === "admin") && (
-                        <DropdownMenuItem onClick={() => handleManageUsers(workspace.id)}>
+                        <DropdownMenuItem onClick={() => handleManageMembers(workspace)}>
                           <Users className="h-4 w-4 mr-2" />
                           Gerenciar Usuários
                         </DropdownMenuItem>
@@ -703,6 +712,15 @@ const Settings = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Workspace Members Modal */}
+      {managingMembersWorkspace && (
+        <WorkspaceMembersModal
+          workspace={managingMembersWorkspace}
+          isOpen={!!managingMembersWorkspace}
+          onClose={() => setManagingMembersWorkspace(null)}
+        />
+      )}
     </div>
   );
 };
