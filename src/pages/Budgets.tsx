@@ -6,22 +6,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { BudgetWithSpending } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
 import AddBudgetModal from "@/components/budgets/AddBudgetModal";
-import EditBudgetModal from "@/components/budgets/EditBudgetModal"; // New import
-import DeleteBudgetAlert from "@/components/budgets/DeleteBudgetAlert"; // New import
-import { showError, showSuccess } from "@/utils/toast"; // Ensure these are imported
+import EditBudgetModal from "@/components/budgets/EditBudgetModal";
+import DeleteBudgetAlert from "@/components/budgets/DeleteBudgetAlert";
+import { showError, showSuccess } from "@/utils/toast";
+import MonthPicker from "@/components/budgets/MonthPicker"; // New import
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const BudgetsPage = () => {
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingBudget, setEditingBudget] = useState<BudgetWithSpending | null>(null); // New state
-  const [deletingBudget, setDeletingBudget] = useState<BudgetWithSpending | null>(null); // New state
+  const [editingBudget, setEditingBudget] = useState<BudgetWithSpending | null>(null);
+  const [deletingBudget, setDeletingBudget] = useState<BudgetWithSpending | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date()); // New state for selected month
 
   const fetchBudgets = async () => {
     setLoading(true);
-    const currentMonth = new Date().toISOString();
+    // Ensure the selectedMonth is at the beginning of the month for the RPC call
+    const monthToFetch = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
     const { data, error } = await supabase.rpc('get_budgets_with_spending', {
-      budget_month: currentMonth
+      budget_month: monthToFetch.toISOString(),
     });
 
     if (error) {
@@ -34,7 +39,7 @@ const BudgetsPage = () => {
 
   useEffect(() => {
     fetchBudgets();
-  }, []);
+  }, [selectedMonth]); // Re-fetch budgets when selectedMonth changes
 
   const handleEditBudget = (budget: BudgetWithSpending) => {
     setEditingBudget(budget);
@@ -59,7 +64,7 @@ const BudgetsPage = () => {
         .from("budgets")
         .delete()
         .eq("id", deletingBudget.id)
-        .eq("user_id", user.id); // Ensure user owns the budget
+        .eq("user_id", user.id);
 
       if (error) {
         throw error;
@@ -76,12 +81,17 @@ const BudgetsPage = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Orçamentos</h1>
-        <Button size="sm" className="gap-1" onClick={() => setIsAddModalOpen(true)}>
-          <PlusCircle className="h-4 w-4" />
-          Novo Orçamento
-        </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <h1 className="text-lg font-semibold md:text-2xl">
+          Orçamentos de {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
+        </h1>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <MonthPicker selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+          <Button size="sm" className="gap-1 w-full sm:w-auto" onClick={() => setIsAddModalOpen(true)}>
+            <PlusCircle className="h-4 w-4" />
+            Novo Orçamento
+          </Button>
+        </div>
       </div>
       {loading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -92,11 +102,11 @@ const BudgetsPage = () => {
       ) : budgets.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => (
-            <BudgetItem 
-              key={budget.id} 
-              budget={budget} 
-              onEdit={handleEditBudget} // Pass edit handler
-              onDelete={handleDeleteBudget} // Pass delete handler
+            <BudgetItem
+              key={budget.id}
+              budget={budget}
+              onEdit={handleEditBudget}
+              onDelete={handleDeleteBudget}
             />
           ))}
         </div>
@@ -124,13 +134,12 @@ const BudgetsPage = () => {
           setIsAddModalOpen(false);
         }}
       />
-      {/* New Modals for Edit and Delete */}
       <EditBudgetModal
         isOpen={!!editingBudget}
         onClose={() => setEditingBudget(null)}
         onBudgetUpdated={fetchBudgets}
         budget={editingBudget}
-        onDeleteRequest={handleDeleteBudget} // Allow initiating delete from edit modal
+        onDeleteRequest={handleDeleteBudget}
       />
       <DeleteBudgetAlert
         isOpen={!!deletingBudget}
