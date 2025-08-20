@@ -94,10 +94,6 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
             </CommandGroup>
             <CommandSeparator />
             <CommandGroup>
-              <CommandItem onSelect={handleCreateWorkspace}>
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Núcleo
-              </CommandItem>
               <CommandItem onSelect={handleManageWorkspaces}>
                 <Settings className="mr-2 h-4 w-4" />
                 Gerenciar Núcleos
