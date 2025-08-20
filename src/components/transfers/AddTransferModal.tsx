@@ -224,6 +224,17 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
     setShowCalculator(false);
   };
 
+  const handleCategoryAdded = (newCategory: Category | null) => {
+    // Atualizar a lista de categorias
+    fetchData().then(() => {
+      // Se uma nova categoria foi criada, selecioná-la automaticamente
+      if (newCategory) {
+        form.setValue('category_id', newCategory.id, { shouldValidate: true });
+      }
+    });
+    setIsAddCategoryModalOpen(false);
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -438,14 +449,8 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
-        onCategoryAdded={(newCategory) => {
-          fetchData().then(() => {
-            if (newCategory) {
-              form.setValue('category_id', newCategory.id, { shouldValidate: true });
-            }
-          });
-          setIsAddCategoryModalOpen(false);
-        }}
+        onCategoryAdded={handleCategoryAdded}
+        defaultType="income"
       />
     </>
   );

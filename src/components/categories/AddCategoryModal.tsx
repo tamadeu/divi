@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,8 +34,10 @@ import { showError, showSuccess } from "@/utils/toast";
 import { Category } from "@/types/database";
 
 const categorySchema = z.object({
-  name: z.string().min(1, "O nome é obrigatório."),
-  type: z.enum(["income", "expense"], { required_error: "O tipo é obrigatório." }),
+  name: z.string().min(1, "Nome da categoria é obrigatório."),
+  type: z.enum(["income", "expense"], {
+    required_error: "Selecione um tipo de categoria.",
+  }),
 });
 
 type CategoryFormValues = z.infer<typeof categorySchema>;
@@ -43,23 +45,32 @@ type CategoryFormValues = z.infer<typeof categorySchema>;
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCategoryAdded: (newCategory?: Category) => void;
+  onCategoryAdded: (category: Category | null) => void;
   defaultType?: "income" | "expense";
 }
 
-const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: AddCategoryModalProps) => {
+const AddCategoryModal = ({ 
+  isOpen, 
+  onClose, 
+  onCategoryAdded, 
+  defaultType 
+}: AddCategoryModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { name: "", type: defaultType },
+    defaultValues: {
+      name: "",
+      type: defaultType || undefined,
+    },
   });
 
-  useEffect(() => {
+  // Reset form quando o modal abrir com o tipo padrão
+  React.useEffect(() => {
     if (isOpen) {
       form.reset({
         name: "",
-        type: defaultType,
+        type: defaultType || undefined,
       });
     }
   }, [isOpen, defaultType, form]);
@@ -73,55 +84,40 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: Add
       return;
     }
 
-    // Validação de nome e tipo únicos
-    const { data: existingCategories, error: fetchError } = await supabase
+    const { data, error } = await supabase
       .from("categories")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("name", values.name)
-      .eq("type", values.type);
-
-    if (fetchError) {
-      showError("Erro ao verificar categorias existentes: " + fetchError.message);
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (existingCategories && existingCategories.length > 0) {
-      form.setError("name", {
-        type: "manual",
-        message: `Já existe uma categoria com o nome "${values.name}" e tipo "${values.type === 'income' ? 'Renda' : 'Despesa'}".`,
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { data: newCategory, error } = await supabase
-      .from("categories")
-      .insert({ ...values, user_id: user.id })
+      .insert({
+        user_id: user.id,
+        name: values.name,
+        type: values.type,
+      })
       .select()
       .single();
 
     if (error) {
-      showError("Erro ao adicionar categoria: " + error.message);
-    } else {
-      showSuccess("Categoria adicionada com sucesso!");
-      onCategoryAdded(newCategory);
-      form.reset();
-      onClose();
+      showError("Erro ao criar categoria: " + error.message);
+      setIsSubmitting(false);
+      return;
     }
+
+    showSuccess("Categoria criada com sucesso!");
+    onCategoryAdded(data);
+    onClose();
     setIsSubmitting(false);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Adicionar Nova Categoria</DialogTitle>
-          <DialogDescription>Crie uma nova categoria para suas transações.</DialogDescription>
+          <DialogDescription>
+            Crie uma nova categoria para suas transações.
+          </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -135,35 +131,47 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: Add
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={!!defaultType}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um tipo" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="expense">Despesa</SelectItem>
                       <SelectItem value="income">Renda</SelectItem>
+                      <SelectItem value="expense">Despesa</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adicionando..." : "Adicionar Categoria"}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            onClick={form.handleSubmit(handleSubmit)}
+          >
+            {isSubmitting ? "Criando..." : "Adicionar Categoria"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
