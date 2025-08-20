@@ -6,11 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { BudgetWithSpending } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
 import AddBudgetModal from "@/components/budgets/AddBudgetModal";
+import EditBudgetModal from "@/components/budgets/EditBudgetModal"; // New import
+import DeleteBudgetAlert from "@/components/budgets/DeleteBudgetAlert"; // New import
+import { showError, showSuccess } from "@/utils/toast"; // Ensure these are imported
 
 const BudgetsPage = () => {
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<BudgetWithSpending | null>(null); // New state
+  const [deletingBudget, setDeletingBudget] = useState<BudgetWithSpending | null>(null); // New state
 
   const fetchBudgets = async () => {
     setLoading(true);
@@ -31,11 +36,49 @@ const BudgetsPage = () => {
     fetchBudgets();
   }, []);
 
+  const handleEditBudget = (budget: BudgetWithSpending) => {
+    setEditingBudget(budget);
+  };
+
+  const handleDeleteBudget = (budget: BudgetWithSpending) => {
+    setDeletingBudget(budget);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingBudget) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("Você precisa estar logado para excluir um orçamento.");
+      setDeletingBudget(null);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("budgets")
+        .delete()
+        .eq("id", deletingBudget.id)
+        .eq("user_id", user.id); // Ensure user owns the budget
+
+      if (error) {
+        throw error;
+      }
+
+      showSuccess("Orçamento excluído com sucesso!");
+      fetchBudgets();
+      setDeletingBudget(null);
+    } catch (error: any) {
+      showError("Erro ao excluir orçamento: " + error.message);
+      console.error("Delete budget error:", error);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Orçamentos</h1>
-        <Button size="sm" className="gap-1" onClick={() => setIsModalOpen(true)}>
+        <Button size="sm" className="gap-1" onClick={() => setIsAddModalOpen(true)}>
           <PlusCircle className="h-4 w-4" />
           Novo Orçamento
         </Button>
@@ -49,7 +92,12 @@ const BudgetsPage = () => {
       ) : budgets.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => (
-            <BudgetItem key={budget.id} budget={budget} />
+            <BudgetItem 
+              key={budget.id} 
+              budget={budget} 
+              onEdit={handleEditBudget} // Pass edit handler
+              onDelete={handleDeleteBudget} // Pass delete handler
+            />
           ))}
         </div>
       ) : (
@@ -61,7 +109,7 @@ const BudgetsPage = () => {
             <p className="text-sm text-muted-foreground">
               Crie seu primeiro orçamento para começar a acompanhar.
             </p>
-            <Button className="mt-4" onClick={() => setIsModalOpen(true)}>
+            <Button className="mt-4" onClick={() => setIsAddModalOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Criar Orçamento
             </Button>
@@ -69,12 +117,26 @@ const BudgetsPage = () => {
         </div>
       )}
       <AddBudgetModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
         onBudgetAdded={() => {
           fetchBudgets();
-          setIsModalOpen(false);
+          setIsAddModalOpen(false);
         }}
+      />
+      {/* New Modals for Edit and Delete */}
+      <EditBudgetModal
+        isOpen={!!editingBudget}
+        onClose={() => setEditingBudget(null)}
+        onBudgetUpdated={fetchBudgets}
+        budget={editingBudget}
+        onDeleteRequest={handleDeleteBudget} // Allow initiating delete from edit modal
+      />
+      <DeleteBudgetAlert
+        isOpen={!!deletingBudget}
+        onClose={() => setDeletingBudget(null)}
+        budget={deletingBudget}
+        onConfirm={handleConfirmDelete}
       />
     </>
   );
