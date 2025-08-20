@@ -44,7 +44,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         throw ownedError;
       }
 
-      // Buscar workspaces onde o usuário é membro
+      // Buscar workspaces onde o usuário é membro (mas NÃO é owner)
       const { data: memberWorkspaceUsers, error: memberError } = await supabase
         .from('workspace_users')
         .select(`
@@ -59,7 +59,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         throw memberError;
       }
 
-      // Combinar os resultados
+      // Combinar os resultados, evitando duplicatas
+      const ownedWorkspaceIds = new Set((ownedWorkspaces || []).map(w => w.id));
+      
       const ownedWorkspacesWithRole = (ownedWorkspaces || []).map(workspace => ({
         ...workspace,
         user_role: 'owner' as const,
@@ -67,8 +69,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         workspace_users: []
       }));
 
+      // Filtrar workspaces onde o usuário é membro mas NÃO é owner
       const memberWorkspacesWithRole = (memberWorkspaceUsers || [])
-        .filter(wu => wu.workspaces) // Garantir que o workspace existe
+        .filter(wu => wu.workspaces && !ownedWorkspaceIds.has(wu.workspaces.id)) // Evitar duplicatas
         .map(wu => ({
           ...wu.workspaces,
           user_role: wu.role as 'admin' | 'user',
@@ -77,6 +80,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         }));
 
       const allWorkspaces = [...ownedWorkspacesWithRole, ...memberWorkspacesWithRole];
+
+      console.log('Owned workspaces:', ownedWorkspacesWithRole);
+      console.log('Member workspaces:', memberWorkspacesWithRole);
+      console.log('All workspaces:', allWorkspaces);
 
       setWorkspaces(allWorkspaces);
 
