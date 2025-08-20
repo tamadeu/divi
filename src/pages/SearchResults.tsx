@@ -102,7 +102,6 @@ const SearchResultsPage = () => {
           category:categories (name),
           transfer_id
         `)
-        .eq("user_id", user.id)
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
 
       if (transactionError) {
