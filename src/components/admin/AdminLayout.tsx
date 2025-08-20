@@ -12,9 +12,9 @@ const AdminLayout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      {/* Desktop Sidebar */}
-      <div className="hidden border-r bg-card md:block">
+    <div className="flex min-h-screen w-full">
+      {/* Fixed Desktop Sidebar */}
+      <div className="hidden md:flex md:w-[220px] lg:w-[280px] md:flex-col md:fixed md:inset-y-0 md:z-50 border-r bg-card">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link to="/admin" className="flex items-center gap-2 font-semibold">
@@ -39,7 +39,7 @@ const AdminLayout = () => {
           
           <AdminUserCard />
           
-          <div className="flex-1">
+          <div className="flex-1 overflow-auto">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
               <AdminNavLinks />
             </nav>
@@ -76,9 +76,10 @@ const AdminLayout = () => {
         </SheetContent>
       </Sheet>
 
-      <div className="flex flex-col">
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
         <AdminHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6 overflow-auto">
           <Outlet />
         </main>
       </div>
