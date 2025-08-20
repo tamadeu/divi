@@ -35,11 +35,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category } from "@/types/database";
-import { CalendarIcon, PlusCircle } from "lucide-react";
+import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import AddCategoryModal from "../categories/AddCategoryModal";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Calculator } from "@/components/ui/calculator";
 
 const transferSchema = z.object({
   from_account_id: z.string().uuid("Selecione uma conta de origem."),
@@ -66,6 +68,8 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<Category[]>([]);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const isMobile = useIsMobile();
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
@@ -75,6 +79,8 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
       description: "",
     },
   });
+
+  const amountValue = form.watch("amount");
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -178,147 +184,225 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
     setIsSubmitting(false);
   };
 
+  const handleCalculatorValue = (value: string) => {
+    const numericValue = parseFloat(value);
+    if (!isNaN(numericValue)) {
+      form.setValue("amount", numericValue, { shouldValidate: true });
+    }
+    setShowCalculator(false);
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
+        <DialogContent 
+          className={cn(
+            "sm:max-w-lg",
+            isMobile ? "h-[95vh] max-h-[95vh] w-[95vw] max-w-[95vw] p-0 flex flex-col" : "max-h-[90vh]"
+          )}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          {/* Header fixo */}
+          <DialogHeader className={cn(
+            "px-6 py-4 border-b flex-shrink-0"
+          )}>
             <DialogTitle>Nova Transferência Entre Contas</DialogTitle>
             <DialogDescription>
               Mova dinheiro de uma conta para outra.
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+
+          {/* Conteúdo com scroll */}
+          <div className={cn(
+            "flex-1 overflow-y-auto px-6 py-4",
+            !isMobile && "max-h-[60vh]"
+          )}>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="from_account_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>De</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Conta de Origem" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="to_account_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Para</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Conta de Destino" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <FormField
                   control={form.control}
-                  name="from_account_id"
+                  name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>De</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Conta de Origem" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Valor</FormLabel>
+                      <FormControl>
+                        {isMobile ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="text"
+                              value={amountValue > 0 ? amountValue.toString() : ""}
+                              placeholder="0.00"
+                              readOnly
+                              className="cursor-pointer"
+                              onClick={() => setShowCalculator(true)}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setShowCalculator(true)}
+                            >
+                              <CalculatorIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        )}
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
-                  name="to_account_id"
+                  name="category_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Para</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Conta de Destino" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Categoria da Entrada</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione uma categoria de receita" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {incomeCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
+                          <PlusCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valor</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria da Entrada</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria de receita" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {incomeCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? format(field.value, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição (Opcional)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Adicione uma nota..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Transferindo..." : "Confirmar Transferência"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                            >
+                              {field.value ? format(field.value, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição (Opcional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Adicione uma nota..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
+          </div>
+
+          {/* Footer fixo */}
+          <DialogFooter className={cn(
+            "px-6 py-4 border-t flex-shrink-0",
+            isMobile && "flex-col gap-2 sm:flex-col"
+          )}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              onClick={form.handleSubmit(handleSubmit)}
+              className={cn(isMobile && "w-full order-1")}
+            >
+              {isSubmitting ? "Transferindo..." : "Confirmar Transferência"}
+            </Button>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={onClose}
+              className={cn(isMobile && "w-full order-2")}
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal da Calculadora */}
+      <Dialog open={showCalculator} onOpenChange={setShowCalculator}>
+        <DialogContent className="p-0 w-[95vw] max-w-sm">
+          <Calculator
+            value={amountValue > 0 ? amountValue.toString() : "0"}
+            onChange={handleCalculatorValue}
+            onClose={() => setShowCalculator(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
