@@ -28,29 +28,43 @@ const AdminPlans = () => {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase
+      // First, get all plans
+      const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
-        .select(`
-          *,
-          exclusive_user:exclusive_user_id (
-            id,
-            email,
-            profiles:profiles (
-              first_name,
-              last_name
-            )
-          )
-        `)
+        .select('*')
         .order('sort_order', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching plans:', error);
+      if (plansError) {
+        console.error('Error fetching plans:', plansError);
         showError('Erro ao carregar planos');
         return;
       }
 
-      setPlans(data || []);
-      setFilteredPlans(data || []);
+      // Then, for exclusive plans, get user data using the admin function
+      const plansWithUserData = await Promise.all(
+        (plansData || []).map(async (plan) => {
+          if (plan.is_exclusive && plan.exclusive_user_id) {
+            try {
+              const { data: userData, error: userError } = await supabase.functions.invoke('admin-list-users', {
+                body: { userId: plan.exclusive_user_id }
+              });
+
+              if (!userError && userData?.users?.length > 0) {
+                return {
+                  ...plan,
+                  exclusive_user: userData.users[0]
+                };
+              }
+            } catch (error) {
+              console.error('Error fetching user data for plan:', plan.id, error);
+            }
+          }
+          return plan;
+        })
+      );
+
+      setPlans(plansWithUserData);
+      setFilteredPlans(plansWithUserData);
     } catch (error) {
       console.error('Error in fetchPlans:', error);
       showError('Erro ao carregar planos');

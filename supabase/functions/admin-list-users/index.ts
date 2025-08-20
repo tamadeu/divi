@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    // Criar cliente Supabase com service role
+    // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -24,17 +24,15 @@ serve(async (req) => {
       }
     )
 
-    // Criar cliente normal para verificar o usuário atual
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
-
-    // Obter o token de autorização
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    // Get the current user from the request
+    const authHeader = req.headers.get('Authorization')!
+    const token = authHeader.replace('Bearer ', '')
+    
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Token de autorização não fornecido' }),
+        JSON.stringify({ error: 'Unauthorized' }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -42,31 +40,16 @@ serve(async (req) => {
       )
     }
 
-    // Verificar o usuário atual
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Usuário não autenticado' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
-    // Verificar se o usuário é admin
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // Check if user is admin
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('user_type')
       .eq('id', user.id)
       .single()
 
-    if (profileError || profile?.user_type !== 'admin') {
+    if (profile?.user_type !== 'admin') {
       return new Response(
-        JSON.stringify({ error: 'Acesso negado. Apenas administradores podem acessar esta função.' }),
+        JSON.stringify({ error: 'Forbidden: Admin access required' }),
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -74,13 +57,21 @@ serve(async (req) => {
       )
     }
 
-    // Buscar todos os usuários com seus perfis
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers()
+    // Parse request body
+    const body = await req.json().catch(() => ({}))
+    const { search, limit = 50, userId } = body
 
-    if (authError) {
-      console.error('Error fetching auth users:', authError)
+    let query = supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: limit
+    })
+
+    const { data: authUsers, error: listError } = await query
+
+    if (listError) {
+      console.error('Error listing users:', listError)
       return new Response(
-        JSON.stringify({ error: 'Erro ao buscar usuários de autenticação' }),
+        JSON.stringify({ error: 'Failed to fetch users' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -88,37 +79,86 @@ serve(async (req) => {
       )
     }
 
-    // Buscar perfis dos usuários
+    // If searching for a specific user ID
+    if (userId) {
+      const specificUser = authUsers.users.find(u => u.id === userId)
+      if (!specificUser) {
+        return new Response(
+          JSON.stringify({ users: [] }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Get profile data for the specific user
+      const { data: profileData } = await supabaseAdmin
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', specificUser.id)
+        .single()
+
+      const userWithProfile = {
+        id: specificUser.id,
+        email: specificUser.email || '',
+        created_at: specificUser.created_at,
+        profiles: profileData
+      }
+
+      return new Response(
+        JSON.stringify({ users: [userWithProfile] }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Get profile data for all users
     const userIds = authUsers.users.map(u => u.id)
-    const { data: profiles, error: profilesError } = await supabaseAdmin
+    const { data: profiles } = await supabaseAdmin
       .from('profiles')
-      .select('*')
+      .select('id, first_name, last_name, user_type')
       .in('id', userIds)
 
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError)
-      return new Response(
-        JSON.stringify({ error: 'Erro ao buscar perfis dos usuários' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
-    // Combinar dados de auth com perfis
-    const users = authUsers.users.map(authUser => {
+    // Combine auth users with profile data
+    let usersWithProfiles = authUsers.users.map(authUser => {
       const profile = profiles?.find(p => p.id === authUser.id)
       return {
         id: authUser.id,
         email: authUser.email || '',
         created_at: authUser.created_at,
-        profile: profile || null
+        profile: profile ? {
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          user_type: profile.user_type
+        } : null,
+        profiles: profile ? {
+          first_name: profile.first_name,
+          last_name: profile.last_name
+        } : null
       }
     })
 
+    // Filter by search term if provided
+    if (search && search.length >= 2) {
+      const searchLower = search.toLowerCase()
+      usersWithProfiles = usersWithProfiles.filter(user => {
+        const email = user.email.toLowerCase()
+        const firstName = user.profile?.first_name?.toLowerCase() || ''
+        const lastName = user.profile?.last_name?.toLowerCase() || ''
+        const fullName = `${firstName} ${lastName}`.trim()
+        
+        return email.includes(searchLower) || 
+               firstName.includes(searchLower) || 
+               lastName.includes(searchLower) || 
+               fullName.includes(searchLower)
+      })
+    }
+
     return new Response(
-      JSON.stringify({ users }),
+      JSON.stringify({ users: usersWithProfiles }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -128,7 +168,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in admin-list-users function:', error)
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

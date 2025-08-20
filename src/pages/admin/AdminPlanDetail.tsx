@@ -82,31 +82,41 @@ const AdminPlanDetail = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First get the plan data
+      const { data: planData, error: planError } = await supabase
         .from('subscription_plans')
-        .select(`
-          *,
-          exclusive_user:exclusive_user_id (
-            id,
-            email,
-            profiles:profiles (
-              first_name,
-              last_name
-            )
-          )
-        `)
+        .select('*')
         .eq('id', planId)
         .single();
 
-      if (error) {
-        console.error('Error fetching plan:', error);
+      if (planError) {
+        console.error('Error fetching plan:', planError);
         showError('Erro ao carregar plano');
         navigate('/admin/plans');
         return;
       }
 
-      setPlan(data);
-      setFormData(data);
+      // If it's an exclusive plan, get user data
+      let planWithUserData = planData;
+      if (planData.is_exclusive && planData.exclusive_user_id) {
+        try {
+          const { data: userData, error: userError } = await supabase.functions.invoke('admin-list-users', {
+            body: { userId: planData.exclusive_user_id }
+          });
+
+          if (!userError && userData?.users?.length > 0) {
+            planWithUserData = {
+              ...planData,
+              exclusive_user: userData.users[0]
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+
+      setPlan(planWithUserData);
+      setFormData(planWithUserData);
     } catch (error) {
       console.error('Error in fetchPlan:', error);
       showError('Erro ao carregar plano');
