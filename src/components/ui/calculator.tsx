@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Backspace } from "lucide-react";
+import { Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CalculatorProps {
@@ -139,7 +139,7 @@ export const Calculator = ({ value, onChange, onClose, className }: CalculatorPr
             className={cn(buttonClass, specialClass)}
             onClick={backspace}
           >
-            <Backspace className="h-5 w-5" />
+            <Delete className="h-5 w-5" />
           </Button>
           <Button
             variant="outline"
