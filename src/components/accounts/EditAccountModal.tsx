@@ -345,7 +345,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                 </FormItem>
               )}
             />
-            <DialogFooter className="flex justify-between">
+            <div className="flex items-center justify-between pt-4">
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -364,7 +364,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                   {isSubmitting ? "Salvando..." : "Salvar Alterações"}
                 </Button>
               </div>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>
