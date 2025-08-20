@@ -1,102 +1,23 @@
-export interface User {
-  id: string;
-  email: string;
-  created_at: string;
-  profile?: Profile | null;
-}
+import { Database } from "./supabase";
 
-export interface Profile {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar_url: string | null;
-  user_type: string | null;
-  ai_provider: string | null;
-  updated_at: string | null;
-}
+export type Account = Database['public']['Tables']['accounts']['Row'];
+export type Category = Database['public']['Tables']['categories']['Row'];
+export type Transaction = Database['public']['Tables']['transactions']['Row'];
+export type Company = Database['public']['Tables']['companies']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Workspace = Database['public']['Tables']['workspaces']['Row'];
+export type WorkspaceUser = Database['public']['Tables']['workspace_users']['Row'];
 
-export interface Bank {
-  id: string;
-  name: string;
-  logo_url: string | null;
-  color: string;
-  created_at: string;
-  updated_at: string;
-}
+export type CreditCard = Database['public']['Tables']['credit_cards']['Row'];
+export type CreditCardBill = Database['public']['Tables']['credit_card_bills']['Row'];
 
-export interface Company {
-  id: string;
-  name: string;
-  logo_url: string | null;
-  created_at: string;
-  updated_at: string;
-}
+// Extend Transaction type to include joined data
+export type TransactionWithDetails = Transaction & {
+  category?: { name: string } | null;
+  account?: { name: string; type: string } | null;
+};
 
-export interface Transaction {
-  id: string;
-  user_id: string;
-  category_id: string | null;
-  account_id: string | null;
-  workspace_id: string | null;
-  date: string;
-  name: string;
-  amount: number;
-  description: string | null;
-  status: string;
-  transfer_id: string | null;
-  created_at: string;
-}
-
-export interface Category {
-  id: string;
-  user_id: string;
-  workspace_id: string | null;
-  name: string;
-  type: string;
-  created_at: string;
-}
-
-export interface Account {
-  id: string;
-  user_id: string;
-  workspace_id: string | null;
-  name: string;
-  bank: string;
-  type: string;
-  balance: number;
-  is_default: boolean;
-  include_in_total: boolean;
-  created_at: string;
-}
-
-export interface Budget {
-  id: string;
-  user_id: string;
-  workspace_id: string | null;
-  category_id: string;
-  amount: number;
-  month: string;
-  created_at: string;
-}
-
-export interface Workspace {
-  id: string;
-  name: string;
-  description: string | null;
-  created_by: string;
-  workspace_owner: string;
-  is_shared: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface WorkspaceUser {
-  id: string;
-  workspace_id: string;
-  user_id: string;
-  role: string;
-  joined_at: string;
-  is_ghost_user: boolean;
-  ghost_user_name: string | null;
-  ghost_user_email: string | null;
-}
+// Extend CreditCard type to include joined account data
+export type CreditCardWithAccount = CreditCard & {
+  account?: { name: string; type: string; balance: number } | null;
+};
