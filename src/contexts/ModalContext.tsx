@@ -1,106 +1,144 @@
+"use client";
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Transaction } from '@/types/database';
+import { Transaction, Category } from '@/types/database'; // Assuming Transaction and Category types are available
 
 interface ModalContextType {
   // Add Transaction Modal
   isAddTransactionModalOpen: boolean;
-  openAddTransactionModal: (initialData?: any) => void;
+  addTransactionInitialData: any | null;
+  openAddTransactionModal: (initialData?: any, callback?: () => void) => void;
   closeAddTransactionModal: () => void;
-  addTransactionInitialData: any;
+  onTransactionAdded: () => void; // Callback for when a transaction is added
 
-  // Edit Transaction Modal
-  isEditTransactionModalOpen: boolean;
-  openEditTransactionModal: (transaction: Transaction) => void;
-  closeEditTransactionModal: () => void;
-  editTransactionData: Transaction | null;
+  // Add Account Modal
+  isAddAccountModalOpen: boolean;
+  openAddAccountModal: (callback?: () => void) => void;
+  closeAddAccountModal: () => void;
+  onAccountAdded: () => void; // Callback for when an account is added
 
-  // Transaction Details Modal
-  isTransactionDetailsModalOpen: boolean;
-  openTransactionDetailsModal: (transaction: Transaction) => void;
-  closeTransactionDetailsModal: () => void;
-  transactionDetailsData: Transaction | null;
+  // Add Category Modal
+  isAddCategoryModalOpen: boolean;
+  openAddCategoryModal: (callback?: (newCategory?: Category) => void) => void;
+  closeAddCategoryModal: () => void;
+  onCategoryAdded: (newCategory?: Category) => void; // Callback for when a category is added
+
+  // Transfer Modal
+  isAddTransferModalOpen: boolean;
+  addTransferInitialData: { fromTransaction: Transaction, toTransaction: Transaction } | null;
+  openAddTransferModal: (initialData?: { fromTransaction: Transaction, toTransaction: Transaction }, callback?: () => void) => void;
+  closeAddTransferModal: () => void;
+  onTransferAdded: () => void; // Callback for when a transfer is completed
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
-export const useModal = () => {
-  const context = useContext(ModalContext);
-  if (!context) {
-    throw new Error('useModal must be used within a ModalProvider');
-  }
-  return context;
-};
-
-interface ModalProviderProps {
-  children: ReactNode;
-}
-
-export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
-  // Add Transaction Modal
+export const ModalProvider = ({ children }: { children: ReactNode }) => {
+  // Add Transaction Modal states
   const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] = useState(false);
-  const [addTransactionInitialData, setAddTransactionInitialData] = useState<any>(null);
+  const [addTransactionInitialData, setAddTransactionInitialData] = useState<any | null>(null);
+  const [transactionAddedCallback, setTransactionAddedCallback] = useState<(() => void) | null>(null);
 
-  // Edit Transaction Modal
-  const [isEditTransactionModalOpen, setIsEditTransactionModalOpen] = useState(false);
-  const [editTransactionData, setEditTransactionData] = useState<Transaction | null>(null);
+  // Add Account Modal states
+  const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
+  const [accountAddedCallback, setAccountAddedCallback] = useState<(() => void) | null>(null);
 
-  // Transaction Details Modal
-  const [isTransactionDetailsModalOpen, setIsTransactionDetailsModalOpen] = useState(false);
-  const [transactionDetailsData, setTransactionDetailsData] = useState<Transaction | null>(null);
+  // Add Category Modal states
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [categoryAddedCallback, setCategoryAddedCallback] = useState<((newCategory?: Category) => void) | null>(null);
 
-  const openAddTransactionModal = (initialData?: any) => {
-    setAddTransactionInitialData(initialData);
+  // Transfer Modal states
+  const [isAddTransferModalOpen, setIsAddTransferModalOpen] = useState(false);
+  const [addTransferInitialData, setAddTransferInitialData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
+  const [transferAddedCallback, setTransferAddedCallback] = useState<(() => void) | null>(null);
+
+  // Add Transaction Modal functions
+  const openAddTransactionModal = (initialData?: any, callback?: () => void) => {
+    setAddTransactionInitialData(initialData || null);
     setIsAddTransactionModalOpen(true);
+    if (callback) setTransactionAddedCallback(() => callback);
   };
-
   const closeAddTransactionModal = () => {
     setIsAddTransactionModalOpen(false);
     setAddTransactionInitialData(null);
+    setTransactionAddedCallback(null);
+  };
+  const onTransactionAdded = () => {
+    if (transactionAddedCallback) transactionAddedCallback();
   };
 
-  const openEditTransactionModal = (transaction: Transaction) => {
-    setEditTransactionData(transaction);
-    setIsEditTransactionModalOpen(true);
+  // Add Account Modal functions
+  const openAddAccountModal = (callback?: () => void) => {
+    setIsAddAccountModalOpen(true);
+    if (callback) setAccountAddedCallback(() => callback);
+  };
+  const closeAddAccountModal = () => {
+    setIsAddAccountModalOpen(false);
+    setAccountAddedCallback(null);
+  };
+  const onAccountAdded = () => {
+    if (accountAddedCallback) accountAddedCallback();
   };
 
-  const closeEditTransactionModal = () => {
-    setIsEditTransactionModalOpen(false);
-    setEditTransactionData(null);
+  // Add Category Modal functions
+  const openAddCategoryModal = (callback?: (newCategory?: Category) => void) => {
+    setIsAddCategoryModalOpen(true);
+    if (callback) setCategoryAddedCallback(() => callback);
+  };
+  const closeAddCategoryModal = () => {
+    setIsAddCategoryModalOpen(false);
+    setCategoryAddedCallback(null);
+  };
+  const onCategoryAdded = (newCategory?: Category) => {
+    if (categoryAddedCallback) categoryAddedCallback(newCategory);
   };
 
-  const openTransactionDetailsModal = (transaction: Transaction) => {
-    setTransactionDetailsData(transaction);
-    setIsTransactionDetailsModalOpen(true);
+  // Transfer Modal functions
+  const openAddTransferModal = (initialData?: { fromTransaction: Transaction, toTransaction: Transaction }, callback?: () => void) => {
+    setAddTransferInitialData(initialData || null);
+    setIsAddTransferModalOpen(true);
+    if (callback) setTransferAddedCallback(() => callback);
+  };
+  const closeAddTransferModal = () => {
+    setIsAddTransferModalOpen(false);
+    setAddTransferInitialData(null);
+    setTransferAddedCallback(null);
+  };
+  const onTransferAdded = () => {
+    if (transferAddedCallback) transferAddedCallback();
   };
 
-  const closeTransactionDetailsModal = () => {
-    setIsTransactionDetailsModalOpen(false);
-    setTransactionDetailsData(null);
+  const value = {
+    isAddTransactionModalOpen,
+    addTransactionInitialData,
+    openAddTransactionModal,
+    closeAddTransactionModal,
+    onTransactionAdded,
+
+    isAddAccountModalOpen,
+    openAddAccountModal,
+    closeAddAccountModal,
+    onAccountAdded,
+
+    isAddCategoryModalOpen,
+    openAddCategoryModal,
+    closeAddCategoryModal,
+    onCategoryAdded,
+
+    isAddTransferModalOpen,
+    addTransferInitialData,
+    openAddTransferModal,
+    closeAddTransferModal,
+    onTransferAdded,
   };
 
-  return (
-    <ModalContext.Provider
-      value={{
-        // Add Transaction Modal
-        isAddTransactionModalOpen,
-        openAddTransactionModal,
-        closeAddTransactionModal,
-        addTransactionInitialData,
+  return <ModalContext.Provider value={value}>{children}</ModalContext.Provider>;
+};
 
-        // Edit Transaction Modal
-        isEditTransactionModalOpen,
-        openEditTransactionModal,
-        closeEditTransactionModal,
-        editTransactionData,
-
-        // Transaction Details Modal
-        isTransactionDetailsModalOpen,
-        openTransactionDetailsModal,
-        closeTransactionDetailsModal,
-        transactionDetailsData,
-      }}
-    >
-      {children}
-    </ModalContext.Provider>
-  );
+export const useModal = () => {
+  const context = useContext(ModalContext);
+  if (context === undefined) {
+    throw new Error('useModal must be used within a ModalProvider');
+  }
+  return context;
 };
