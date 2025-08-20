@@ -37,7 +37,8 @@ import { showError } from "@/utils/toast";
 import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet";
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import SummaryCards from "@/components/SummaryCards"; // Importando o novo componente
+import SummaryCards from "@/components/SummaryCards";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -50,6 +51,7 @@ const TransactionsPage = () => {
   const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
+  const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,6 +69,11 @@ const TransactionsPage = () => {
   const [loadingSummary, setLoadingSummary] = useState(true);
 
   const fetchSummaryData = useCallback(async () => {
+    if (!currentWorkspace) {
+      setLoadingSummary(false);
+      return;
+    }
+
     setLoadingSummary(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -79,7 +86,10 @@ const TransactionsPage = () => {
       filter_status?: string;
       filter_category_name?: string;
       filter_account_type?: string;
-    } = {};
+      workspace_id_param?: string;
+    } = {
+      workspace_id_param: currentWorkspace.id
+    };
 
     if (monthFilter !== "all") {
       const [year, month] = monthFilter.split('-');
@@ -112,9 +122,14 @@ const TransactionsPage = () => {
       setMonthlyExpenses(Math.abs(summaryData.monthly_expenses || 0));
     }
     setLoadingSummary(false);
-  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter]); // Adicionado todos os filtros como dependências
+  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, currentWorkspace]);
 
   const fetchTransactions = async () => {
+    if (!currentWorkspace) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -149,6 +164,7 @@ const TransactionsPage = () => {
         transfer_id
       `)
       .eq("user_id", user.id)
+      .eq("workspace_id", currentWorkspace.id)
       .order("date", { ascending: false });
 
     if (error) {
@@ -165,12 +181,16 @@ const TransactionsPage = () => {
   };
 
   useEffect(() => {
-    fetchTransactions();
-  }, []); // Dependência vazia para carregar transações apenas uma vez
+    if (currentWorkspace) {
+      fetchTransactions();
+    }
+  }, [currentWorkspace]);
 
   useEffect(() => {
-    fetchSummaryData();
-  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, fetchSummaryData]); // Recarrega o resumo quando qualquer filtro relevante muda
+    if (currentWorkspace) {
+      fetchSummaryData();
+    }
+  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, currentWorkspace, fetchSummaryData]);
 
   const uniqueCategories = useMemo(() => {
     const categories = new Set(allTransactions.map((t) => t.category).filter(Boolean));
@@ -265,6 +285,17 @@ const TransactionsPage = () => {
     setCurrentPage(1); // Reset to first page when filters are applied
     fetchSummaryData(); // Recarrega o resumo com os novos filtros
   };
+
+  if (!currentWorkspace) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">Nenhum núcleo financeiro selecionado</h2>
+          <p className="text-muted-foreground">Selecione um núcleo financeiro para ver suas transações.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
