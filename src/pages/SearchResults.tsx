@@ -29,7 +29,7 @@ const SearchResultsPage = () => {
 
   const [searchResults, setSearchResults] = useState<Transaction[]>([]);
   const [filteredResults, setFilteredResults] = useState<Transaction[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]); // Adicionado estado para companies
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -355,7 +355,7 @@ const SearchResultsPage = () => {
             <AllTransactionsTable
               transactions={filteredResults}
               onEditTransaction={handleRowClick}
-              companies={companies} {/* Passando a lista de companies */}
+              companies={companies}
             />
           )}
         </CardContent>
