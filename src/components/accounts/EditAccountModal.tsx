@@ -73,12 +73,8 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
 
   // Initialize form data when account changes or modal opens
   useEffect(() => {
-    console.log("EditAccountModal: useEffect triggered.");
-    console.log("EditAccountModal: Current isOpen =", isOpen, ", Current account =", account);
-
     const initializeFormData = async () => {
       if (!isOpen || !account) {
-        console.log("EditAccountModal: Skipping initialization because isOpen is false or account is null.");
         setFormData({
           name: "",
           bank_id: "",
@@ -87,8 +83,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         });
         return;
       }
-
-      console.log("EditAccountModal: Account received for initialization:", account);
 
       setLoadingBanks(true);
       const { data: fetchedBanks, error: banksError } = await supabase
@@ -100,7 +94,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         console.error("Error fetching banks:", banksError);
         showError("Erro ao carregar bancos");
         setBanks([]);
-        // Set other form data, but bank_id will be empty
         setFormData({
           name: account.name,
           bank_id: "", 
@@ -109,10 +102,8 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         });
       } else {
         setBanks(fetchedBanks || []);
-        console.log("EditAccountModal: Fetched banks:", fetchedBanks);
         
         const initialBankId = account.bank_id || "";
-        console.log("EditAccountModal: Initial bank_id from account:", initialBankId);
 
         setFormData({
           name: account.name,
@@ -120,7 +111,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
           type: mapAccountTypeForDisplay(account.type),
           includeInTotal: account.include_in_total,
         });
-        console.log("EditAccountModal: Final formData.bank_id set to:", initialBankId);
       }
       setLoadingBanks(false);
     };
@@ -192,6 +182,7 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
             <div className="grid gap-2">
               <Label htmlFor="bank">Banco</Label>
               <Select
+                key={formData.bank_id} // Add key here
                 value={formData.bank_id} // Using bank_id as value
                 onValueChange={(value) => setFormData({ ...formData, bank_id: value })}
               >
@@ -227,6 +218,7 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
             <div className="grid gap-2">
               <Label htmlFor="type">Tipo de Conta</Label>
               <Select
+                key={formData.type} // Add key here
                 value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value })}
               >
