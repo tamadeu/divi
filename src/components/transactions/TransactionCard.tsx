@@ -52,14 +52,14 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
       onClick={() => onRowClick(transaction)}
       className="flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
     >
-      <div className="flex items-center gap-3 flex-1 min-w-0"> {/* Adicionado min-w-0 aqui */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         {getAvatarContent()}
         
-        <div className="flex-1 min-w-0"> {/* Mantido min-w-0 para permitir truncamento */}
-          <h3 className="font-medium text-foreground truncate mb-1"> {/* Garantindo que o nome trunque */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-foreground mb-1"> {/* Removido 'truncate' */}
             {transaction.name}
           </h3>
-          <p className="text-sm text-muted-foreground truncate">
+          <p className="text-sm text-muted-foreground"> {/* Removido 'truncate' */}
             {getTransactionType()}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -68,7 +68,7 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
         </div>
       </div>
 
-      <div className="text-right flex-shrink-0"> {/* Adicionado flex-shrink-0 para manter a largura do valor */}
+      <div className="text-right flex-shrink-0">
         <p
           className={`font-semibold ${
             transaction.amount > 0 ? "text-green-600" : "text-red-600"
