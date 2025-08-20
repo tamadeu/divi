@@ -82,6 +82,14 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
   useEffect(() => {
     const initializeFormData = async () => {
       if (account && isOpen) {
+        // Set initial form data immediately with account details
+        setFormData({
+          name: account.name,
+          bank: "", // Will be updated after banks are fetched
+          type: mapAccountTypeForDisplay(account.type),
+          includeInTotal: account.include_in_total,
+        });
+
         setLoadingBanks(true);
         const { data, error } = await supabase
           .from("banks")
@@ -95,14 +103,21 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         } else {
           setBanks(data || []);
           const exactBankName = getExactBankName(account.bank, data || []);
-          setFormData({
-            name: account.name,
-            bank: exactBankName, // Use the exact name from the fetched list
-            type: mapAccountTypeForDisplay(account.type), // Map type for the Select component
-            includeInTotal: account.include_in_total,
-          });
+          // Update form data with the correct bank name after fetching banks
+          setFormData(prev => ({
+            ...prev,
+            bank: exactBankName,
+          }));
         }
         setLoadingBanks(false);
+      } else if (!isOpen) {
+        // Reset form data when modal closes
+        setFormData({
+          name: "",
+          bank: "",
+          type: "",
+          includeInTotal: true,
+        });
       }
     };
 
