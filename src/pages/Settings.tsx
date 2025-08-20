@@ -581,16 +581,6 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Appearance Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Aparência</CardTitle>
-          <CardDescription>
-            Personalize a aparência da aplicação.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
       {/* Create Workspace Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
