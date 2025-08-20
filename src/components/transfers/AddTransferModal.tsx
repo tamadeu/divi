@@ -240,8 +240,10 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
         
         setIncomeCategories(categoriesData || []);
         
-        // Depois, selecionar a nova categoria
-        form.setValue('category_id', newCategory.id, { shouldValidate: true });
+        // Aguardar a atualização do estado antes de selecionar a categoria
+        setTimeout(() => {
+          form.setValue('category_id', newCategory.id, { shouldValidate: true });
+        }, 100);
       }
     }
   };
