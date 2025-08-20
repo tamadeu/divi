@@ -25,7 +25,7 @@ interface WorkspaceSwitcherProps {
 
 const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) => {
   const [open, setOpen] = useState(false);
-  const { workspaces, currentWorkspace, switchWorkspace } = useWorkspace();
+  const { workspaces, currentWorkspace, switchWorkspace, loading } = useWorkspace();
   const navigate = useNavigate();
 
   const handleWorkspaceSelect = async (workspaceId: string) => {
@@ -35,13 +35,23 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
   };
 
   const handleManageWorkspaces = () => {
-    navigate('/settings#workspace-management');
+    navigate('/settings');
     setOpen(false);
     onWorkspaceChange?.();
   };
 
-  if (!currentWorkspace) {
-    return null;
+  // Se não há workspace atual ou está carregando, mostrar loading
+  if (loading || !currentWorkspace) {
+    return (
+      <Button
+        variant="outline"
+        disabled
+        className="w-full justify-between"
+      >
+        <span>Carregando...</span>
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    );
   }
 
   return (
@@ -62,30 +72,32 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
           <CommandInput placeholder="Buscar núcleo..." />
           <CommandList>
             <CommandEmpty>Nenhum núcleo encontrado.</CommandEmpty>
-            <CommandGroup heading="Núcleos Financeiros">
-              {workspaces.map((workspace) => (
-                <CommandItem
-                  key={workspace.id}
-                  value={workspace.id}
-                  onSelect={() => handleWorkspaceSelect(workspace.id)}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      currentWorkspace.id === workspace.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{workspace.name}</span>
-                    {workspace.description && (
-                      <span className="text-xs text-muted-foreground">
-                        {workspace.description}
-                      </span>
-                    )}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {workspaces.length > 0 && (
+              <CommandGroup heading="Núcleos Financeiros">
+                {workspaces.map((workspace) => (
+                  <CommandItem
+                    key={workspace.id}
+                    value={workspace.id}
+                    onSelect={() => handleWorkspaceSelect(workspace.id)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        currentWorkspace.id === workspace.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span>{workspace.name}</span>
+                      {workspace.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {workspace.description}
+                        </span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
             <CommandSeparator />
             <CommandGroup>
               <CommandItem onSelect={handleManageWorkspaces}>
