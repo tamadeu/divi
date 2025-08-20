@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import AdminNavLinks from "./AdminNavLinks";
 import AdminUserCard from "./AdminUserCard";
-import Header from "../layout/Header";
+import AdminHeader from "./AdminHeader";
 import BottomNav from "./AdminBottomNav";
 
 const AdminLayout = () => {
@@ -77,7 +77,7 @@ const AdminLayout = () => {
       </Sheet>
 
       <div className="flex flex-col">
-        <Header />
+        <AdminHeader />
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6">
           <Outlet />
         </main>

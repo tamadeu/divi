@@ -8,8 +8,17 @@ export const useAdmin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    console.log('useAdmin effect:', {
+      sessionLoading,
+      profileLoading,
+      profile,
+      userType: profile?.user_type
+    });
+
     if (!sessionLoading && !profileLoading) {
-      setIsAdmin(profile?.user_type === 'admin');
+      const adminStatus = profile?.user_type === 'admin';
+      console.log('useAdmin: Setting admin status to:', adminStatus);
+      setIsAdmin(adminStatus);
     }
   }, [profile?.user_type, sessionLoading, profileLoading]);
 
