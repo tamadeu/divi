@@ -19,6 +19,8 @@ import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Transaction } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile"; // Importar o hook
+import TransactionCardList from "@/components/transactions/TransactionCardList"; // Importar o novo componente
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -26,6 +28,8 @@ interface RecentTransactionsProps {
 }
 
 const RecentTransactions = ({ transactions, loading }: RecentTransactionsProps) => {
+  const isMobile = useIsMobile(); // Usar o hook para detectar mobile
+
   const statusVariant = {
     "Concluído": "default",
     "Pendente": "secondary",
@@ -56,7 +60,9 @@ const RecentTransactions = ({ transactions, loading }: RecentTransactionsProps) 
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-        ) : (
+        ) : isMobile ? ( // Condicionalmente renderizar o CardList para mobile
+          <TransactionCardList transactions={transactions} loading={loading} />
+        ) : ( // Ou a tabela para desktop
           <Table>
             <TableHeader>
               <TableRow>

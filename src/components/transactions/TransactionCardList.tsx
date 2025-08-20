@@ -1,80 +1,75 @@
-import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Transaction } from "@/types/database";
-import { supabase } from "@/integrations/supabase/client";
-import TransactionCard from "./TransactionCard";
+import { cn } from "@/lib/utils";
 
 interface TransactionCardListProps {
   transactions: Transaction[];
-  onRowClick: (transaction: Transaction) => void;
+  loading: boolean;
 }
 
-interface CompanyMatch {
-  [transactionName: string]: string | null;
-}
+const TransactionCardList = ({ transactions, loading }: TransactionCardListProps) => {
+  const statusVariant = {
+    "Concluído": "default",
+    "Pendente": "secondary",
+    "Falhou": "destructive",
+  } as const;
 
-const TransactionCardList = ({ transactions, onRowClick }: TransactionCardListProps) => {
-  const [companyLogos, setCompanyLogos] = useState<CompanyMatch>({});
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  };
 
-  useEffect(() => {
-    const fetchCompanyLogos = async () => {
-      if (transactions.length === 0) return;
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
+  }
 
-      try {
-        // Buscar todas as empresas
-        const { data: companies, error } = await supabase
-          .from('companies')
-          .select('name, logo_url');
-
-        if (error) {
-          console.error('Error fetching companies:', error);
-          return;
-        }
-
-        if (!companies) return;
-
-        // Criar mapa de correspondências
-        const logoMap: CompanyMatch = {};
-
-        transactions.forEach(transaction => {
-          // Pular transferências
-          if (transaction.transfer_id) {
-            logoMap[transaction.name] = null;
-            return;
-          }
-
-          // Buscar empresa correspondente (case insensitive)
-          const matchingCompany = companies.find(company => 
-            company.name.toLowerCase() === transaction.name.toLowerCase()
-          );
-
-          logoMap[transaction.name] = matchingCompany?.logo_url || null;
-        });
-
-        setCompanyLogos(logoMap);
-      } catch (error) {
-        console.error('Error in fetchCompanyLogos:', error);
-      }
-    };
-
-    fetchCompanyLogos();
-  }, [transactions]);
+  if (transactions.length === 0) {
+    return (
+      <div className="flex h-32 items-center justify-center text-muted-foreground">
+        Nenhuma transação recente.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
-      {transactions.length > 0 ? (
-        transactions.map((transaction) => (
-          <TransactionCard
-            key={transaction.id}
-            transaction={transaction}
-            onRowClick={onRowClick}
-            companyLogo={companyLogos[transaction.name]}
-          />
-        ))
-      ) : (
-        <div className="text-center py-8">
-          <p className="text-gray-500">Nenhuma transação encontrada.</p>
-        </div>
-      )}
+      {transactions.map((transaction) => (
+        <Card key={transaction.id}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-lg">{transaction.name}</h3>
+              <Badge variant={statusVariant[transaction.status]}>
+                {transaction.status}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{new Date(transaction.date).toLocaleDateString("pt-BR")}</span>
+              <span className={cn(
+                "font-bold",
+                transaction.amount > 0 ? "text-green-600" : "text-red-600"
+              )}>
+                {formatCurrency(transaction.amount)}
+              </span>
+            </div>
+            {transaction.category && (
+              <div className="text-sm text-muted-foreground mt-1">
+                Categoria: {typeof transaction.category === 'string' ? transaction.category : transaction.category.name}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };
