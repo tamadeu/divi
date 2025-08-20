@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Transaction, Company } from "@/types/database"; // Importar Company
-import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal"; // Importar o modal de detalhes
+import { Transaction, Company } from "@/types/database";
+import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
 
 interface SummaryData {
   total_balance: number;
@@ -22,17 +22,17 @@ interface SummaryData {
 const Dashboard = () => {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]); // Novo estado para empresas
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
 
   const handleTransactionClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    setIsDetailsModalOpen(true);
+    setIsEditModalOpen(true); // Abrir o modal de edição
   };
 
   const fetchDashboardData = useCallback(async () => {
@@ -161,10 +161,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <TransactionDetailsModal
+      <EditTransactionModal
         transaction={selectedTransaction}
-        isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onTransactionUpdated={fetchDashboardData} // Recarregar dados após edição/exclusão
       />
     </>
   );
