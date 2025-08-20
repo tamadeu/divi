@@ -18,6 +18,21 @@ interface VoiceTransactionData {
   date?: string;
 }
 
+interface PendingAILog {
+  user_id: string;
+  workspace_id: string;
+  input_text: string;
+  ai_provider: string;
+  ai_model?: string;
+  ai_response?: string;
+  processing_time_ms: number;
+  cost_usd?: number;
+  tokens_input?: number;
+  tokens_output?: number;
+  success: boolean;
+  error_message?: string;
+}
+
 const VoiceTransactionButton = () => {
   const [showModal, setShowModal] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -194,8 +209,8 @@ const VoiceTransactionButton = () => {
       
       console.log("Áudio convertido para base64, tamanho:", base64Audio.length);
       
-      // Chamar edge function para processar áudio
-      const { data, error } = await supabase.functions.invoke('process-voice-transaction', {
+      // Chamar edge function para processar áudio (sem salvar logs ainda)
+      const { data, error } = await supabase.functions.invoke('process-voice-transaction-temp', {
         body: { 
           audio_data: base64Audio,
           audio_type: audioBlob.type,
@@ -212,6 +227,7 @@ const VoiceTransactionButton = () => {
       
       if (data && data.success) {
         const transactionData: VoiceTransactionData = data.transaction;
+        const pendingLogs: PendingAILog[] = data.pending_logs || [];
         
         // Buscar conta padrão do workspace
         const { data: accounts } = await supabase
@@ -250,6 +266,8 @@ const VoiceTransactionButton = () => {
             date: transactionDate,
             account_id: defaultAccount?.id || "",
             category_id: transactionData.category_id || "",
+            // Incluir logs pendentes nos dados do modal
+            _pendingAILogs: pendingLogs,
           };
           
           console.log("🎯 Dados para o modal:", modalData);

@@ -60,6 +60,21 @@ const transactionSchema = z.object({
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
+interface PendingAILog {
+  user_id: string;
+  workspace_id: string;
+  input_text: string;
+  ai_provider: string;
+  ai_model?: string;
+  ai_response?: string;
+  processing_time_ms: number;
+  cost_usd?: number;
+  tokens_input?: number;
+  tokens_output?: number;
+  success: boolean;
+  error_message?: string;
+}
+
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -78,6 +93,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFutureDate, setIsFutureDate] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [pendingAILogs, setPendingAILogs] = useState<PendingAILog[]>([]);
   const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
@@ -150,6 +166,12 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
         if (initialData) {
           console.log("🎯 Dados iniciais recebidos:", initialData);
           
+          // Extrair logs pendentes se existirem
+          if (initialData._pendingAILogs) {
+            setPendingAILogs(initialData._pendingAILogs);
+            console.log("📝 Logs de IA pendentes:", initialData._pendingAILogs);
+          }
+          
           // Resetar com dados iniciais
           form.reset({
             name: initialData.name || "",
@@ -170,6 +192,9 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
             }
           }, 100);
         } else {
+          // Limpar logs pendentes se não há dados iniciais
+          setPendingAILogs([]);
+          
           form.reset({
             name: "",
             amount: 0,
@@ -238,6 +263,32 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
     }
   }, [accounts, transactionType, form, initialData]);
 
+  // Função para salvar logs de IA no banco
+  const saveAILogs = async (transactionId?: string) => {
+    if (pendingAILogs.length === 0) return;
+
+    console.log("💾 Salvando logs de IA:", pendingAILogs);
+
+    try {
+      const logsToSave = pendingAILogs.map(log => ({
+        ...log,
+        transaction_id: transactionId || null
+      }));
+
+      const { error } = await supabase
+        .from('ai_request_logs')
+        .insert(logsToSave);
+
+      if (error) {
+        console.error('Erro ao salvar logs de IA:', error);
+      } else {
+        console.log("✅ Logs de IA salvos com sucesso");
+      }
+    } catch (error) {
+      console.error('Erro ao salvar logs de IA:', error);
+    }
+  };
+
   const handleSubmit = async (values: TransactionFormValues) => {
     if (!currentWorkspace) {
       showError("Nenhum núcleo financeiro selecionado.");
@@ -254,7 +305,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
 
     const amountToSave = values.type === 'expense' ? -Math.abs(values.amount) : Math.abs(values.amount);
 
-    const { error: transactionError } = await supabase.from("transactions").insert({
+    const { data: transactionData, error: transactionError } = await supabase.from("transactions").insert({
       name: values.name,
       amount: amountToSave,
       date: values.date.toISOString(),
@@ -264,12 +315,17 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       description: values.description,
       user_id: user.id,
       workspace_id: currentWorkspace.id,
-    });
+    }).select().single();
 
     if (transactionError) {
       showError("Erro ao adicionar transação: " + transactionError.message);
       setIsSubmitting(false);
       return;
+    }
+
+    // Salvar logs de IA com o ID da transação criada
+    if (transactionData) {
+      await saveAILogs(transactionData.id);
     }
 
     if (values.status === 'Concluído') {
@@ -293,6 +349,16 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
     setIsSubmitting(false);
   };
 
+  const handleClose = async () => {
+    // Salvar logs de IA mesmo se o usuário cancelar (sem transaction_id)
+    await saveAILogs();
+    
+    // Limpar logs pendentes
+    setPendingAILogs([]);
+    
+    onClose();
+  };
+
   const handleCalculatorValue = (value: string) => {
     const numericValue = parseFloat(value);
     if (!isNaN(numericValue)) {
@@ -307,11 +373,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent 
           className={cn(
             "sm:max-w-lg",
-            isMobile ? "h-[95vh] max-h-[95vh] w-[95vw] max-w-[95vw] p-0 flex flex-col" : "max-h-[90vh]"
+            isMobile ?  "h-[95vh] max-h-[95vh] w-[95vw] max-w-[95vw] p-0 flex flex-col" : "max-h-[90vh]"
           )}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
@@ -322,6 +388,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
             <DialogTitle>Adicionar Nova Transação</DialogTitle>
             <DialogDescription>
               Preencha os detalhes da sua nova transação.
+              {pendingAILogs.length > 0 && (
+                <span className="block text-xs text-blue-600 mt-1">
+                  ✨ Dados processados por IA - verifique antes de salvar
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
           
@@ -619,7 +690,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
             <Button 
               type="button" 
               variant="ghost" 
-              onClick={onClose}
+              onClick={handleClose}
               className={cn(isMobile && "w-full order-2")}
             >
               Cancelar
