@@ -1,17 +1,15 @@
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import MobileSummaryCards from "@/components/dashboard/MobileSummaryCards";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import SpendingChart from "@/components/dashboard/SpendingChart";
-import { DollarSign, TrendingUp, TrendingDown, PlusCircle, ArrowRightLeft } from "lucide-react";
+import BudgetSummaryTable from "@/components/dashboard/BudgetSummaryTable"; // Importar o novo componente
+import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
-import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Transaction, Company } from "@/types/database";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
+import { Transaction, Company, BudgetWithSpending } from "@/types/database"; // Adicionar BudgetWithSpending
+import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 
 interface SummaryData {
   total_balance: number;
@@ -23,16 +21,17 @@ const Dashboard = () => {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]); // Novo estado para orçamentos
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleTransactionClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    setIsEditModalOpen(true); // Abrir o modal de edição
+    setIsEditModalOpen(true);
   };
 
   const fetchDashboardData = useCallback(async () => {
@@ -90,6 +89,21 @@ const Dashboard = () => {
       setTransactions(formattedData);
     }
 
+    // Fetch budgets for the current month
+    const currentMonth = new Date();
+    currentMonth.setDate(1); // Define para o primeiro dia do mês
+    currentMonth.setHours(0, 0, 0, 0); // Zera o tempo para evitar problemas com o RPC
+    const { data: budgetsData, error: budgetsError } = await supabase.rpc('get_budgets_with_spending', {
+      budget_month: currentMonth.toISOString(),
+    });
+
+    if (budgetsError) {
+      console.error("Error fetching budgets data:", budgetsError);
+      setBudgets([]);
+    } else {
+      setBudgets(budgetsData || []);
+    }
+
     setLoading(false);
   }, []);
 
@@ -109,7 +123,6 @@ const Dashboard = () => {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
-       
       </div>
       {loading ? (
         <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -157,7 +170,8 @@ const Dashboard = () => {
           <RecentTransactions transactions={transactions} loading={loading} onRowClick={handleTransactionClick} companies={companies} />
         </div>
         <div className="lg:col-span-2">
-          <SpendingChart />
+          {/* Substituindo SpendingChart por BudgetSummaryTable */}
+          <BudgetSummaryTable budgets={budgets} loading={loading} />
         </div>
       </div>
 
@@ -165,7 +179,7 @@ const Dashboard = () => {
         transaction={selectedTransaction}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onTransactionUpdated={fetchDashboardData} // Recarregar dados após edição/exclusão
+        onTransactionUpdated={fetchDashboardData}
       />
     </>
   );
