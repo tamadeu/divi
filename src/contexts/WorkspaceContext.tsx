@@ -24,7 +24,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [workspaces, setWorkspaces] = useState<WorkspaceWithRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchWorkspaces = useCallback(async () => {
+  const fetchWorkspaces = async () => {
     if (!session?.user || sessionLoading) {
       setWorkspaces([]);
       setCurrentWorkspace(null);
@@ -99,41 +99,51 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       );
 
       const allWorkspaces = [...ownedWorkspacesWithRole, ...filteredMemberWorkspaces];
+      console.log('Fetched workspaces:', allWorkspaces); // Debug
 
       setWorkspaces(allWorkspaces);
 
-      // Se não há workspace atual ou o atual não está mais na lista, selecionar o primeiro
-      const currentWorkspaceStillExists = allWorkspaces.find(w => w.id === currentWorkspace?.id);
-      
-      if (!currentWorkspaceStillExists && allWorkspaces.length > 0) {
-        const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
-        const workspaceToSelect = savedWorkspaceId 
-          ? allWorkspaces.find(w => w.id === savedWorkspaceId) || allWorkspaces[0]
-          : allWorkspaces[0];
-        
+      // Verificar se o workspace atual ainda existe
+      const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
+      let workspaceToSelect = null;
+
+      if (savedWorkspaceId) {
+        workspaceToSelect = allWorkspaces.find(w => w.id === savedWorkspaceId);
+      }
+
+      if (!workspaceToSelect && allWorkspaces.length > 0) {
+        workspaceToSelect = allWorkspaces[0];
+      }
+
+      if (workspaceToSelect) {
         setCurrentWorkspace(workspaceToSelect);
         localStorage.setItem('currentWorkspaceId', workspaceToSelect.id);
+        console.log('Set current workspace:', workspaceToSelect.name); // Debug
       }
+
     } catch (error: any) {
       console.error('Error fetching workspaces:', error);
       showError('Erro ao carregar núcleos financeiros');
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.id, sessionLoading]);
+  };
 
-  const switchWorkspace = useCallback((workspaceId: string) => {
+  const switchWorkspace = (workspaceId: string) => {
+    console.log('switchWorkspace called with:', workspaceId); // Debug
+    console.log('Available workspaces:', workspaces.map(w => ({ id: w.id, name: w.name }))); // Debug
+    
     const workspace = workspaces.find(w => w.id === workspaceId);
     if (workspace) {
+      console.log('Found workspace, switching to:', workspace.name); // Debug
       setCurrentWorkspace(workspace);
       localStorage.setItem('currentWorkspaceId', workspaceId);
-      console.log('Switched to workspace:', workspace.name); // Debug log
     } else {
       console.error('Workspace not found:', workspaceId);
     }
-  }, [workspaces]);
+  };
 
-  const createWorkspace = useCallback(async (name: string, description?: string, isShared: boolean = false): Promise<Workspace | null> => {
+  const createWorkspace = async (name: string, description?: string, isShared: boolean = false): Promise<Workspace | null> => {
     if (!session?.user) return null;
 
     try {
@@ -169,9 +179,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       showError('Erro ao criar núcleo financeiro');
       return null;
     }
-  }, [session?.user, fetchWorkspaces]);
+  };
 
-  const transferOwnership = useCallback(async (workspaceId: string, newOwnerId: string): Promise<boolean> => {
+  const transferOwnership = async (workspaceId: string, newOwnerId: string): Promise<boolean> => {
     if (!session?.user) return false;
 
     try {
@@ -193,14 +203,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       showError('Erro ao transferir propriedade do núcleo');
       return false;
     }
-  }, [session?.user, fetchWorkspaces]);
+  };
 
-  // Só executar fetchWorkspaces quando a sessão estiver carregada e houver mudança no usuário
+  // Só executar fetchWorkspaces quando a sessão estiver carregada
   useEffect(() => {
     if (!sessionLoading) {
       fetchWorkspaces();
     }
-  }, [sessionLoading, session?.user?.id, fetchWorkspaces]);
+  }, [sessionLoading, session?.user?.id]);
 
   const value = {
     currentWorkspace,

@@ -3,19 +3,13 @@ import { Check, ChevronsUpDown, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useNavigate } from "react-router-dom";
 
@@ -24,33 +18,27 @@ interface WorkspaceSwitcherProps {
 }
 
 const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) => {
-  const [open, setOpen] = useState(false);
   const { workspaces, currentWorkspace, switchWorkspace, loading } = useWorkspace();
   const navigate = useNavigate();
 
   const handleWorkspaceSelect = (workspaceId: string) => {
-    console.log('Selecting workspace:', workspaceId); // Debug log
+    console.log('Selecting workspace:', workspaceId);
     switchWorkspace(workspaceId);
-    setOpen(false);
     onWorkspaceChange?.();
   };
 
   const handleManageWorkspaces = () => {
     navigate('/settings');
-    setOpen(false);
     onWorkspaceChange?.();
   };
 
-  // Não desabilitar o botão se há workspaces disponíveis
   const isDisabled = loading || workspaces.length === 0;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          role="combobox"
-          aria-expanded={open}
           className="w-full justify-between"
           disabled={isDisabled}
         >
@@ -59,49 +47,45 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
-          <CommandInput placeholder="Buscar núcleo..." />
-          <CommandList>
-            <CommandEmpty>Nenhum núcleo encontrado.</CommandEmpty>
-            {workspaces.length > 0 && (
-              <CommandGroup heading="Núcleos Financeiros">
-                {workspaces.map((workspace) => (
-                  <CommandItem
-                    key={workspace.id}
-                    value={workspace.name}
-                    onSelect={() => handleWorkspaceSelect(workspace.id)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        currentWorkspace?.id === workspace.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span>{workspace.name}</span>
-                      {workspace.description && (
-                        <span className="text-xs text-muted-foreground">
-                          {workspace.description}
-                        </span>
-                      )}
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            <CommandSeparator />
-            <CommandGroup>
-              <CommandItem onSelect={handleManageWorkspaces}>
-                <Settings className="mr-2 h-4 w-4" />
-                Gerenciar Núcleos
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-full min-w-[200px]" align="start">
+        <DropdownMenuLabel>Núcleos Financeiros</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {workspaces.length === 0 ? (
+          <DropdownMenuItem disabled>
+            Nenhum núcleo encontrado
+          </DropdownMenuItem>
+        ) : (
+          workspaces.map((workspace) => (
+            <DropdownMenuItem
+              key={workspace.id}
+              onClick={() => handleWorkspaceSelect(workspace.id)}
+              className="flex items-center gap-2"
+            >
+              <Check
+                className={cn(
+                  "h-4 w-4",
+                  currentWorkspace?.id === workspace.id ? "opacity-100" : "opacity-0"
+                )}
+              />
+              <div className="flex flex-col">
+                <span>{workspace.name}</span>
+                {workspace.description && (
+                  <span className="text-xs text-muted-foreground">
+                    {workspace.description}
+                  </span>
+                )}
+              </div>
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleManageWorkspaces}>
+          <Settings className="mr-2 h-4 w-4" />
+          Gerenciar Núcleos
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
