@@ -349,12 +349,12 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
               <Button 
                 type="button" 
                 variant="ghost" 
+                size="icon"
                 onClick={handleDelete}
                 disabled={isDeleting}
                 className="text-red-500 hover:text-red-600 hover:bg-red-50"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {isDeleting ? "Excluindo..." : "Excluir"}
+                <Trash2 className="h-4 w-4" />
               </Button>
               <div className="flex gap-2">
                 <Button type="button" variant="ghost" onClick={onClose}>
