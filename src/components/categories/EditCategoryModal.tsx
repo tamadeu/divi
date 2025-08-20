@@ -109,7 +109,7 @@ const EditCategoryModal = ({ category, isOpen, onClose, onCategoryUpdated }: Edi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Editar Categoria</DialogTitle>
           <DialogDescription>Atualize os detalhes da sua categoria.</DialogDescription>

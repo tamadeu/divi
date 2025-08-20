@@ -257,7 +257,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Adicionar Nova Transação</DialogTitle>
             <DialogDescription>

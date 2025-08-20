@@ -181,7 +181,7 @@ const AddTransferModal = ({ isOpen, onClose, onTransferAdded }: AddTransferModal
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Nova Transferência Entre Contas</DialogTitle>
             <DialogDescription>

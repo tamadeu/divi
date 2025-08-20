@@ -115,7 +115,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: Add
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Adicionar Nova Categoria</DialogTitle>
           <DialogDescription>Crie uma nova categoria para suas transações.</DialogDescription>

@@ -116,7 +116,7 @@ const AddBudgetModal = ({ isOpen, onClose, onBudgetAdded }: AddBudgetModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Adicionar Novo Orçamento</DialogTitle>
           <DialogDescription>
