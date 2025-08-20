@@ -43,7 +43,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
     name: "",
     bank: "",
     type: "",
-    balance: 0,
     include_in_total: true,
   });
   const [loading, setLoading] = useState(false);
@@ -54,7 +53,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         name: account.name,
         bank: account.bank,
         type: account.type,
-        balance: account.balance,
         include_in_total: account.include_in_total,
       });
     }
@@ -70,7 +68,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         name: formData.name,
         bank: formData.bank,
         type: formData.type,
-        balance: formData.balance,
         include_in_total: formData.include_in_total,
       })
       .eq("id", account.id);
@@ -83,6 +80,13 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
       onAccountUpdated();
     }
     setLoading(false);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(amount);
   };
 
   const accountTypes = [
@@ -144,15 +148,16 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="balance">Saldo Inicial</Label>
+              <Label htmlFor="current_balance">Saldo Atual</Label>
               <Input
-                id="balance"
-                type="number"
-                step="0.01"
-                value={formData.balance}
-                onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
+                id="current_balance"
+                value={formatCurrency(account.balance)}
+                disabled
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground">
+                O saldo é calculado automaticamente com base nas transações. Para alterá-lo, adicione uma nova transação.
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Switch

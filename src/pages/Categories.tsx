@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -39,6 +40,7 @@ const Categories = () => {
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("Despesa");
   const { openAddCategoryModal } = useModal();
   const { currentWorkspace } = useWorkspace();
 
@@ -97,6 +99,138 @@ const Categories = () => {
       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
   };
 
+  const getFilteredCategories = (type: string) => {
+    return categories.filter(category => category.type === type);
+  };
+
+  const renderCategoryCards = (categoryList: Category[]) => (
+    <div className="grid gap-4 md:hidden">
+      {categoryList.map((category) => (
+        <Card key={category.id}>
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-lg">{category.name}</CardTitle>
+              </div>
+              <Badge className={getTypeColor(category.type)}>
+                {category.type}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEditCategory(category)}
+                className="flex-1"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir categoria</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir a categoria "{category.name}"? 
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDeleteCategory(category.id)}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderCategoryTable = (categoryList: Category[]) => (
+    <Card className="hidden md:block">
+      <CardHeader>
+        <CardTitle>Categorias de {activeTab}</CardTitle>
+        <CardDescription>
+          Gerencie suas categorias de {activeTab.toLowerCase()}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {categoryList.map((category) => (
+              <TableRow key={category.id}>
+                <TableCell className="font-medium">{category.name}</TableCell>
+                <TableCell>
+                  <Badge className={getTypeColor(category.type)}>
+                    {category.type}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditCategory(category)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir categoria</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir a categoria "{category.name}"? 
+                            Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -148,133 +282,56 @@ const Categories = () => {
           </CardContent>
         </Card>
       ) : (
-        <>
-          {/* Mobile Cards */}
-          <div className="grid gap-4 md:hidden">
-            {categories.map((category) => (
-              <Card key={category.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{category.name}</CardTitle>
-                    </div>
-                    <Badge className={getTypeColor(category.type)}>
-                      {category.type}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditCategory(category)}
-                      className="flex-1"
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir categoria</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir a categoria "{category.name}"? 
-                            Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="Despesa">
+              Despesas ({getFilteredCategories("Despesa").length})
+            </TabsTrigger>
+            <TabsTrigger value="Receita">
+              Receitas ({getFilteredCategories("Receita").length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="Despesa" className="space-y-4">
+            {getFilteredCategories("Despesa").length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-semibold">Nenhuma categoria de despesa encontrada</h3>
+                    <p className="text-muted-foreground">
+                      Crie categorias para organizar suas despesas.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          {/* Desktop Table */}
-          <Card className="hidden md:block">
-            <CardHeader>
-              <CardTitle>Suas Categorias</CardTitle>
-              <CardDescription>
-                Organize suas transações por categorias.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell>
-                        <Badge className={getTypeColor(category.type)}>
-                          {category.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditCategory(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir categoria</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir a categoria "{category.name}"? 
-                                  Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteCategory(category.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </>
+            ) : (
+              <>
+                {renderCategoryCards(getFilteredCategories("Despesa"))}
+                {renderCategoryTable(getFilteredCategories("Despesa"))}
+              </>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="Receita" className="space-y-4">
+            {getFilteredCategories("Receita").length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-semibold">Nenhuma categoria de receita encontrada</h3>
+                    <p className="text-muted-foreground">
+                      Crie categorias para organizar suas receitas.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {renderCategoryCards(getFilteredCategories("Receita"))}
+                {renderCategoryTable(getFilteredCategories("Receita"))}
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Edit Category Modal */}

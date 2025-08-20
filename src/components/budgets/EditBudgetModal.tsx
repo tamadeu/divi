@@ -1,10 +1,4 @@
-"use client"
-
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,146 +8,126 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { BudgetWithSpending } from "@/types/database";
-import { Loader2, Trash2 } from "lucide-react";
 
-const editBudgetSchema = z.object({
-  amount: z.coerce.number().positive("O valor do orçamento deve ser positivo."),
-});
-
-type EditBudgetFormValues = z.infer<typeof editBudgetSchema>;
+interface BudgetWithSpending {
+  id: string;
+  category_id: string;
+  category_name: string;
+  budgeted_amount: number;
+  spent_amount: number;
+}
 
 interface EditBudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
+  budget: BudgetWithSpending;
   onBudgetUpdated: () => void;
-  budget: BudgetWithSpending | null;
-  onDeleteRequest: (budget: BudgetWithSpending) => void;
+  selectedMonth: string;
 }
 
-const EditBudgetModal = ({ isOpen, onClose, onBudgetUpdated, budget, onDeleteRequest }: EditBudgetModalProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFormInitialized, setIsFormInitialized] = useState(false);
-
-  const form = useForm<EditBudgetFormValues>({
-    resolver: zodResolver(editBudgetSchema),
-    defaultValues: {
-      amount: 0,
-    },
-  });
+const EditBudgetModal = ({ isOpen, onClose, budget, onBudgetUpdated, selectedMonth }: EditBudgetModalProps) => {
+  const [amount, setAmount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && budget && !isFormInitialized) {
-      form.reset({
-        amount: budget.budgeted_amount,
-      });
-      setIsFormInitialized(true);
-    } else if (!isOpen) {
-      setIsFormInitialized(false); // Reset for next open
+    if (budget) {
+      setAmount(budget.budgeted_amount);
     }
-  }, [isOpen, budget, isFormInitialized, form]);
+  }, [budget]);
 
-  const handleSubmit = async (values: EditBudgetFormValues) => {
-    if (!budget) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    setIsSubmitting(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      showError("Você precisa estar logado para editar um orçamento.");
-      setIsSubmitting(false);
+    if (amount <= 0) {
+      showError("O valor do orçamento deve ser maior que zero");
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from("budgets")
-        .update({
-          amount: values.amount,
-        })
-        .eq("id", budget.id)
-        .eq("user_id", user.id); // Ensure user owns the budget
+    setLoading(true);
 
-      if (error) {
-        throw error;
-      }
+    const { error } = await supabase
+      .from("budgets")
+      .update({
+        amount: amount,
+      })
+      .eq("id", budget.id);
 
+    if (error) {
+      showError("Erro ao atualizar orçamento");
+      console.error("Error updating budget:", error);
+    } else {
       showSuccess("Orçamento atualizado com sucesso!");
       onBudgetUpdated();
-      onClose();
-    } catch (error: any) {
-      showError("Erro ao atualizar orçamento: " + error.message);
-      console.error("Update budget error:", error);
-    } finally {
-      setIsSubmitting(false);
     }
+    setLoading(false);
   };
 
-  const handleInitiateDelete = () => {
-    if (budget) {
-      onDeleteRequest(budget);
-      onClose(); // Close the edit modal
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(amount);
   };
-
-  if (!budget) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Editar Orçamento</DialogTitle>
           <DialogDescription>
-            Atualize o valor do orçamento para a categoria "{budget.category_name}".
+            Atualize o valor do orçamento para {budget?.category_name}.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor do Orçamento</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex items-center justify-between pt-4">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon"
-                onClick={handleInitiateDelete} 
-                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                disabled={isSubmitting}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              <div className="flex gap-2 ml-auto">
-                <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Salvar Alterações
-                </Button>
-              </div>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Input
+                id="category"
+                value={budget?.category_name || ""}
+                disabled
+                className="bg-muted"
+              />
             </div>
-          </form>
-        </Form>
+            <div className="grid gap-2">
+              <Label htmlFor="spent_amount">Valor Gasto</Label>
+              <Input
+                id="spent_amount"
+                value={formatCurrency(budget?.spent_amount || 0)}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Este valor é calculado automaticamente com base nas transações.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Valor Orçado</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={amount}
+                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
