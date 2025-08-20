@@ -100,44 +100,95 @@ const ConfirmDeleteAccountWithTransactionsModal = ({
     checkTransactionsAndFetchAccounts();
   }, [isOpen, account]);
 
+  // Helper function to process transfer transactions and update balances
+  const processTransferTransactions = async (transactions: Transaction[]) => {
+    const transferIdsProcessed = new Set<string>();
+    const allTransferTransactionIdsToDelete = new Set<string>();
+
+    for (const t of transactions) {
+      if (t.transfer_id && !transferIdsProcessed.has(t.transfer_id)) {
+        transferIdsProcessed.add(t.transfer_id); // Mark this transfer_id as processed
+
+        // Fetch both sides of the transfer
+        const { data: transferTransactions, error: fetchTransferError } = await supabase
+          .from("transactions")
+          .select("id, amount, account_id")
+          .eq("transfer_id", t.transfer_id);
+
+        if (fetchTransferError || !transferTransactions || transferTransactions.length !== 2) {
+          console.warn("Could not find complete transfer pair for transaction:", t.id, fetchTransferError);
+          continue; // Skip if pair is incomplete or error
+        }
+
+        const [trans1, trans2] = transferTransactions;
+
+        // Identify which transaction belongs to the account being deleted
+        const otherTransaction = trans1.account_id === account?.id ? trans2 : trans1;
+
+        if (otherTransaction) {
+          // Fetch the current balance of the other account
+          const { data: accountToUpdate, error: fetchAccountError } = await supabase
+            .from("accounts")
+            .select("balance")
+            .eq("id", otherTransaction.account_id)
+            .single();
+
+          if (fetchAccountError || !accountToUpdate) {
+            console.error("Error fetching account for balance update:", otherTransaction.account_id, fetchAccountError);
+            throw new Error("Could not fetch account for balance update.");
+          }
+
+          // Revert the amount: if it was an income to the other account, subtract it; if it was an expense, add it back.
+          const newBalance = accountToUpdate.balance - otherTransaction.amount; 
+
+          const { error: updateBalanceError } = await supabase
+            .from("accounts")
+            .update({ balance: newBalance })
+            .eq("id", otherTransaction.account_id);
+
+          if (updateBalanceError) {
+            console.error("Error updating balance for account:", otherTransaction.account_id, updateBalanceError);
+            throw updateBalanceError;
+          }
+        }
+        
+        // Add both transaction IDs to the list for deletion
+        allTransferTransactionIdsToDelete.add(trans1.id);
+        allTransferTransactionIdsToDelete.add(trans2.id);
+      }
+    }
+    return Array.from(allTransferTransactionIdsToDelete);
+  };
+
   const handleDeleteAllTransactions = async () => {
     if (!account) return;
     setIsSubmitting(true);
 
     try {
-      // Fetch all transactions related to this account
-      const { data: transactions, error: fetchError } = await supabase
+      const { data: transactionsInAccount, error: fetchError } = await supabase
         .from("transactions")
-        .select("id, transfer_id")
+        .select("id, amount, account_id, transfer_id")
         .eq("account_id", account.id);
 
       if (fetchError) throw fetchError;
 
-      const transactionIdsToDelete = new Set<string>();
-      const transferIdsToDelete = new Set<string>();
+      const transferTransactionIdsToDelete = await processTransferTransactions(transactionsInAccount);
 
-      transactions.forEach((t: Transaction) => {
-        transactionIdsToDelete.add(t.id);
-        if (t.transfer_id) {
-          transferIdsToDelete.add(t.transfer_id);
+      // Collect all transaction IDs to delete (transfers + regular)
+      const allTransactionIdsToDelete = new Set(transferTransactionIdsToDelete);
+      transactionsInAccount.forEach(t => {
+        if (!t.transfer_id) { // Add regular transactions
+          allTransactionIdsToDelete.add(t.id);
         }
       });
 
-      // Delete linked transfer transactions first
-      if (transferIdsToDelete.size > 0) {
-        const { error: deleteTransfersError } = await supabase
+      if (allTransactionIdsToDelete.size > 0) {
+        const { error: deleteTransactionsError } = await supabase
           .from("transactions")
           .delete()
-          .in("id", Array.from(transferIdsToDelete));
-        if (deleteTransfersError) throw deleteTransfersError;
+          .in("id", Array.from(allTransactionIdsToDelete));
+        if (deleteTransactionsError) throw deleteTransactionsError;
       }
-
-      // Delete all transactions associated with the account
-      const { error: deleteTransactionsError } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("account_id", account.id);
-      if (deleteTransactionsError) throw deleteTransactionsError;
 
       // Finally, delete the account
       const { error: deleteAccountError } = await supabase
@@ -162,40 +213,34 @@ const ConfirmDeleteAccountWithTransactionsModal = ({
     setIsSubmitting(true);
 
     try {
-      // Fetch all transactions related to this account
-      const { data: transactions, error: fetchError } = await supabase
+      const { data: transactionsInAccount, error: fetchError } = await supabase
         .from("transactions")
-        .select("id, transfer_id")
+        .select("id, amount, account_id, transfer_id")
         .eq("account_id", account.id);
 
       if (fetchError) throw fetchError;
 
-      const transferIdsToDelete = new Set<string>();
-      const transactionsToReassign = [];
+      const transferTransactionIdsToDelete = await processTransferTransactions(transactionsInAccount);
 
-      transactions.forEach((t: Transaction) => {
-        if (t.transfer_id) {
-          transferIdsToDelete.add(t.transfer_id);
-        } else {
-          transactionsToReassign.push(t.id);
-        }
-      });
+      const regularTransactionIdsToReassign = transactionsInAccount
+        .filter(t => !t.transfer_id)
+        .map(t => t.id);
 
-      // Delete linked transfer transactions first
-      if (transferIdsToDelete.size > 0) {
+      // Delete all identified transfer transactions
+      if (transferTransactionIdsToDelete.length > 0) {
         const { error: deleteTransfersError } = await supabase
           .from("transactions")
           .delete()
-          .in("id", Array.from(transferIdsToDelete));
+          .in("id", transferTransactionIdsToDelete);
         if (deleteTransfersError) throw deleteTransfersError;
       }
 
       // Reassign non-transfer transactions
-      if (transactionsToReassign.length > 0) {
+      if (regularTransactionIdsToReassign.length > 0) {
         const { error: reassignError } = await supabase
           .from("transactions")
           .update({ account_id: selectedReassignAccountId })
-          .in("id", transactionsToReassign);
+          .in("id", regularTransactionIdsToReassign);
         if (reassignError) throw reassignError;
       }
 
@@ -238,7 +283,7 @@ const ConfirmDeleteAccountWithTransactionsModal = ({
             <p className="text-sm text-muted-foreground">
               Você pode excluir todas as transações relacionadas a esta conta ou reatribuí-las a outra conta existente.
               <br/>
-              <span className="font-semibold text-red-500">Atenção: Transações de transferência (origem e destino) serão sempre excluídas.</span>
+              <span className="font-semibold text-red-500">Atenção: Transações de transferência (origem e destino) serão sempre excluídas e seus saldos revertidos nas contas de origem/destino.</span>
             </p>
 
             <div className="flex flex-col gap-4">
