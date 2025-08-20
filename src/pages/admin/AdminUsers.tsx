@@ -19,51 +19,22 @@ const AdminUsers = () => {
     setLoading(true);
     
     try {
-      // Buscar usuários com perfis
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          user_type,
-          updated_at
-        `);
+      // Usar a Edge Function para buscar usuários
+      const { data, error } = await supabase.functions.invoke('admin-list-users');
 
-      if (usersError) {
-        console.error('Error fetching users:', usersError);
-        showError('Erro ao carregar usuários');
+      if (error) {
+        console.error('Error calling admin-list-users function:', error);
+        showError('Erro ao carregar usuários: ' + error.message);
         return;
       }
 
-      // Buscar dados de autenticação dos usuários
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-
-      if (authError) {
-        console.error('Error fetching auth users:', authError);
-        // Continuar mesmo com erro de auth, usando apenas dados do perfil
+      if (data.error) {
+        showError(data.error);
+        return;
       }
 
-      // Combinar dados
-      const combinedUsers: User[] = usersData.map(profile => {
-        const authUser = authUsers?.users.find(u => u.id === profile.id);
-        return {
-          id: profile.id,
-          email: authUser?.email || 'Email não disponível',
-          created_at: authUser?.created_at || profile.updated_at,
-          profile: {
-            id: profile.id,
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            avatar_url: null,
-            updated_at: profile.updated_at,
-            user_type: profile.user_type as "admin" | "user",
-          }
-        };
-      });
-
-      setUsers(combinedUsers);
-      setFilteredUsers(combinedUsers);
+      setUsers(data.users || []);
+      setFilteredUsers(data.users || []);
     } catch (error) {
       console.error('Error in fetchUsers:', error);
       showError('Erro ao carregar usuários');

@@ -19,12 +19,26 @@ const AdminDashboard = () => {
     setLoading(true);
     
     try {
-      // Buscar estatísticas de usuários
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_type, updated_at');
+      // Buscar usuários via Edge Function
+      const { data: usersData, error: usersError } = await supabase.functions.invoke('admin-list-users');
+      
+      let totalUsers = 0;
+      let adminUsers = 0;
+      let recentSignups = 0;
 
-      // Buscar contadores
+      if (!usersError && usersData?.users) {
+        totalUsers = usersData.users.length;
+        adminUsers = usersData.users.filter((u: any) => u.profile?.user_type === 'admin').length;
+        
+        // Usuários cadastrados nos últimos 7 dias
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        recentSignups = usersData.users.filter((u: any) => 
+          new Date(u.created_at) > sevenDaysAgo
+        ).length;
+      }
+
+      // Buscar contadores de outras tabelas
       const { count: transactionsCount } = await supabase
         .from('transactions')
         .select('*', { count: 'exact', head: true });
@@ -36,17 +50,6 @@ const AdminDashboard = () => {
       const { count: categoriesCount } = await supabase
         .from('categories')
         .select('*', { count: 'exact', head: true });
-
-      // Calcular estatísticas
-      const totalUsers = profilesData?.length || 0;
-      const adminUsers = profilesData?.filter(p => p.user_type === 'admin').length || 0;
-      
-      // Usuários cadastrados nos últimos 7 dias
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const recentSignups = profilesData?.filter(p => 
-        new Date(p.updated_at) > sevenDaysAgo
-      ).length || 0;
 
       setStats({
         totalUsers,
@@ -110,7 +113,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.adminUsers}</div>
             <p className="text-xs text-muted-foreground">
-              {((stats.adminUsers / stats.totalUsers) * 100).toFixed(1)}% do total
+              {stats.totalUsers > 0 ? ((stats.adminUsers / stats.totalUsers) * 100).toFixed(1) : 0}% do total
             </p>
           </CardContent>
         </Card>
@@ -123,7 +126,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalTransactions}</div>
             <p className="text-xs text-muted-foreground">
-              Média de {(stats.totalTransactions / Math.max(stats.totalUsers, 1)).toFixed(1)} por usuário
+              Média de {stats.totalUsers > 0 ? (stats.totalTransactions / stats.totalUsers).toFixed(1) : 0} por usuário
             </p>
           </CardContent>
         </Card>
@@ -136,7 +139,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalAccounts}</div>
             <p className="text-xs text-muted-foreground">
-              Média de {(stats.totalAccounts / Math.max(stats.totalUsers, 1)).toFixed(1)} por usuário
+              Média de {stats.totalUsers > 0 ? (stats.totalAccounts / stats.totalUsers).toFixed(1) : 0} por usuário
             </p>
           </CardContent>
         </Card>
