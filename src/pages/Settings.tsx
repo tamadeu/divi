@@ -1,6 +1,7 @@
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { ThemeOptions } from "@/components/settings/ThemeOptions";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
+import { WorkspaceManagement } from "@/components/settings/WorkspaceManagement";
 import {
   Card,
   CardContent,
@@ -25,6 +26,9 @@ const SettingsPage = () => {
             <ProfileForm />
           </CardContent>
         </Card>
+        
+        <WorkspaceManagement />
+        
         <Card>
           <CardHeader>
             <CardTitle>Aparência</CardTitle>
