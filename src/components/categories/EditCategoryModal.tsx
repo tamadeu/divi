@@ -40,15 +40,15 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
   });
   const [loading, setLoading] = useState(false);
 
-  // Initialize form data when category changes
+  // Initialize form data when category prop changes
   useEffect(() => {
-    if (category && isOpen) {
+    if (category) {
       setFormData({
         name: category.name,
         type: category.type,
       });
     }
-  }, [category, isOpen]);
+  }, [category]); // Depend on 'category' to re-initialize when a new category is selected
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

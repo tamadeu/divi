@@ -93,18 +93,22 @@ const Categories = () => {
     setEditingCategory(null);
   };
 
+  // Updated to use "Receita" and "Despesa" directly
   const getTypeColor = (type: string) => {
-    return type === "income" 
+    return type === "Receita" 
       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
   };
 
+  // Updated to return the type directly as it's already "Receita" or "Despesa"
   const getTypeLabel = (type: string) => {
-    return type === "income" ? "Receita" : "Despesa";
+    return type;
   };
 
-  const getFilteredCategories = (type: string) => {
-    return categories.filter(category => category.type === type);
+  // Updated to map tab values ("expense", "income") to actual category types ("Despesa", "Receita")
+  const getFilteredCategories = (tabType: string) => {
+    const actualCategoryType = tabType === "expense" ? "Despesa" : "Receita";
+    return categories.filter(category => category.type === actualCategoryType);
   };
 
   const renderCategoryCards = (categoryList: Category[]) => (
