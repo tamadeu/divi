@@ -44,6 +44,7 @@ const VoiceTransactionButton = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   
   const { openAddTransactionModal } = useModal();
   const { currentWorkspace } = useWorkspace();
@@ -53,26 +54,46 @@ const VoiceTransactionButton = () => {
     return 'MediaRecorder' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
   };
 
-  // Prevenir scroll quando modal estiver aberto
+  // Prevenir scroll quando modal estiver aberto - versão melhorada para mobile
   useEffect(() => {
     if (showModal) {
-      document.body.style.overflow = 'hidden';
+      // Salvar posição atual do scroll
+      const scrollY = window.scrollY;
+      
+      // Aplicar estilos para prevenir scroll
       document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.height = '100%';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+      document.body.style.width = '100vw';
+      
+      // Prevenir zoom no iOS
+      const viewport = document.querySelector('meta[name=viewport]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      }
+      
+      return () => {
+        // Restaurar estilos
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        document.body.style.height = '';
+        document.body.style.width = '';
+        
+        // Restaurar posição do scroll
+        window.scrollTo(0, scrollY);
+        
+        // Restaurar viewport
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+        }
+      };
     }
-
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    };
   }, [showModal]);
 
   // Limpar timer quando componente for desmontado
@@ -287,7 +308,10 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const handleVoiceInput = () => {
+  const handleVoiceInput = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!isMediaRecorderSupported()) {
       showError("Seu navegador não suporta gravação de áudio. Tente usar Chrome, Edge ou Safari.");
       return;
@@ -299,8 +323,12 @@ const VoiceTransactionButton = () => {
     }
 
     console.log("🔥 Abrindo modal de gravação");
-    setShowModal(true);
-    resetModal();
+    
+    // Usar setTimeout para garantir que o evento seja processado
+    setTimeout(() => {
+      setShowModal(true);
+      resetModal();
+    }, 100);
   };
 
   const resetModal = () => {
@@ -317,7 +345,12 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const closeModal = () => {
+  const closeModal = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     console.log("🔥 Fechando modal");
     
     // Parar gravação se estiver ativa
@@ -335,28 +368,42 @@ const VoiceTransactionButton = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleModalClick = (e: React.MouseEvent) => {
+    // Prevenir que cliques no modal fechem ele
+    e.stopPropagation();
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Só fechar se clicar no backdrop e não estiver gravando/processando
+    if (e.target === e.currentTarget && !isRecording && !isProcessing) {
+      closeModal(e);
+    }
+  };
+
   const modalContent = showModal ? (
     <div 
+      ref={modalRef}
       className="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
       style={{ 
-        zIndex: 99999,
+        zIndex: 999999, // Z-index muito alto
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         width: '100vw',
-        height: '100vh'
+        height: '100vh',
+        touchAction: 'none', // Prevenir gestos no mobile
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isRecording && !isProcessing) {
-          closeModal();
-        }
-      }}
+      onClick={handleBackdropClick}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
     >
       <div 
         className="w-full max-w-sm mx-auto"
-        onClick={(e) => e.stopPropagation()}
+        onClick={handleModalClick}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
       >
         <Card className="relative bg-white shadow-2xl border-2">
           <CardContent className="p-6 text-center">
@@ -366,6 +413,7 @@ const VoiceTransactionButton = () => {
               className="absolute top-2 right-2 h-8 w-8 hover:bg-gray-100"
               onClick={closeModal}
               disabled={isRecording || isProcessing}
+              onTouchStart={(e) => e.stopPropagation()}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -385,6 +433,7 @@ const VoiceTransactionButton = () => {
                   
                   <Button
                     onClick={startRecording}
+                    onTouchStart={(e) => e.stopPropagation()}
                     className="mt-4 bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16"
                   >
                     <Mic className="h-6 w-6" />
@@ -405,6 +454,7 @@ const VoiceTransactionButton = () => {
                   
                   <Button
                     onClick={stopRecording}
+                    onTouchStart={(e) => e.stopPropagation()}
                     className="bg-gray-500 hover:bg-gray-600 text-white rounded-full w-16 h-16"
                   >
                     <Square className="h-6 w-6" />
@@ -425,6 +475,7 @@ const VoiceTransactionButton = () => {
                   <div className="flex justify-center gap-3">
                     <Button
                       onClick={discardRecording}
+                      onTouchStart={(e) => e.stopPropagation()}
                       variant="outline"
                       className="rounded-full w-12 h-12"
                       disabled={isProcessing}
@@ -434,6 +485,7 @@ const VoiceTransactionButton = () => {
                     
                     <Button
                       onClick={sendRecording}
+                      onTouchStart={(e) => e.stopPropagation()}
                       className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12"
                       disabled={isProcessing}
                     >
@@ -471,6 +523,7 @@ const VoiceTransactionButton = () => {
         variant="outline"
         className="gap-1 w-full md:w-auto"
         onClick={handleVoiceInput}
+        onTouchStart={(e) => e.stopPropagation()}
         disabled={!currentWorkspace}
       >
         <Mic className="h-4 w-4" />
