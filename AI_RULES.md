@@ -11,6 +11,7 @@
 - ALWAYS try to use the shadcn/ui library.
 - Tailwind CSS: always use Tailwind CSS for styling components. Utilize Tailwind classes extensively for layout, spacing, colors, and other design aspects.
 - don't waste time and tokens trying to explain what you are doing and what you will code.
+- if, by any means, you need to check a different file that's not in the codebase context, please, please, please, tell the user which files you need access
 
 Available packages and libraries:
 
