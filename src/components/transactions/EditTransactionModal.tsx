@@ -87,8 +87,8 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFutureDate, setIsFutureDate] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // New state for delete confirmation
-  const [isDeleting, setIsDeleting] = useState(false); // New state for delete loading
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isMobile = useIsMobile();
 
   const form = useForm<TransactionFormValues>({
@@ -363,15 +363,6 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
             <DialogDescription>
               Modifique os detalhes da sua transação.
             </DialogDescription>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 h-8 w-8 hover:bg-gray-100"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isSubmitting || isDeleting}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
           </DialogHeader>
           
           <div className={cn(
@@ -650,24 +641,36 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
 
           <DialogFooter className={cn(
             "px-6 py-4 border-t flex-shrink-0",
-            isMobile && "flex-col gap-2 sm:flex-col"
+            isMobile ? "flex-col gap-2 sm:flex-col" : "flex-row justify-between" // Adjust for desktop layout
           )}>
-            <Button 
-              type="submit" 
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
               disabled={isSubmitting || isDeleting}
-              onClick={form.handleSubmit(handleSubmit)}
-              className={cn(isMobile && "w-full order-1")}
+              className={cn(isMobile && "w-full order-3", !isMobile && "mr-auto")} // Push to left on desktop
             >
-              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir
             </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={onClose}
-              className={cn(isMobile && "w-full order-2")}
-            >
-              Cancelar
-            </Button>
+            <div className={cn(isMobile && "w-full flex flex-col gap-2 sm:flex-col", !isMobile && "flex gap-2")}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || isDeleting}
+                onClick={form.handleSubmit(handleSubmit)}
+                className={cn(isMobile && "w-full order-1")}
+              >
+                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={onClose}
+                className={cn(isMobile && "w-full order-2")}
+              >
+                Cancelar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
