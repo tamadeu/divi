@@ -3,7 +3,6 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
-import PullToRefreshWrapper from "./PullToRefresh";
 import InstallPrompt from "../pwa/InstallPrompt";
 import UpdatePrompt from "../pwa/UpdatePrompt";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -60,11 +59,9 @@ const Layout = () => {
 
         <div className="flex flex-col">
           <Header />
-          <PullToRefreshWrapper onRefresh={() => Promise.resolve()}>
-            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6">
-              <Outlet />
-            </main>
-          </PullToRefreshWrapper>
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6 overflow-auto">
+            <Outlet />
+          </main>
         </div>
         <BottomNav onMenuClick={() => setMobileSidebarOpen(true)} />
       </div>
