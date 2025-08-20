@@ -3,6 +3,7 @@ export interface Workspace {
   name: string;
   description?: string;
   created_by: string;
+  workspace_owner: string; // Novo campo para o proprietário atual
   is_shared: boolean;
   created_at: string;
   updated_at: string;

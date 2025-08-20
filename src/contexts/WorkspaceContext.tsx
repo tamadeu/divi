@@ -13,6 +13,7 @@ interface WorkspaceContextType {
   switchWorkspace: (workspaceId: string) => void;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (name: string, description?: string, isShared?: boolean) => Promise<Workspace | null>;
+  transferOwnership: (workspaceId: string, newOwnerId: string) => Promise<boolean>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -38,7 +39,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const { data: ownedWorkspaces, error: ownedError } = await supabase
         .from('workspaces')
         .select('*')
-        .eq('created_by', session.user.id)
+        .eq('workspace_owner', session.user.id) // Usar workspace_owner ao invés de created_by
         .order('created_at', { ascending: true });
 
       if (ownedError) {
@@ -76,7 +77,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               memberWorkspaceDetails.push({
                 ...workspace,
                 user_role: memberInfo.role as 'admin' | 'user',
-                is_owner: false,
+                is_owner: workspace.workspace_owner === session.user.id, // Verificar se é owner pelo workspace_owner
               });
             }
           }
@@ -137,6 +138,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           name,
           description,
           created_by: session.user.id,
+          workspace_owner: session.user.id, // Definir o criador como owner inicial
           is_shared: isShared
         })
         .select()
@@ -164,6 +166,30 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [session?.user, fetchWorkspaces]);
 
+  const transferOwnership = useCallback(async (workspaceId: string, newOwnerId: string): Promise<boolean> => {
+    if (!session?.user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ 
+          workspace_owner: newOwnerId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', workspaceId)
+        .eq('workspace_owner', session.user.id); // Só o owner atual pode transferir
+
+      if (error) throw error;
+
+      await fetchWorkspaces();
+      return true;
+    } catch (error: any) {
+      console.error('Error transferring ownership:', error);
+      showError('Erro ao transferir propriedade do núcleo');
+      return false;
+    }
+  }, [session?.user, fetchWorkspaces]);
+
   // Só executar fetchWorkspaces quando a sessão estiver carregada e houver mudança no usuário
   useEffect(() => {
     if (!sessionLoading) {
@@ -177,7 +203,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     loading,
     switchWorkspace,
     refreshWorkspaces: fetchWorkspaces,
-    createWorkspace
+    createWorkspace,
+    transferOwnership
   };
 
   return (
