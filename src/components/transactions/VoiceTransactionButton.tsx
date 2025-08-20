@@ -54,7 +54,7 @@ const VoiceTransactionButton = () => {
     return 'MediaRecorder' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
   };
 
-  // Prevenir scroll quando modal estiver aberto - CORRIGIDO
+  // Prevenir scroll quando modal estiver aberto
   useEffect(() => {
     if (showModal) {
       // Salvar posição atual do scroll
@@ -68,7 +68,6 @@ const VoiceTransactionButton = () => {
       document.body.style.overflow = 'hidden';
       document.body.style.height = '100vh';
       document.body.style.width = '100vw';
-      // REMOVIDO: document.body.style.pointerEvents = 'none'; // ❌ Isso estava bloqueando cliques!
       
       // Prevenir zoom no iOS
       const viewport = document.querySelector('meta[name=viewport]');
@@ -85,7 +84,6 @@ const VoiceTransactionButton = () => {
         document.body.style.overflow = '';
         document.body.style.height = '';
         document.body.style.width = '';
-        // document.body.style.pointerEvents = ''; // ❌ Não precisamos mais disso
         
         // Restaurar posição do scroll
         window.scrollTo(0, scrollY);
@@ -107,7 +105,10 @@ const VoiceTransactionButton = () => {
     };
   }, []);
 
-  const startRecording = async () => {
+  const startRecording = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log("🎤 Função startRecording chamada - INÍCIO");
     
     try {
@@ -217,7 +218,10 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log("🎤 Tentando parar gravação...");
     
     if (mediaRecorderRef.current && isRecording) {
@@ -233,7 +237,10 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const discardRecording = () => {
+  const discardRecording = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log("🎤 Descartando gravação...");
     setHasRecording(false);
     setAudioBlob(null);
@@ -241,7 +248,10 @@ const VoiceTransactionButton = () => {
     audioChunksRef.current = [];
   };
 
-  const sendRecording = async () => {
+  const sendRecording = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!audioBlob || !currentWorkspace || isProcessing) {
       if (!audioBlob) showError("Nenhuma gravação para enviar.");
       if (!currentWorkspace) showError("Nenhum núcleo financeiro selecionado.");
@@ -392,12 +402,25 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const closeModal = () => {
+  const closeModal = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     console.log("🔥 Fechando modal");
     
-    // Parar gravação se estiver ativa
-    if (isRecording) {
-      stopRecording();
+    // Parar gravação se estiver ativa e limpar stream
+    if (isRecording && mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      
+      // Parar todas as tracks do stream para liberar o microfone
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => {
+          track.stop();
+          console.log("🎤 Track parada ao fechar modal:", track.kind);
+        });
+      }
     }
     
     setShowModal(false);
@@ -408,6 +431,20 @@ const VoiceTransactionButton = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handler para clique no backdrop
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Só fechar se clicar EXATAMENTE no backdrop (não em elementos filhos)
+    if (e.target === e.currentTarget && !isRecording && !isProcessing) {
+      console.log("🔥 Clique no backdrop - fechando modal");
+      closeModal();
+    }
+  };
+
+  // Handler para parar propagação no conteúdo do modal
+  const handleModalContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   const modalContent = showModal ? (
@@ -423,10 +460,14 @@ const VoiceTransactionButton = () => {
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        pointerEvents: 'auto', // ✅ GARANTIR que o modal aceite cliques
+        pointerEvents: 'auto',
       }}
+      onClick={handleBackdropClick}
     >
-      <div className="w-full max-w-sm mx-auto">
+      <div 
+        className="w-full max-w-sm mx-auto"
+        onClick={handleModalContentClick}
+      >
         <Card className="relative bg-white shadow-2xl border-2" style={{ pointerEvents: 'auto' }}>
           <CardContent className="p-6 text-center">
             <Button
@@ -452,7 +493,7 @@ const VoiceTransactionButton = () => {
                   <p className="text-xs text-gray-500 italic">"Gastei 50 reais no Uber hoje"</p>
                   <p className="text-xs text-gray-500 italic">"Recebi 2000 reais de salário"</p>
                   
-                  <div className="mt-4 flex justify-center">
+                  <div className="mt-4 flex justify-center gap-3">
                     <button
                       onClick={startRecording}
                       className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full w-16 h-16 flex items-center justify-center transition-colors focus:outline-none focus:ring-4 focus:ring-red-300"
@@ -460,11 +501,22 @@ const VoiceTransactionButton = () => {
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
                         userSelect: 'none',
-                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
+                        pointerEvents: 'auto',
                       }}
                     >
                       <Mic className="h-6 w-6" style={{ margin: 0, padding: 0 }} />
                     </button>
+                  </div>
+                  
+                  {/* Botão Cancelar */}
+                  <div className="mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={closeModal}
+                      className="w-full"
+                    >
+                      Cancelar
+                    </Button>
                   </div>
                 </div>
               )}
@@ -488,7 +540,7 @@ const VoiceTransactionButton = () => {
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
                         userSelect: 'none',
-                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
+                        pointerEvents: 'auto',
                       }}
                     >
                       <Square className="h-6 w-6" style={{ margin: 0, padding: 0 }} />
@@ -507,7 +559,7 @@ const VoiceTransactionButton = () => {
                   <p className="text-lg font-mono text-gray-700 mb-4">{formatTime(recordingTime)}</p>
                   <p className="text-sm text-gray-600 mb-4">Enviar para processar ou gravar novamente?</p>
                   
-                  <div className="flex justify-center gap-3">
+                  <div className="flex justify-center gap-3 mb-4">
                     <button
                       onClick={discardRecording}
                       className="border border-gray-300 hover:bg-gray-50 active:bg-gray-100 text-gray-700 rounded-full w-12 h-12 flex items-center justify-center transition-colors focus:outline-none focus:ring-4 focus:ring-gray-200"
@@ -516,7 +568,7 @@ const VoiceTransactionButton = () => {
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
                         userSelect: 'none',
-                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
+                        pointerEvents: 'auto',
                       }}
                     >
                       <Trash2 className="h-5 w-5" />
@@ -530,11 +582,22 @@ const VoiceTransactionButton = () => {
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
                         userSelect: 'none',
-                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
+                        pointerEvents: 'auto',
                       }}
                     >
                       <Send className="h-5 w-5" />
                     </button>
+                  </div>
+                  
+                  {/* Botão Cancelar */}
+                  <div>
+                    <Button
+                      variant="outline"
+                      onClick={closeModal}
+                      className="w-full"
+                    >
+                      Cancelar
+                    </Button>
                   </div>
                 </div>
               )}
