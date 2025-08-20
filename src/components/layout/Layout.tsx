@@ -69,8 +69,13 @@ const Layout = () => {
 
   return (
     <>
-      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <Sidebar />
+      <div className="flex min-h-screen w-full">
+        {/* Fixed Sidebar for Desktop */}
+        <div className="hidden md:flex md:w-[220px] lg:w-[280px] md:flex-col md:fixed md:inset-y-0 md:z-50">
+          <Sidebar />
+        </div>
+        
+        {/* Mobile Sidebar */}
         <Sheet open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent side="left" className="flex flex-col w-full p-0">
             <div className="flex flex-col h-full">
@@ -108,12 +113,16 @@ const Layout = () => {
           </SheetContent>
         </Sheet>
 
-        <div className="flex flex-col">
+        {/* Main Content Area */}
+        <div className="flex flex-col flex-1 md:ml-[220px] lg:ml-[280px]">
           <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6 overflow-auto">
-            <Outlet key={refreshTrigger} />
+          <main className="flex-1 overflow-auto">
+            <div className="p-4 lg:p-6 pb-20 md:pb-6">
+              <Outlet key={refreshTrigger} />
+            </div>
           </main>
         </div>
+        
         <BottomNav onMenuClick={() => setMobileSidebarOpen(true)} />
       </div>
 
