@@ -129,14 +129,12 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
     const { data: accountsData } = await supabase
       .from("accounts")
       .select("*")
-      .eq("user_id", user.id)
       .eq("workspace_id", currentWorkspace.id);
     setAccounts(accountsData || []);
 
     const { data: categoriesData } = await supabase
       .from("categories")
       .select("*")
-      .eq("user_id", user.id)
       .eq("workspace_id", currentWorkspace.id)
       .order("name", { ascending: true });
     setCategories(categoriesData || []);
