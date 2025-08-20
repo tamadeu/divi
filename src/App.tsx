@@ -1,130 +1,54 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { SessionProvider, useSession } from "@/contexts/SessionContext";
-import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SessionContextProvider } from "@supabase/auth-helpers-react";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ModalProvider } from "@/contexts/ModalContext";
-import Layout from "@/components/layout/Layout";
-import AdminLayout from "@/components/admin/AdminLayout";
-import AdminRoute from "@/components/admin/AdminRoute";
-import PlatformMetaUpdater from "@/components/PlatformMetaUpdater";
-import Dashboard from "./pages/Dashboard";
-import AccountsPage from "./pages/Accounts";
-import AccountDetailPage from "./pages/AccountDetail";
-import TransactionsPage from "./pages/Transactions";
-import SearchResultsPage from "./pages/SearchResults";
-import BudgetsPage from "./pages/Budgets";
-import ReportsPage from "./pages/Reports";
-import SettingsPage from "./pages/Settings";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminBanks from "./pages/admin/AdminBanks";
-import AdminCompanies from "./pages/admin/AdminCompanies";
-import AdminSystem from "./pages/admin/AdminSystem";
-import AdminReports from "./pages/admin/AdminReports";
-import AdminSettings from "./pages/admin/AdminSettings";
-import LoginPage from "./pages/Login";
-import SignUpPage from "./pages/SignUp";
-import NotFound from "./pages/NotFound";
-import CategoriesPage from "./pages/Categories";
-import { Skeleton } from "./components/ui/skeleton";
-import ForgotPasswordPage from "./pages/ForgotPassword";
-import ResetPasswordPage from "./pages/ResetPassword";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import Layout from "@/components/Layout";
+import Index from "@/pages/Index";
+import Login from "@/pages/Login";
+import Transactions from "@/pages/Transactions";
+import Accounts from "@/pages/Accounts";
+import Categories from "@/pages/Categories";
+import Budgets from "@/pages/Budgets";
+import CreditCards from "@/pages/CreditCards";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
+import Workspaces from "@/pages/Workspaces";
 
-const ProtectedRoute = () => {
-  const { session, loading } = useSession();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return (
-    <WorkspaceProvider>
-      <Layout />
-    </WorkspaceProvider>
-  );
-};
-
-const AdminProtectedRoute = () => {
-  const { session, loading } = useSession();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return (
-    <AdminRoute>
-      <AdminLayout />
-    </AdminRoute>
-  );
-};
-
-function AppRoutes() {
-  return (
-    <Router>
-      <PlatformMetaUpdater />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        
-        {/* Main App Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/accounts" element={<AccountsPage />} />
-          <Route path="/accounts/:accountId" element={<AccountDetailPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/search" element={<SearchResultsPage />} />
-          <Route path="/categories" element={<CategoriesPage />} />
-          <Route path="/budgets" element={<BudgetsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminProtectedRoute />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="banks" element={<AdminBanks />} />
-          <Route path="companies" element={<AdminCompanies />} />
-          <Route path="system" element={<AdminSystem />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="settings" element={<AdminSettings />} />
-        </Route>
-
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
-  );
-}
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <SessionProvider>
-        <ModalProvider>
-          <AppRoutes />
-        </ModalProvider>
-      </SessionProvider>
-      <Toaster />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <SessionContextProvider supabaseClient={supabase}>
+        <AuthProvider>
+          <WorkspaceProvider>
+            <ModalProvider>
+              <Router>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<Layout />}>
+                    <Route index element={<Index />} />
+                    <Route path="transactions" element={<Transactions />} />
+                    <Route path="accounts" element={<Accounts />} />
+                    <Route path="categories" element={<Categories />} />
+                    <Route path="budgets" element={<Budgets />} />
+                    <Route path="credit-cards" element={<CreditCards />} />
+                    <Route path="reports" element={<Reports />} />
+                    <Route path="settings" element={<Settings />} />
+                    <Route path="workspaces" element={<Workspaces />} />
+                  </Route>
+                </Routes>
+              </Router>
+              <Toaster />
+            </ModalProvider>
+          </WorkspaceProvider>
+        </AuthProvider>
+      </SessionContextProvider>
+    </QueryClientProvider>
   );
 }
 

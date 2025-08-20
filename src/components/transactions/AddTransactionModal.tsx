@@ -35,6 +35,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category } from "@/types/database";
+import { CreditCard } from "@/types/credit-cards";
 import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon } from "lucide-react";
 import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,6 +47,7 @@ import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Calculator } from "@/components/ui/calculator";
+import { Switch } from "@/components/ui/switch";
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -56,6 +58,8 @@ const transactionSchema = z.object({
   category_id: z.string({ required_error: "Selecione uma categoria."}).uuid("Selecione uma categoria válida."),
   status: z.enum(["Concluído", "Pendente"]),
   description: z.string().optional(),
+  is_credit_card: z.boolean().default(false),
+  credit_card_id: z.string().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
@@ -71,6 +75,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
@@ -92,6 +97,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       type: "expense",
       account_id: "", 
       category_id: "", 
+      is_credit_card: false,
+      credit_card_id: "",
     },
   });
 
@@ -99,6 +106,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const nameValue = form.watch("name");
   const transactionDate = form.watch("date");
   const amountValue = form.watch("amount");
+  const isCreditCard = form.watch("is_credit_card");
 
   useEffect(() => {
     if (transactionDate) {
@@ -121,7 +129,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   }, [categories, transactionType]);
 
   const fetchData = useCallback(async () => {
-    if (!currentWorkspace) return { accounts: [], categories: [] };
+    if (!currentWorkspace) return { accounts: [], categories: [], creditCards: [] };
 
     // Buscar contas do workspace atual
     const { data: accountsData } = await supabase
@@ -139,7 +147,16 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       .order("name", { ascending: true });
     setCategories(categoriesData || []);
 
-    return { accounts: accountsData || [], categories: categoriesData || [] };
+    // Buscar cartões de crédito do workspace atual
+    const { data: creditCardsData } = await supabase
+      .from("credit_cards")
+      .select("*")
+      .eq("workspace_id", currentWorkspace.id)
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+    setCreditCards(creditCardsData || []);
+
+    return { accounts: accountsData || [], categories: categoriesData || [], creditCards: creditCardsData || [] };
   }, [currentWorkspace]);
 
   useEffect(() => {
@@ -159,6 +176,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
             type: "expense",
             account_id: defaultAccountId, 
             category_id: "", 
+            is_credit_card: false,
+            credit_card_id: "",
           });
         }
       });
@@ -218,6 +237,13 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
     }
   }, [accounts, transactionType, form, initialData]);
 
+  // Reset credit card when switching off credit card mode
+  useEffect(() => {
+    if (!isCreditCard) {
+      form.setValue('credit_card_id', '');
+    }
+  }, [isCreditCard, form]);
+
   const handleSubmit = async (values: TransactionFormValues) => {
     if (!currentWorkspace) {
       showError("Nenhum núcleo financeiro selecionado.");
@@ -234,6 +260,73 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
 
     const amountToSave = values.type === 'expense' ? -Math.abs(values.amount) : Math.abs(values.amount);
 
+    // Se for cartão de crédito, precisamos encontrar ou criar a fatura
+    let creditCardBillId = null;
+    if (values.is_credit_card && values.credit_card_id && values.type === 'expense') {
+      // Buscar o cartão de crédito para obter as datas
+      const { data: creditCard } = await supabase
+        .from('credit_cards')
+        .select('*')
+        .eq('id', values.credit_card_id)
+        .single();
+
+      if (creditCard) {
+        // Calcular o mês de referência baseado na data da transação e dia de fechamento
+        const transactionDate = new Date(values.date);
+        const referenceMonth = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), 1);
+        
+        // Se a transação é depois do dia de fechamento, vai para o próximo mês
+        if (transactionDate.getDate() > creditCard.closing_day) {
+          referenceMonth.setMonth(referenceMonth.getMonth() + 1);
+        }
+
+        // Buscar ou criar a fatura
+        let { data: existingBill } = await supabase
+          .from('credit_card_bills')
+          .select('id')
+          .eq('credit_card_id', values.credit_card_id)
+          .eq('reference_month', referenceMonth.toISOString().split('T')[0])
+          .single();
+
+        if (!existingBill) {
+          // Criar nova fatura
+          const closingDate = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), creditCard.closing_day);
+          const dueDate = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), creditCard.due_day);
+          
+          // Se o dia de vencimento é menor que o de fechamento, vai para o próximo mês
+          if (creditCard.due_day <= creditCard.closing_day) {
+            dueDate.setMonth(dueDate.getMonth() + 1);
+          }
+
+          const { data: newBill, error: billError } = await supabase
+            .from('credit_card_bills')
+            .insert({
+              credit_card_id: values.credit_card_id,
+              reference_month: referenceMonth.toISOString().split('T')[0],
+              closing_date: closingDate.toISOString().split('T')[0],
+              due_date: dueDate.toISOString().split('T')[0],
+              total_amount: 0,
+              paid_amount: 0,
+              status: 'open',
+              user_id: user.id,
+              workspace_id: currentWorkspace.id,
+            })
+            .select('id')
+            .single();
+
+          if (billError) {
+            showError("Erro ao criar fatura: " + billError.message);
+            setIsSubmitting(false);
+            return;
+          }
+
+          creditCardBillId = newBill.id;
+        } else {
+          creditCardBillId = existingBill.id;
+        }
+      }
+    }
+
     const { error: transactionError } = await supabase.from("transactions").insert({
       name: values.name,
       amount: amountToSave,
@@ -244,6 +337,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       description: values.description,
       user_id: user.id,
       workspace_id: currentWorkspace.id,
+      credit_card_bill_id: creditCardBillId,
     });
 
     if (transactionError) {
@@ -252,7 +346,8 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       return;
     }
 
-    if (values.status === 'Concluído') {
+    // Só atualizar saldo da conta se não for cartão de crédito e estiver concluída
+    if (values.status === 'Concluído' && !values.is_credit_card) {
       const selectedAccount = accounts.find(acc => acc.id === values.account_id);
       if (selectedAccount) {
         const newBalance = selectedAccount.balance + amountToSave;
@@ -323,6 +418,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
                           onValueChange={(value) => {
                             field.onChange(value);
                             form.setValue("name", "");
+                            form.setValue("is_credit_card", false);
                           }}
                           className="w-full"
                         >
@@ -346,6 +442,60 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
                     </FormItem>
                   )}
                 />
+
+                {/* Switch para Cartão de Crédito - apenas para despesas */}
+                {transactionType === 'expense' && creditCards.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="is_credit_card"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">
+                            Cartão de Crédito
+                          </FormLabel>
+                          <div className="text-sm text-muted-foreground">
+                            Esta despesa foi feita no cartão de crédito?
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Seleção do Cartão de Crédito */}
+                {isCreditCard && (
+                  <FormField
+                    control={form.control}
+                    name="credit_card_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cartão de Crédito</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um cartão" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {creditCards.map(card => (
+                              <SelectItem key={card.id} value={card.id}>
+                                {card.name} •••• {card.last_four_digits}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
@@ -371,6 +521,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
                               }}
                               onFocus={() => setIsNamePopoverOpen(true)}
                               autoComplete="off"
+                            
                             />
                           </FormControl>
                         </PopoverAnchor>
@@ -477,31 +628,34 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="account_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Conta</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma conta" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddAccountModalOpen(true)}>
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Conta - apenas se não for cartão de crédito */}
+                {!isCreditCard && (
+                  <FormField
+                    control={form.control}
+                    name="account_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Conta</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione uma conta" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" size="icon" onClick={() => setIsAddAccountModalOpen(true)}>
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
