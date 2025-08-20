@@ -64,6 +64,37 @@ const EditCategoryModal = ({ category, isOpen, onClose, onCategoryUpdated }: Edi
     if (!category) return;
     setIsSubmitting(true);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("Você precisa estar logado.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validação de nome e tipo únicos, excluindo a categoria atual
+    const { data: existingCategories, error: fetchError } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", values.name)
+      .eq("type", values.type)
+      .neq("id", category.id); // Exclui a categoria atual da verificação
+
+    if (fetchError) {
+      showError("Erro ao verificar categorias existentes: " + fetchError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (existingCategories && existingCategories.length > 0) {
+      form.setError("name", {
+        type: "manual",
+        message: `Já existe outra categoria com o nome "${values.name}" e tipo "${values.type === 'income' ? 'Renda' : 'Despesa'}".`,
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     const { error } = await supabase.from("categories").update(values).eq("id", category.id);
 
     if (error) {

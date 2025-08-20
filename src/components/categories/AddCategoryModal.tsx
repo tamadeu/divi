@@ -73,6 +73,29 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: Add
       return;
     }
 
+    // Validação de nome e tipo únicos
+    const { data: existingCategories, error: fetchError } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", values.name)
+      .eq("type", values.type);
+
+    if (fetchError) {
+      showError("Erro ao verificar categorias existentes: " + fetchError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (existingCategories && existingCategories.length > 0) {
+      form.setError("name", {
+        type: "manual",
+        message: `Já existe uma categoria com o nome "${values.name}" e tipo "${values.type === 'income' ? 'Renda' : 'Despesa'}".`,
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     const { data: newCategory, error } = await supabase
       .from("categories")
       .insert({ ...values, user_id: user.id })
