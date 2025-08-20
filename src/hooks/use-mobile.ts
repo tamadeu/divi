@@ -1,20 +1,26 @@
 import { useState, useEffect } from 'react';
 
-export const useIsMobile = (breakpoint = 768) => {
+const MOBILE_BREAKPOINT = 768; // Corresponde ao breakpoint 'md' do Tailwind CSS
+
+export const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < breakpoint);
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     };
 
-    checkMobile(); // Initial check
+    // Define o estado inicial
+    checkMobile();
+
+    // Adiciona um listener para redimensionamento da janela
     window.addEventListener('resize', checkMobile);
 
+    // Limpa o listener ao desmontar o componente
     return () => {
       window.removeEventListener('resize', checkMobile);
     };
-  }, [breakpoint]);
+  }, []);
 
   return isMobile;
 };
