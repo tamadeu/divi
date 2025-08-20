@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import BudgetItem from "@/components/budgets/BudgetItem";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Copy, Loader2 } from "lucide-react"; // Added Copy and Loader2 icons
 import { supabase } from "@/integrations/supabase/client";
 import { BudgetWithSpending } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,8 +9,8 @@ import AddBudgetModal from "@/components/budgets/AddBudgetModal";
 import EditBudgetModal from "@/components/budgets/EditBudgetModal";
 import DeleteBudgetAlert from "@/components/budgets/DeleteBudgetAlert";
 import { showError, showSuccess } from "@/utils/toast";
-import MonthPicker from "@/components/budgets/MonthPicker"; // New import
-import { format } from "date-fns";
+import MonthPicker from "@/components/budgets/MonthPicker";
+import { format, subMonths } from "date-fns"; // Added subMonths
 import { ptBR } from "date-fns/locale";
 
 const BudgetsPage = () => {
@@ -19,11 +19,11 @@ const BudgetsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetWithSpending | null>(null);
   const [deletingBudget, setDeletingBudget] = useState<BudgetWithSpending | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date()); // New state for selected month
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [isCopying, setIsCopying] = useState(false); // New state for copying
 
   const fetchBudgets = async () => {
     setLoading(true);
-    // Ensure the selectedMonth is at the beginning of the month for the RPC call
     const monthToFetch = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
     const { data, error } = await supabase.rpc('get_budgets_with_spending', {
       budget_month: monthToFetch.toISOString(),
@@ -39,7 +39,7 @@ const BudgetsPage = () => {
 
   useEffect(() => {
     fetchBudgets();
-  }, [selectedMonth]); // Re-fetch budgets when selectedMonth changes
+  }, [selectedMonth]);
 
   const handleEditBudget = (budget: BudgetWithSpending) => {
     setEditingBudget(budget);
@@ -76,6 +76,74 @@ const BudgetsPage = () => {
     } catch (error: any) {
       showError("Erro ao excluir orçamento: " + error.message);
       console.error("Delete budget error:", error);
+    }
+  };
+
+  const handleCopyFromLastMonth = async () => {
+    setIsCopying(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError("Você precisa estar logado para copiar orçamentos.");
+      setIsCopying(false);
+      return;
+    }
+
+    try {
+      const lastMonth = subMonths(selectedMonth, 1);
+      const currentMonthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+
+      // Fetch budgets from the last month
+      const { data: lastMonthBudgets, error: lastMonthError } = await supabase.rpc('get_budgets_with_spending', {
+        budget_month: lastMonth.toISOString(),
+      });
+
+      if (lastMonthError) throw lastMonthError;
+
+      if (!lastMonthBudgets || lastMonthBudgets.length === 0) {
+        showError("Não há orçamentos para copiar do mês passado.");
+        setIsCopying(false);
+        return;
+      }
+
+      // Fetch existing budgets for the current month to avoid duplicates
+      const { data: currentMonthExistingBudgets, error: currentMonthError } = await supabase
+        .from("budgets")
+        .select("category_id")
+        .eq("user_id", user.id)
+        .eq("month", currentMonthStart.toISOString().split('T')[0]);
+
+      if (currentMonthError) throw currentMonthError;
+
+      const existingCategoryIds = new Set(currentMonthExistingBudgets?.map(b => b.category_id));
+
+      const budgetsToInsert = lastMonthBudgets
+        .filter(budget => !existingCategoryIds.has(budget.category_id))
+        .map(budget => ({
+          user_id: user.id,
+          category_id: budget.category_id,
+          amount: budget.budgeted_amount,
+          month: currentMonthStart.toISOString().split('T')[0],
+        }));
+
+      if (budgetsToInsert.length === 0) {
+        showSuccess("Todos os orçamentos do mês passado já existem neste mês.");
+        setIsCopying(false);
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("budgets")
+        .insert(budgetsToInsert);
+
+      if (insertError) throw insertError;
+
+      showSuccess(`Orçamentos copiados com sucesso! (${budgetsToInsert.length} novos orçamentos)`);
+      fetchBudgets(); // Re-fetch budgets to show the new ones
+    } catch (error: any) {
+      showError("Erro ao copiar orçamentos: " + error.message);
+      console.error("Copy budgets error:", error);
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -117,12 +185,22 @@ const BudgetsPage = () => {
               Nenhum orçamento para este mês
             </h3>
             <p className="text-sm text-muted-foreground">
-              Crie seu primeiro orçamento para começar a acompanhar.
+              Crie seu primeiro orçamento ou copie do mês passado.
             </p>
-            <Button className="mt-4" onClick={() => setIsAddModalOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Criar Orçamento
-            </Button>
+            <div className="flex gap-2 mt-4">
+              <Button onClick={() => setIsAddModalOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Criar Orçamento
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCopyFromLastMonth} 
+                disabled={isCopying}
+              >
+                {isCopying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+                Copiar do mês passado
+              </Button>
+            </div>
           </div>
         </div>
       )}
