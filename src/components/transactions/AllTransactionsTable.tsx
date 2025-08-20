@@ -14,18 +14,18 @@ import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
-  onEditTransaction?: (transaction: Transaction) => void;
+  onRowClick?: (transaction: Transaction) => void;
   companies: Company[];
 }
 
-const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: AllTransactionsTableProps) => {
+const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransactionsTableProps) => {
   const isMobile = useIsMobile();
   
   console.log("AllTransactionsTable rendered:", {
     isMobile,
     transactionsCount: transactions.length,
-    onEditTransactionExists: !!onEditTransaction,
-    onEditTransactionType: typeof onEditTransaction
+    onRowClickExists: !!onRowClick,
+    onRowClickType: typeof onRowClick
   });
   
   const statusVariant = {
@@ -37,25 +37,25 @@ const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: Al
   const handleRowClick = (transaction: Transaction) => {
     console.log("AllTransactionsTable handleRowClick:", {
       transactionId: transaction.id,
-      onEditTransactionExists: !!onEditTransaction,
-      onEditTransactionType: typeof onEditTransaction
+      onRowClickExists: !!onRowClick,
+      onRowClickType: typeof onRowClick
     });
 
     try {
-      if (onEditTransaction && typeof onEditTransaction === 'function') {
-        onEditTransaction(transaction);
+      if (onRowClick && typeof onRowClick === 'function') {
+        onRowClick(transaction);
       } else {
-        console.warn("onEditTransaction is not a function or is undefined:", onEditTransaction);
+        console.warn("onRowClick is not a function or is undefined:", onRowClick);
       }
     } catch (error) {
-      console.error("Error calling onEditTransaction:", error);
+      console.error("Error calling onRowClick:", error);
     }
   };
 
   // Renderizar cards no mobile
   if (isMobile) {
     console.log("Rendering mobile view with TransactionCardList");
-    return <TransactionCardList transactions={transactions} onEditTransaction={onEditTransaction} companies={companies} loading={false} />;
+    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} companies={companies} loading={false} />;
   }
 
   // Renderizar tabela no desktop
@@ -78,7 +78,7 @@ const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: Al
               <TableRow
                 key={transaction.id}
                 onClick={() => handleRowClick(transaction)}
-                className={`${onEditTransaction ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'}`}
+                className={`${onRowClick ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'}`}
               >
                 <TableCell className="min-w-[150px]">
                   <div className="font-medium">{transaction.name}</div>
