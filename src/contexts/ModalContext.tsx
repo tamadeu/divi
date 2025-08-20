@@ -165,4 +165,3 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
     </ModalContext.Provider>
   );
 };
-</ModalContext.Provider>
