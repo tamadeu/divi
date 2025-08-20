@@ -30,8 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Bank } from "@/types/database";
+import { Trash2 } from "lucide-react";
 
 const editAccountSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -39,6 +41,7 @@ const editAccountSchema = z.object({
   custom_bank_name: z.string().optional(),
   type: z.string().min(1, "O tipo é obrigatório."),
   balance: z.coerce.number(),
+  is_default: z.boolean().default(false),
 }).refine(data => {
   if (data.bank_selection === "custom_bank_input") {
     return data.custom_bank_name && data.custom_bank_name.trim().length > 0;
@@ -60,9 +63,9 @@ interface EditAccountModalProps {
 
 const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAccountModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [availableBanks, setAvailableBanks] = useState<Bank[]>([]);
   const [showCustomBankInput, setShowCustomBankInput] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   const form = useForm<EditAccountFormValues>({
     resolver: zodResolver(editAccountSchema),
@@ -72,10 +75,10 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
       custom_bank_name: "",
       type: "",
       balance: 0,
+      is_default: false,
     },
   });
 
-  // Fetch banks when modal opens
   useEffect(() => {
     const fetchBanks = async () => {
       const { data, error } = await supabase
@@ -89,42 +92,25 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
       }
     };
 
-    if (isOpen) {
+    if (isOpen && account) {
       fetchBanks();
-      setIsInitialized(false);
-    }
-  }, [isOpen]);
-
-  // Initialize form with account data only once when both account and banks are available
-  useEffect(() => {
-    if (isOpen && account && availableBanks.length > 0 && !isInitialized) {
-      // Check if the account's bank exists in the banks table
-      const existingBank = availableBanks.find(bank => bank.name === account.bank);
       
-      if (existingBank) {
-        // Bank exists in the table
-        form.reset({
-          name: account.name,
-          bank_selection: existingBank.id,
-          custom_bank_name: "",
-          type: account.type,
-          balance: account.balance,
-        });
-        setShowCustomBankInput(false);
-      } else {
-        // Bank doesn't exist in table, use custom input
-        form.reset({
-          name: account.name,
-          bank_selection: "custom_bank_input",
-          custom_bank_name: account.bank,
-          type: account.type,
-          balance: account.balance,
-        });
-        setShowCustomBankInput(true);
-      }
-      setIsInitialized(true);
+      // Find if the bank exists in our banks table
+      const existingBank = availableBanks.find(b => b.name === account.bank);
+      const bankSelection = existingBank ? existingBank.id : "custom_bank_input";
+      
+      form.reset({
+        name: account.name,
+        bank_selection: bankSelection,
+        custom_bank_name: existingBank ? "" : account.bank,
+        type: account.type,
+        balance: account.balance,
+        is_default: account.is_default,
+      });
+      
+      setShowCustomBankInput(!existingBank);
     }
-  }, [isOpen, account, availableBanks, form, isInitialized]);
+  }, [isOpen, account, form, availableBanks]);
 
   const handleSubmit = async (values: EditAccountFormValues) => {
     if (!account) return;
@@ -145,24 +131,78 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
       bankNameToUpdate = selectedBank ? selectedBank.name : "";
     }
 
-    const { error } = await supabase
-      .from("accounts")
-      .update({
-        name: values.name,
-        bank: bankNameToUpdate,
-        type: values.type,
-        balance: values.balance,
-      })
-      .eq("id", account.id);
+    try {
+      // If setting as default, first unset all other accounts as default
+      if (values.is_default) {
+        const { error: unsetError } = await supabase.rpc('set_default_account', {
+          account_id_to_set: account.id
+        });
+        
+        if (unsetError) {
+          throw unsetError;
+        }
+      }
 
-    if (error) {
-      showError("Erro ao atualizar conta: " + error.message);
-    } else {
+      // Update the account
+      const { error } = await supabase
+        .from("accounts")
+        .update({
+          name: values.name,
+          bank: bankNameToUpdate,
+          type: values.type,
+          balance: values.balance,
+          is_default: values.is_default,
+        })
+        .eq("id", account.id);
+
+      if (error) {
+        throw error;
+      }
+
       showSuccess("Conta atualizada com sucesso!");
       onAccountUpdated();
       onClose();
+    } catch (error: any) {
+      showError("Erro ao atualizar conta: " + error.message);
     }
+    
     setIsSubmitting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!account) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // First delete all transactions associated with this account
+      const { error: transactionsError } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("account_id", account.id);
+
+      if (transactionsError) {
+        throw transactionsError;
+      }
+
+      // Then delete the account
+      const { error: accountError } = await supabase
+        .from("accounts")
+        .delete()
+        .eq("id", account.id);
+
+      if (accountError) {
+        throw accountError;
+      }
+
+      showSuccess("Conta excluída com sucesso!");
+      onAccountUpdated();
+      onClose();
+    } catch (error: any) {
+      showError("Erro ao excluir conta: " + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (!account) return null;
@@ -237,9 +277,9 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                 name="custom_bank_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome do Banco</FormLabel>
+                    <FormLabel>Nome do Novo Banco</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Meu Banco" {...field} />
+                      <Input placeholder="Ex: Meu Novo Banco" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -283,13 +323,47 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                 </FormItem>
               )}
             />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={onClose}>
-                Cancelar
+            <FormField
+              control={form.control}
+              name="is_default"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Definir como conta padrão
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Esta conta será selecionada automaticamente ao criar transações.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="w-full sm:w-auto"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {isDeleting ? "Excluindo..." : "Excluir Conta"}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
-              </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button type="button" variant="ghost" onClick={onClose} className="flex-1 sm:flex-none">
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
