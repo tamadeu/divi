@@ -105,13 +105,11 @@ const VoiceTransactionButton = () => {
     };
   }, []);
 
-  const startRecording = async (e?: React.MouseEvent | React.TouchEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const startRecording = async (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     
-    console.log("🎤 Tentando iniciar gravação...");
+    console.log("🎤 Função startRecording chamada");
     
     try {
       // Verificar se o navegador suporta getUserMedia
@@ -220,11 +218,9 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const stopRecording = (e?: React.MouseEvent | React.TouchEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const stopRecording = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     
     console.log("🎤 Tentando parar gravação...");
     
@@ -241,11 +237,9 @@ const VoiceTransactionButton = () => {
     }
   };
 
-  const discardRecording = (e?: React.MouseEvent | React.TouchEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const discardRecording = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     
     console.log("🎤 Descartando gravação...");
     setHasRecording(false);
@@ -254,11 +248,9 @@ const VoiceTransactionButton = () => {
     audioChunksRef.current = [];
   };
 
-  const sendRecording = async (e?: React.MouseEvent | React.TouchEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const sendRecording = async (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     
     if (!audioBlob || !currentWorkspace || isProcessing) {
       if (!audioBlob) showError("Nenhuma gravação para enviar.");
@@ -420,7 +412,7 @@ const VoiceTransactionButton = () => {
     
     // Parar gravação se estiver ativa
     if (isRecording) {
-      stopRecording();
+      stopRecording(e as any);
     }
     
     setShowModal(false);
@@ -433,14 +425,15 @@ const VoiceTransactionButton = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleModalClick = (e: React.MouseEvent) => {
-    // Prevenir que cliques no modal fechem ele
+  const handleModalContentClick = (e: React.MouseEvent) => {
+    // IMPORTANTE: Parar propagação para evitar que cliques no conteúdo fechem o modal
     e.stopPropagation();
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Só fechar se clicar no backdrop e não estiver gravando/processando
+    // Só fechar se clicar EXATAMENTE no backdrop (não em elementos filhos)
     if (e.target === e.currentTarget && !isRecording && !isProcessing) {
+      console.log("🔥 Clique no backdrop - fechando modal");
       closeModal(e);
     }
   };
@@ -450,7 +443,7 @@ const VoiceTransactionButton = () => {
       ref={modalRef}
       className="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
       style={{ 
-        zIndex: 999999, // Z-index muito alto
+        zIndex: 999999,
         position: 'fixed',
         top: 0,
         left: 0,
@@ -458,13 +451,13 @@ const VoiceTransactionButton = () => {
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        touchAction: 'none', // Prevenir gestos no mobile
+        touchAction: 'none',
       }}
       onClick={handleBackdropClick}
     >
       <div 
         className="w-full max-w-sm mx-auto"
-        onClick={handleModalClick}
+        onClick={handleModalContentClick}
       >
         <Card className="relative bg-white shadow-2xl border-2">
           <CardContent className="p-6 text-center">
