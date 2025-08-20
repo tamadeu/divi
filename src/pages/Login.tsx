@@ -20,14 +20,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const LoginPage = () => {
   const { session, loading: sessionLoading } = useSession();
-  const { getPlatformName, getPlatformTagline, getPlatformLogo } = usePublicPlatformSettings();
+  const { getPlatformName, getPlatformTagline, getPlatformLogo, loading } = usePublicPlatformSettings();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -37,7 +37,7 @@ const LoginPage = () => {
       showError(error.message);
     }
     // On success, the SessionProvider will handle the redirect
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   if (sessionLoading) {
@@ -52,26 +52,32 @@ const LoginPage = () => {
   const platformTagline = getPlatformTagline();
   const platformLogo = getPlatformLogo();
 
+  // Don't render platform info if still loading or empty
+  const shouldShowPlatformInfo = !loading && (platformName || platformLogo);
+  const shouldShowTagline = !loading && platformTagline;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <div className="flex justify-center items-center gap-2 mb-4">
-            {platformLogo ? (
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={platformLogo} alt={platformName} />
-                <AvatarFallback>
-                  <Package className="h-6 w-6" />
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <Package className="h-8 w-8" />
-            )}
-            <h1 className="text-2xl font-bold">{platformName}</h1>
-          </div>
+          {shouldShowPlatformInfo && (
+            <div className="flex justify-center items-center gap-2 mb-4">
+              {platformLogo ? (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={platformLogo} alt={platformName || 'Logo'} />
+                  <AvatarFallback>
+                    <Package className="h-6 w-6" />
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <Package className="h-8 w-8" />
+              )}
+              {platformName && <h1 className="text-2xl font-bold">{platformName}</h1>}
+            </div>
+          )}
           <CardTitle className="text-2xl">Bem-vindo de volta!</CardTitle>
           <CardDescription>
-            {platformTagline ? `${platformTagline}. ` : ''}
+            {shouldShowTagline && `${platformTagline}. `}
             Entre com seus dados para acessar sua conta.
           </CardDescription>
         </CardHeader>
@@ -101,8 +107,8 @@ const LoginPage = () => {
                 </div>
                 <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Entrando..." : "Entrar"}
               </Button>
             </div>
           </form>

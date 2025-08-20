@@ -7,7 +7,7 @@ import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Sidebar = () => {
-  const { getPlatformName, getPlatformLogo } = usePublicPlatformSettings();
+  const { getPlatformName, getPlatformLogo, loading } = usePublicPlatformSettings();
   
   const handleRefresh = () => {
     window.location.reload();
@@ -16,6 +16,9 @@ const Sidebar = () => {
   const platformName = getPlatformName();
   const platformLogo = getPlatformLogo();
 
+  // Don't render the name if it's empty or still loading
+  const shouldShowName = !loading && platformName;
+
   return (
     <div className="hidden border-r bg-card md:block">
       <div className="flex h-full max-h-screen flex-col gap-2">
@@ -23,7 +26,7 @@ const Sidebar = () => {
           <Link to="/" className="flex items-center gap-2 font-semibold">
             {platformLogo ? (
               <Avatar className="h-6 w-6">
-                <AvatarImage src={platformLogo} alt={platformName} />
+                <AvatarImage src={platformLogo} alt={platformName || 'Logo'} />
                 <AvatarFallback>
                   <Package className="h-4 w-4" />
                 </AvatarFallback>
@@ -31,7 +34,7 @@ const Sidebar = () => {
             ) : (
               <Package className="h-6 w-6" />
             )}
-            <span className="">{platformName}</span>
+            {shouldShowName && <span>{platformName}</span>}
           </Link>
           <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
             <Bell className="h-4 w-4" />

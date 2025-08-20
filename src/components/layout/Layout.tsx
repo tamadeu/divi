@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
-  const { getPlatformName, getPlatformLogo } = usePublicPlatformSettings();
+  const { getPlatformName, getPlatformLogo, loading } = usePublicPlatformSettings();
   const {
     isAddTransactionModalOpen,
     closeAddTransactionModal,
@@ -41,6 +41,9 @@ const Layout = () => {
   const platformName = getPlatformName();
   const platformLogo = getPlatformLogo();
 
+  // Don't render the name if it's empty or still loading
+  const shouldShowName = !loading && platformName;
+
   return (
     <>
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -57,7 +60,7 @@ const Layout = () => {
                 >
                   {platformLogo ? (
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={platformLogo} alt={platformName} />
+                      <AvatarImage src={platformLogo} alt={platformName || 'Logo'} />
                       <AvatarFallback>
                         <Package2 className="h-4 w-4" />
                       </AvatarFallback>
@@ -65,7 +68,7 @@ const Layout = () => {
                   ) : (
                     <Package2 className="h-6 w-6" />
                   )}
-                  <span>{platformName}</span>
+                  {shouldShowName && <span>{platformName}</span>}
                 </Link>
               </div>
               

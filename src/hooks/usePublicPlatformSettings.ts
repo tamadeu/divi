@@ -33,11 +33,11 @@ export const usePublicPlatformSettings = () => {
   };
 
   const getPlatformName = (): string => {
-    return getSettingValue('platform_name', 'Finance Inc');
+    return getSettingValue('platform_name', '');
   };
 
   const getPlatformTagline = (): string => {
-    return getSettingValue('platform_tagline', 'Controle Financeiro Inteligente');
+    return getSettingValue('platform_tagline', '');
   };
 
   const getPlatformLogo = (): string => {
@@ -49,7 +49,7 @@ export const usePublicPlatformSettings = () => {
   };
 
   const getPrimaryColor = (): string => {
-    return getSettingValue('platform_primary_color', '#000000');
+    return getSettingValue('platform_primary_color', '');
   };
 
   useEffect(() => {
