@@ -52,6 +52,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const transferSchema = z.object({
   from_account_id: z.string().uuid("Selecione uma conta de origem."),
@@ -82,6 +83,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
   const [showCalculator, setShowCalculator] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
   const form = useForm<TransferFormValues>({
@@ -103,16 +105,24 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
   const availableToAccounts = accounts.filter(acc => acc.id !== fromAccountId);
 
   const fetchData = useCallback(async () => {
+    if (!currentWorkspace) return;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
+    // Buscar contas do workspace atual
+    const { data: accountsData } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("workspace_id", currentWorkspace.id)
+      .order("name", { ascending: true });
     setAccounts(accountsData || []);
 
+    // Buscar categorias de receita do workspace atual
     const { data: categoriesData } = await supabase
       .from("categories")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("workspace_id", currentWorkspace.id)
       .eq("type", "income")
       .order("name", { ascending: true });
     setIncomeCategories(categoriesData || []);
@@ -124,10 +134,10 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
         form.setValue('from_account_id', defaultAccount.id, { shouldValidate: true });
       }
     }
-  }, [form, initialTransferData]);
+  }, [form, initialTransferData, currentWorkspace]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && currentWorkspace) {
       fetchData().then(() => {
         if (initialTransferData) {
           const { fromTransaction, toTransaction } = initialTransferData;
@@ -161,7 +171,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
         }
       });
     }
-  }, [isOpen, initialTransferData, fetchData, form]);
+  }, [isOpen, initialTransferData, fetchData, form, currentWorkspace]);
 
   // Limpar conta de destino se ela for igual à conta de origem
   useEffect(() => {
@@ -172,6 +182,11 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
   }, [fromAccountId, form]);
 
   const handleSubmit = async (values: TransferFormValues) => {
+    if (!currentWorkspace) {
+      showError("Nenhum núcleo financeiro selecionado.");
+      return;
+    }
+
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -289,6 +304,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
         // Débito da conta de origem
         {
           user_id: user.id,
+          workspace_id: currentWorkspace.id,
           account_id: fromAccount.id,
           name: `Transferência para ${toAccount.name}`,
           amount: -amount,
@@ -301,6 +317,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
         // Crédito na conta de destino
         {
           user_id: user.id,
+          workspace_id: currentWorkspace.id,
           account_id: toAccount.id,
           name: `Transferência de ${fromAccount.name}`,
           amount: amount,
@@ -357,11 +374,11 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
     if (newCategory) {
       // Primeiro, atualizar a lista de categorias
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user && currentWorkspace) {
         const { data: categoriesData } = await supabase
           .from("categories")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("workspace_id", currentWorkspace.id)
           .eq("type", "income")
           .order("name", { ascending: true });
         
@@ -419,8 +436,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
       const { error: deleteError } = await supabase
         .from("transactions")
         .delete()
-        .in("id", [fromTransaction.id, toTransaction.id])
-        .eq("user_id", user.id);
+        .in("id", [fromTransaction.id, toTransaction.id]);
 
       if (deleteError) {
         showError("Erro ao excluir transferência: " + deleteError.message);
@@ -437,6 +453,10 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
       setIsDeleting(false);
     }
   };
+
+  if (!currentWorkspace) {
+    return null;
+  }
 
   return (
     <>

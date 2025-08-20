@@ -123,15 +123,15 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const fetchData = useCallback(async () => {
     if (!currentWorkspace) return { accounts: [], categories: [] };
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { accounts: [], categories: [] };
-
+    // Buscar contas do workspace atual
     const { data: accountsData } = await supabase
       .from("accounts")
       .select("*")
-      .eq("workspace_id", currentWorkspace.id);
+      .eq("workspace_id", currentWorkspace.id)
+      .order("name", { ascending: true });
     setAccounts(accountsData || []);
 
+    // Buscar categorias do workspace atual
     const { data: categoriesData } = await supabase
       .from("categories")
       .select("*")
@@ -172,10 +172,10 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Buscar sugestões de nomes de transações do workspace atual
       const { data, error } = await supabase
         .from('transactions')
         .select('name, amount')
-        .eq('user_id', user.id)
         .eq('workspace_id', currentWorkspace.id)
         .limit(500);
 

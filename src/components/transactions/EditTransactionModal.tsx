@@ -55,6 +55,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -89,6 +90,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
   const [showCalculator, setShowCalculator] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
   const form = useForm<TransactionFormValues>({
@@ -133,24 +135,29 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
   }, [categories, transactionType]);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { accounts: [], categories: [] };
+    if (!currentWorkspace) return { accounts: [], categories: [] };
 
-    const { data: accountsData } = await supabase.from("accounts").select("*").eq("user_id", user.id);
+    // Buscar contas do workspace atual
+    const { data: accountsData } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("workspace_id", currentWorkspace.id)
+      .order("name", { ascending: true });
     setAccounts(accountsData || []);
 
+    // Buscar categorias do workspace atual
     const { data: categoriesData } = await supabase
       .from("categories")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("workspace_id", currentWorkspace.id)
       .order("name", { ascending: true });
     setCategories(categoriesData || []);
 
     return { accounts: accountsData || [], categories: categoriesData || [] };
-  }, []);
+  }, [currentWorkspace]);
 
   useEffect(() => {
-    if (isOpen && transaction) {
+    if (isOpen && transaction && currentWorkspace) {
       fetchData().then(() => {
         const transactionType = transaction.amount > 0 ? "income" : "expense";
         const absoluteAmount = Math.abs(transaction.amount);
@@ -175,19 +182,17 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
         }
       });
     }
-  }, [isOpen, transaction, form, fetchData]);
+  }, [isOpen, transaction, form, fetchData, currentWorkspace]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (!isOpen || !transactionType) return;
+      if (!isOpen || !transactionType || !currentWorkspace) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      // Buscar sugestões de nomes de transações do workspace atual
       const { data, error } = await supabase
         .from('transactions')
         .select('name, amount')
-        .eq('user_id', user.id)
+        .eq('workspace_id', currentWorkspace.id)
         .limit(500);
 
       if (error) {
@@ -205,7 +210,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
     };
 
     fetchSuggestions();
-  }, [isOpen, transactionType]);
+  }, [isOpen, transactionType, currentWorkspace]);
 
   const filteredNameSuggestions = useMemo(() => {
     if (!nameValue) return [];
@@ -335,8 +340,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
       const { error } = await supabase
         .from("transactions")
         .delete()
-        .eq("id", transaction.id)
-        .eq("user_id", user.id);
+        .eq("id", transaction.id);
 
       if (error) {
         showError("Erro ao excluir transação: " + error.message);
@@ -354,7 +358,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
     }
   };
 
-  if (!transaction) return null;
+  if (!transaction || !currentWorkspace) return null;
 
   return (
     <>
