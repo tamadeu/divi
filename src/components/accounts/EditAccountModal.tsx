@@ -354,7 +354,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                 className="w-full sm:w-auto"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                {isDeleting ? "Excluindo..." : "Excluir Conta"}
+                {isDeleting ? "Excluindo..." : ""}
               </Button>
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button type="button" variant="ghost" onClick={onClose} className="flex-1 sm:flex-none">
