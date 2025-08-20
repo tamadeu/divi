@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,12 +31,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
+import { Bank } from "@/types/database";
 
 const accountSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
-  bank: z.string().min(1, "O banco é obrigatório."),
+  bank_selection: z.string().min(1, "Selecione um banco ou digite um novo."),
+  custom_bank_name: z.string().optional(),
   type: z.string().min(1, "O tipo é obrigatório."),
   balance: z.coerce.number(),
+}).refine(data => {
+  if (data.bank_selection === "custom_bank_input") {
+    return data.custom_bank_name && data.custom_bank_name.trim().length > 0;
+  }
+  return true;
+}, {
+  message: "O nome do novo banco é obrigatório.",
+  path: ["custom_bank_name"],
 });
 
 type AccountFormValues = z.infer<typeof accountSchema>;
@@ -49,16 +59,39 @@ interface AddAccountModalProps {
 
 const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableBanks, setAvailableBanks] = useState<Bank[]>([]);
+  const [showCustomBankInput, setShowCustomBankInput] = useState(false);
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
       name: "",
-      bank: "",
+      bank_selection: "",
+      custom_bank_name: "",
       type: "",
       balance: 0,
     },
   });
+
+  useEffect(() => {
+    const fetchBanks = async () => {
+      const { data, error } = await supabase
+        .from("banks")
+        .select("id, name")
+        .order("name", { ascending: true });
+      if (error) {
+        console.error("Error fetching banks:", error);
+      } else {
+        setAvailableBanks(data || []);
+      }
+    };
+    if (isOpen) {
+      fetchBanks();
+      setShowCustomBankInput(false); // Reset custom input state when modal opens
+      form.setValue('custom_bank_name', ''); // Clear custom bank name
+      form.clearErrors('custom_bank_name'); // Clear errors for custom bank name
+    }
+  }, [isOpen, form]);
 
   const handleSubmit = async (values: AccountFormValues) => {
     setIsSubmitting(true);
@@ -69,8 +102,19 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
       return;
     }
 
+    let bankNameToInsert: string;
+    if (values.bank_selection === "custom_bank_input") {
+      bankNameToInsert = values.custom_bank_name || "";
+    } else {
+      const selectedBank = availableBanks.find(b => b.id === values.bank_selection);
+      bankNameToInsert = selectedBank ? selectedBank.name : "";
+    }
+
     const { error } = await supabase.from("accounts").insert({
-      ...values,
+      name: values.name,
+      bank: bankNameToInsert, // Use the determined bank name
+      type: values.type,
+      balance: values.balance,
       user_id: user.id,
     });
 
@@ -111,17 +155,59 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
             />
             <FormField
               control={form.control}
-              name="bank"
+              name="bank_selection"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome do Banco</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Banco Digital" {...field} />
-                  </FormControl>
+                  <FormLabel>Banco</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value === "custom_bank_input") {
+                        setShowCustomBankInput(true);
+                        form.trigger("custom_bank_name"); // Trigger validation for custom name
+                      } else {
+                        setShowCustomBankInput(false);
+                        form.setValue("custom_bank_name", ""); // Clear custom name if not needed
+                        form.clearErrors("custom_bank_name"); // Clear errors
+                      }
+                    }} 
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um banco" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableBanks.map((bank) => (
+                        <SelectItem key={bank.id} value={bank.id}>
+                          {bank.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom_bank_input">
+                        Não encontrou seu banco?
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {showCustomBankInput && (
+              <FormField
+                control={form.control}
+                name="custom_bank_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Novo Banco</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Meu Novo Banco" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name="type"
