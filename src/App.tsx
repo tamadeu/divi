@@ -30,7 +30,6 @@ import CategoriesPage from "./pages/Categories";
 import { Skeleton } from "./components/ui/skeleton";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPasswordPage from "./pages/ResetPassword";
-import CreditCardsPage from "./pages/CreditCards"; // Import the new page
 
 const ProtectedRoute = () => {
   const { session, loading } = useSession();
@@ -97,7 +96,6 @@ function AppRoutes() {
           <Route path="/budgets" element={<BudgetsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/credit-cards" element={<CreditCardsPage />} /> {/* New Credit Cards Route */}
         </Route>
 
         {/* Admin Routes */}
