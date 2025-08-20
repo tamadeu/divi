@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Package } from "lucide-react";
+import { PlusCircle, Package, UserCheck, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SubscriptionPlan } from "@/types/subscription-plans";
@@ -18,6 +18,7 @@ const AdminPlans = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   
   // Modal states
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -29,7 +30,17 @@ const AdminPlans = () => {
     try {
       const { data, error } = await supabase
         .from('subscription_plans')
-        .select('*')
+        .select(`
+          *,
+          exclusive_user:exclusive_user_id (
+            id,
+            email,
+            profiles:profiles (
+              first_name,
+              last_name
+            )
+          )
+        `)
         .order('sort_order', { ascending: true });
 
       if (error) {
@@ -74,8 +85,17 @@ const AdminPlans = () => {
       }
     }
 
+    // Filtrar por tipo
+    if (typeFilter !== "all") {
+      if (typeFilter === "exclusive") {
+        filtered = filtered.filter(plan => plan.is_exclusive);
+      } else if (typeFilter === "public") {
+        filtered = filtered.filter(plan => !plan.is_exclusive);
+      }
+    }
+
     setFilteredPlans(filtered);
-  }, [plans, searchQuery, statusFilter]);
+  }, [plans, searchQuery, statusFilter, typeFilter]);
 
   const handleDeletePlan = (plan: SubscriptionPlan) => {
     setDeletingPlan(plan);
@@ -186,6 +206,7 @@ const AdminPlans = () => {
   const totalPlans = plans.length;
   const activePlans = plans.filter(p => p.is_active).length;
   const featuredPlans = plans.filter(p => p.is_featured).length;
+  const exclusivePlans = plans.filter(p => p.is_exclusive).length;
 
   return (
     <>
@@ -200,7 +221,7 @@ const AdminPlans = () => {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Planos</CardTitle>
@@ -239,13 +260,27 @@ const AdminPlans = () => {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Planos Exclusivos</CardTitle>
+            <UserCheck className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{exclusivePlans}</div>
+            <p className="text-xs text-muted-foreground">
+              Planos por demanda
+            
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Planos de Assinatura</CardTitle>
           <CardDescription>
-            Gerencie os planos de assinatura disponíveis na plataforma.
+            Gerencie os planos de assinatura disponíveis na plataforma, incluindo planos exclusivos por demanda.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -267,6 +302,16 @@ const AdminPlans = () => {
                 <SelectItem value="featured">Em Destaque</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Tipos</SelectItem>
+                <SelectItem value="public">Planos Públicos</SelectItem>
+                <SelectItem value="exclusive">Planos Exclusivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {loading ? (
@@ -285,15 +330,15 @@ const AdminPlans = () => {
             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-12">
               <div className="flex flex-col items-center gap-1 text-center">
                 <h3 className="text-2xl font-bold tracking-tight">
-                  {searchQuery || statusFilter !== "all" ? 'Nenhum plano encontrado' : 'Nenhum plano cadastrado'}
+                  {searchQuery || statusFilter !== "all" || typeFilter !== "all" ? 'Nenhum plano encontrado' : 'Nenhum plano cadastrado'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery || statusFilter !== "all"
+                  {searchQuery || statusFilter !== "all" || typeFilter !== "all"
                     ? 'Tente ajustar sua busca ou filtros.'
                     : 'Comece criando o primeiro plano de assinatura da plataforma.'
                   }
                 </p>
-                {!searchQuery && statusFilter === "all" && (
+                {!searchQuery && statusFilter === "all" && typeFilter === "all" && (
                   <Button className="mt-4" asChild>
                     <Link to="/admin/plans/new">
                       <PlusCircle className="mr-2 h-4 w-4" />

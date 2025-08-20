@@ -6,6 +6,9 @@ export interface SubscriptionPlan {
   price_yearly: number | null;
   is_active: boolean;
   is_featured: boolean;
+  is_exclusive: boolean;
+  exclusive_user_id: string | null;
+  max_subscriptions: number | null;
   sort_order: number;
   
   // Core limits (always enabled)
@@ -31,6 +34,16 @@ export interface SubscriptionPlan {
   
   created_at: string;
   updated_at: string;
+  
+  // Relations for exclusive plans
+  exclusive_user?: {
+    id: string;
+    email: string;
+    profiles?: {
+      first_name: string | null;
+      last_name: string | null;
+    };
+  };
 }
 
 export interface PlanFormData {
@@ -40,6 +53,9 @@ export interface PlanFormData {
   price_yearly: number | null;
   is_active: boolean;
   is_featured: boolean;
+  is_exclusive: boolean;
+  exclusive_user_id: string | null;
+  max_subscriptions: number | null;
   sort_order: number;
   
   // Core limits

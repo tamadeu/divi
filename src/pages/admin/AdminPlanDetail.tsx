@@ -23,9 +23,13 @@ import {
   Check,
   X,
   Calendar,
-  Package
+  Package,
+  UserCheck,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import DeletePlanAlert from "@/components/admin/DeletePlanAlert";
+import { UserSearchCombobox } from "@/components/admin/UserSearchCombobox";
 
 const AdminPlanDetail = () => {
   const { planId } = useParams<{ planId: string }>();
@@ -51,6 +55,9 @@ const AdminPlanDetail = () => {
         price_yearly: null,
         is_active: true,
         is_featured: false,
+        is_exclusive: false,
+        exclusive_user_id: null,
+        max_subscriptions: null,
         sort_order: 0,
         max_transactions: null,
         max_accounts: null,
@@ -77,7 +84,17 @@ const AdminPlanDetail = () => {
     try {
       const { data, error } = await supabase
         .from('subscription_plans')
-        .select('*')
+        .select(`
+          *,
+          exclusive_user:exclusive_user_id (
+            id,
+            email,
+            profiles:profiles (
+              first_name,
+              last_name
+            )
+          )
+        `)
         .eq('id', planId)
         .single();
 
@@ -113,6 +130,9 @@ const AdminPlanDetail = () => {
         price_yearly: formData.price_yearly,
         is_active: formData.is_active,
         is_featured: formData.is_featured,
+        is_exclusive: formData.is_exclusive,
+        exclusive_user_id: formData.is_exclusive ? formData.exclusive_user_id : null,
+        max_subscriptions: formData.max_subscriptions,
         sort_order: formData.sort_order || 0,
         max_transactions: formData.max_transactions,
         max_accounts: formData.max_accounts,
@@ -200,6 +220,18 @@ const AdminPlanDetail = () => {
     return Math.round((1 - (formData.price_yearly / (formData.price_monthly * 12))) * 100);
   };
 
+  const getExclusiveUserName = () => {
+    if (!plan?.exclusive_user) return null;
+    const user = plan.exclusive_user;
+    if (user.profiles?.first_name && user.profiles?.last_name) {
+      return `${user.profiles.first_name} ${user.profiles.last_name}`;
+    }
+    if (user.profiles?.first_name) {
+      return user.profiles.first_name;
+    }
+    return user.email.split('@')[0];
+  };
+
   const coreFeatures = PLAN_FEATURES.filter(f => f.category === 'core');
   const optionalFeatures = PLAN_FEATURES.filter(f => f.category === 'optional');
 
@@ -233,6 +265,12 @@ const AdminPlanDetail = () => {
               {isNewPlan ? 'Novo Plano' : formData.name || 'Plano'}
               {formData.is_featured && (
                 <Star className="h-5 w-5 text-yellow-500 fill-current" />
+              )}
+              {formData.is_exclusive && (
+                <Badge variant="outline" className="gap-1">
+                  <UserCheck className="h-3 w-3" />
+                  Exclusivo
+                </Badge>
               )}
               {!isNewPlan && (
                 <Badge variant={formData.is_active ? "default" : "secondary"}>
@@ -380,8 +418,8 @@ const AdminPlanDetail = () => {
               </div>
             </div>
 
-            <div className="flex gap-6">
-              <div className="flex items-center justify-between rounded-lg border p-4 flex-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Plano Ativo</Label>
                   <p className="text-sm text-muted-foreground">
@@ -395,7 +433,7 @@ const AdminPlanDetail = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border p-4 flex-1">
+              <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Plano em Destaque</Label>
                   <p className="text-sm text-muted-foreground">
@@ -409,6 +447,96 @@ const AdminPlanDetail = () => {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Configurações de Exclusividade */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              Configurações de Exclusividade
+            </CardTitle>
+            <CardDescription>
+              Configure se este plano é exclusivo para um usuário específico ou tem limite de assinaturas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label>Plano Exclusivo</Label>
+                <p className="text-sm text-muted-foreground">
+                  Planos exclusivos só aparecem para o usuário específico
+                </p>
+              </div>
+              <Switch
+                checked={formData.is_exclusive || false}
+                onCheckedChange={(checked) => {
+                  setFormData({ 
+                    ...formData, 
+                    is_exclusive: checked,
+                    exclusive_user_id: checked ? formData.exclusive_user_id : null
+                  });
+                }}
+                disabled={!isEditing}
+              />
+            </div>
+
+            {formData.is_exclusive && (
+              <div className="space-y-2">
+                <Label>Usuário Exclusivo</Label>
+                {isEditing ? (
+                  <UserSearchCombobox
+                    value={formData.exclusive_user_id}
+                    onValueChange={(userId) => setFormData({ ...formData, exclusive_user_id: userId })}
+                    placeholder="Selecione o usuário exclusivo..."
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 p-3 border rounded-lg">
+                    {plan?.exclusive_user ? (
+                      <>
+                        <UserCheck className="h-4 w-4 text-green-600" />
+                        <div>
+                          <p className="font-medium">{getExclusiveUserName()}</p>
+                          <p className="text-sm text-muted-foreground">{plan.exclusive_user.email}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">Nenhum usuário selecionado</p>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Este plano só será visível e disponível para o usuário selecionado.
+                </p>
+              </div>
+            )}
+
+            {!formData.is_exclusive && (
+              <div className="space-y-2">
+                <Label htmlFor="max_subscriptions">Limite de Assinaturas</Label>
+                {isEditing ? (
+                  <Input
+                    id="max_subscriptions"
+                    type="number"
+                    min="1"
+                    placeholder="Ilimitado"
+                    value={formData.max_subscriptions || ""}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      max_subscriptions: e.target.value ? parseInt(e.target.value) : null 
+                    })}
+                  />
+                ) : (
+                  <p className="text-lg font-medium">
+                    {formatLimit(formData.max_subscriptions)} assinaturas
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Número máximo de usuários que podem assinar este plano. Deixe vazio para ilimitado.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -523,6 +651,12 @@ const AdminPlanDetail = () => {
                 <div>
                   <span className="font-medium">ID do Plano:</span>
                   <p className="text-muted-foreground font-mono">{plan.id}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Tipo:</span>
+                  <p className="text-muted-foreground">
+                    {plan.is_exclusive ? 'Plano Exclusivo' : 'Plano Público'}
+                  </p>
                 </div>
                 <div>
                   <span className="font-medium">Criado em:</span>

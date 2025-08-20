@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubscriptionPlan } from "@/types/subscription-plans";
-import { Pencil, Trash2, Star, Eye, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import { Pencil, Trash2, Star, Eye, ArrowUp, ArrowDown, ExternalLink, UserCheck, Users } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Link } from "react-router-dom";
 
@@ -57,6 +57,18 @@ const SubscriptionPlansTable = ({
     return features.filter(Boolean).length;
   };
 
+  const getExclusiveUserName = (plan: SubscriptionPlan) => {
+    if (!plan.exclusive_user) return null;
+    const user = plan.exclusive_user;
+    if (user.profiles?.first_name && user.profiles?.last_name) {
+      return `${user.profiles.first_name} ${user.profiles.last_name}`;
+    }
+    if (user.profiles?.first_name) {
+      return user.profiles.first_name;
+    }
+    return user.email.split('@')[0];
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -64,6 +76,7 @@ const SubscriptionPlansTable = ({
           <TableRow>
             <TableHead>Ordem</TableHead>
             <TableHead>Plano</TableHead>
+            <TableHead>Tipo</TableHead>
             <TableHead>Preço Mensal</TableHead>
             <TableHead>Preço Anual</TableHead>
             <TableHead>Limites Principais</TableHead>
@@ -120,6 +133,31 @@ const SubscriptionPlansTable = ({
                           ? `${plan.description.substring(0, 50)}...`
                           : plan.description
                         }
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {plan.is_exclusive ? (
+                      <Badge variant="outline" className="gap-1">
+                        <UserCheck className="h-3 w-3" />
+                        Exclusivo
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1">
+                        <Users className="h-3 w-3" />
+                        Público
+                      </Badge>
+                    )}
+                    {plan.is_exclusive && plan.exclusive_user && (
+                      <div className="text-xs text-muted-foreground">
+                        {getExclusiveUserName(plan)}
+                      </div>
+                    )}
+                    {!plan.is_exclusive && plan.max_subscriptions && (
+                      <div className="text-xs text-muted-foreground">
+                        Máx: {plan.max_subscriptions} usuários
                       </div>
                     )}
                   </div>
@@ -201,7 +239,7 @@ const SubscriptionPlansTable = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={9} className="h-24 text-center">
+              <TableCell colSpan={10} className="h-24 text-center">
                 Nenhum plano encontrado.
               </TableCell>
             </TableRow>
