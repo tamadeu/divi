@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
+import PullToRefreshWrapper from "./PullToRefresh";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import NavLinks from "./NavLinks";
 import { Package2 } from "lucide-react";
@@ -11,10 +12,12 @@ import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import AddTransferModal from "@/components/transfers/AddTransferModal";
-import UserCard from "./UserCard"; // Importar UserCard
+import UserCard from "./UserCard";
+import { showSuccess } from "@/utils/toast";
 
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
   const {
     isAddTransactionModalOpen,
     closeAddTransactionModal,
@@ -31,6 +34,16 @@ const Layout = () => {
     onTransferAdded,
   } = useModal();
 
+  const handleRefresh = async () => {
+    // Simula um delay de atualização
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Recarrega a página atual
+    window.location.reload();
+    
+    showSuccess("Página atualizada!");
+  };
+
   return (
     <>
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -46,7 +59,6 @@ const Layout = () => {
                 <Package2 className="h-6 w-6" />
                 <span>Divi</span>
               </Link>
-              {/* Adicionar UserCard aqui para mobile */}
               <UserCard /> 
               <div onClick={() => setMobileSidebarOpen(false)}>
                 <NavLinks />
@@ -57,9 +69,11 @@ const Layout = () => {
 
         <div className="flex flex-col">
           <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6">
-            <Outlet />
-          </main>
+          <PullToRefreshWrapper onRefresh={handleRefresh}>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6">
+              <Outlet />
+            </main>
+          </PullToRefreshWrapper>
         </div>
         <BottomNav onMenuClick={() => setMobileSidebarOpen(true)} />
       </div>
