@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Transaction } from "@/types/database";
+import { Transaction, Company } from "@/types/database"; // Importar Company
 import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal"; // Importar o modal de detalhes
 
 interface SummaryData {
@@ -22,6 +22,7 @@ interface SummaryData {
 const Dashboard = () => {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]); // Novo estado para empresas
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
@@ -40,6 +41,16 @@ const Dashboard = () => {
     if (!user) {
       setLoading(false);
       return;
+    }
+
+    // Fetch companies
+    const { data: companiesData, error: companiesError } = await supabase
+      .from("companies")
+      .select("name, logo_url");
+    if (companiesError) {
+      console.error("Error fetching companies:", companiesError);
+    } else {
+      setCompanies(companiesData || []);
     }
 
     // Fetch summary
@@ -153,7 +164,7 @@ const Dashboard = () => {
       )}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <RecentTransactions transactions={transactions} loading={loading} onRowClick={handleTransactionClick} />
+          <RecentTransactions transactions={transactions} loading={loading} onRowClick={handleTransactionClick} companies={companies} />
         </div>
         <div className="lg:col-span-2">
           <SpendingChart />

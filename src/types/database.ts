@@ -1,85 +1,23 @@
-export type Account = {
-  id: string;
-  user_id: string;
-  name: string;
-  bank: string;
-  type: string;
-  balance: number;
-  created_at: string;
-  is_default: boolean;
-};
+// src/types/database.ts
+import { Database } from "./supabase";
 
-export type Category = {
-  id: string;
-  user_id: string;
-  name: string;
-  type: "income" | "expense";
-  created_at: string;
-};
+export type Tables<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Row'];
+export type Enums<T extends keyof Database['public']['Enums']> =
+  Database['public']['Enums'][T];
 
-export type Profile = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar_url: string | null;
-  updated_at: string;
-  user_type: "admin" | "user";
+export type Account = Tables<'accounts'>;
+export type Category = Tables<'categories'>;
+export type Transaction = Tables<'transactions'> & {
+  category?: { name: string } | string; // Allow for nested object or direct string
+  account?: { name: string; type: string } | null;
 };
+export type Profile = Tables<'profiles'>;
 
-export type Bank = {
-  id: string;
-  name: string;
-  logo_url: string | null;
-  color: string;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Company = {
+export interface Company {
   id: string;
   name: string;
   logo_url: string | null;
   created_at: string;
   updated_at: string;
-};
-
-// Representa uma transação com o nome da categoria já incluído (via JOIN)
-export type Transaction = {
-  id: string;
-  account_id: string;
-  date: string;
-  name: string;
-  amount: number;
-  status: "Concluído" | "Pendente" | "Falhou";
-  description: string | null;
-  category: string | null; // Categoria pode ser nula para transferências
-  transfer_id?: string | null;
-  account?: {
-    name: string;
-    type: string;
-  } | null;
-};
-
-export type Budget = {
-  id: string;
-  user_id: string;
-  category_id: string;
-  amount: number;
-  month: string; // date string
-  created_at: string;
-};
-
-export type BudgetWithSpending = {
-  id: string;
-  category_id: string;
-  category_name: string;
-  budgeted_amount: number;
-  spent_amount: number;
-};
-
-export type User = {
-  id: string;
-  email: string;
-  created_at: string;
-  profile?: Profile;
-};
+}

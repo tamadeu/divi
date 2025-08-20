@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Transaction } from "@/types/database";
+import { Transaction, Company } from "@/types/database"; // Importar Company
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal";
 import { Input } from "@/components/ui/input";
@@ -30,11 +30,13 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, ArrowRightLeft } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
+import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
 
 const ITEMS_PER_PAGE = 10;
 
 const TransactionsPage = () => {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]); // Novo estado para empresas
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -53,6 +55,17 @@ const TransactionsPage = () => {
       return;
     }
 
+    // Fetch companies
+    const { data: companiesData, error: companiesError } = await supabase
+      .from("companies")
+      .select("name, logo_url");
+    if (companiesError) {
+      console.error("Error fetching companies:", companiesError);
+    } else {
+      setCompanies(companiesData || []);
+    }
+
+    // Fetch transactions
     const { data, error } = await supabase
       .from("transactions")
       .select(`
@@ -64,7 +77,8 @@ const TransactionsPage = () => {
         status,
         description,
         category:categories (name),
-        account:accounts (name, type)
+        account:accounts (name, type),
+        transfer_id
       `)
       .eq("user_id", user.id)
       .order("date", { ascending: false });
@@ -231,6 +245,7 @@ const TransactionsPage = () => {
               <AllTransactionsTable
                 transactions={paginatedTransactions}
                 onRowClick={handleRowClick}
+                companies={companies} // Passar companies
               />
               {totalPages > 1 && (
                 <div className="mt-4">

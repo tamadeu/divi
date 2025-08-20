@@ -17,18 +17,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Transaction } from "@/types/database";
+import { Transaction, Company } from "@/types/database"; // Importar Company
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "@/components/transactions/TransactionCardList";
+import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
   loading: boolean;
-  onRowClick: (transaction: Transaction) => void; // Adicionar prop onRowClick
+  onRowClick: (transaction: Transaction) => void;
+  companies: Company[]; // Adicionar prop companies
 }
 
-const RecentTransactions = ({ transactions, loading, onRowClick }: RecentTransactionsProps) => {
+const RecentTransactions = ({ transactions, loading, onRowClick, companies }: RecentTransactionsProps) => {
   const isMobile = useIsMobile();
 
   const statusVariant = {
@@ -62,7 +64,7 @@ const RecentTransactions = ({ transactions, loading, onRowClick }: RecentTransac
             <Skeleton className="h-10 w-full" />
           </div>
         ) : isMobile ? (
-          <TransactionCardList transactions={transactions} loading={loading} onRowClick={onRowClick} />
+          <TransactionCardList transactions={transactions} loading={loading} onRowClick={onRowClick} companies={companies} />
         ) : (
           <Table>
             <TableHeader>

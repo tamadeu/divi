@@ -7,16 +7,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction } from "@/types/database";
+import { Transaction, Company } from "@/types/database"; // Importar Company
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "./TransactionCardList";
+import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
   onRowClick: (transaction: Transaction) => void;
+  companies: Company[]; // Adicionar prop companies
 }
 
-const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTableProps) => {
+const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransactionsTableProps) => {
   const isMobile = useIsMobile();
   
   const statusVariant = {
@@ -27,7 +29,7 @@ const AllTransactionsTable = ({ transactions, onRowClick }: AllTransactionsTable
 
   // Renderizar cards no mobile
   if (isMobile) {
-    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} />;
+    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} companies={companies} loading={false} />;
   }
 
   // Renderizar tabela no desktop
