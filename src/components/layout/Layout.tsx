@@ -4,6 +4,8 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import PullToRefreshWrapper from "./PullToRefresh";
+import InstallPrompt from "../pwa/InstallPrompt";
+import UpdatePrompt from "../pwa/UpdatePrompt";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import NavLinks from "./NavLinks";
 import { Package2 } from "lucide-react";
@@ -77,6 +79,10 @@ const Layout = () => {
         </div>
         <BottomNav onMenuClick={() => setMobileSidebarOpen(true)} />
       </div>
+
+      {/* PWA Components */}
+      <InstallPrompt />
+      <UpdatePrompt />
 
       <AddTransactionModal
         isOpen={isAddTransactionModalOpen}
