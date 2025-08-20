@@ -43,6 +43,7 @@ import AddAccountModal from "../accounts/AddAccountModal";
 import AddCategoryModal from "../categories/AddCategoryModal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -74,6 +75,7 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   const [isNamePopoverOpen, setIsNamePopoverOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFutureDate, setIsFutureDate] = useState(false);
+  const isMobile = useIsMobile();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -257,264 +259,308 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Adicionar Nova Transação</DialogTitle>
-            <DialogDescription>
-              Preencha os detalhes da sua nova transação.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Tabs
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          form.setValue("name", "");
-                        }}
-                        className="w-full"
-                      >
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger
-                            value="expense"
-                            className="data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground"
-                          >
-                            Despesa
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="income"
-                            className="data-[state=active]:bg-green-600 data-[state=active]:text-primary-foreground"
-                          >
-                            Renda
-                          </TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome</FormLabel>
-                      <Popover open={isNamePopoverOpen && filteredNameSuggestions.length > 0} onOpenChange={setIsNamePopoverOpen}>
-                        <PopoverAnchor asChild>
-                          <FormControl>
-                            <Input
-                              placeholder={transactionType === 'expense' ? "Ex: Uber" : "Ex: Salário"}
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                if (e.target.value) {
-                                  setIsNamePopoverOpen(true);
-                                }
-                              }}
-                              onBlur={() => {
-                                setTimeout(() => setIsNamePopoverOpen(false), 150);
-                                field.onBlur();
-                              }}
-                              onFocus={() => setIsNamePopoverOpen(true)}
-                              autoComplete="off"
-                            />
-                          </FormControl>
-                        </PopoverAnchor>
-                        <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <Command>
-                            <CommandList>
-                              <CommandGroup>
-                                {filteredNameSuggestions.map((suggestion) => (
-                                  <CommandItem
-                                    key={suggestion}
-                                    value={suggestion}
-                                    onSelect={() => {
-                                      form.setValue("name", suggestion, { shouldValidate: true });
-                                      setIsNamePopoverOpen(false);
-                                    }}
-                                  >
-                                    {suggestion}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data</FormLabel>
-                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                      <PopoverTrigger asChild>
+        <DialogContent 
+          className={cn(
+            "sm:max-w-lg",
+            isMobile && "h-[90vh] max-h-[90vh] w-[95vw] max-w-[95vw] p-0"
+          )}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className={cn(
+            "flex flex-col",
+            isMobile && "h-full"
+          )}>
+            <DialogHeader className={cn(
+              isMobile && "px-6 py-4 border-b flex-shrink-0"
+            )}>
+              <DialogTitle>Adicionar Nova Transação</DialogTitle>
+              <DialogDescription>
+                Preencha os detalhes da sua nova transação.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className={cn(
+              "flex-1",
+              isMobile && "overflow-y-auto px-6 py-4"
+            )}>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
+                          <Tabs
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              form.setValue("name", "");
+                            }}
+                            className="w-full"
                           >
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: ptBR })
-                            ) : (
-                              <span>Escolha uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                            <TabsList className="grid w-full grid-cols-2">
+                              <TabsTrigger
+                                value="expense"
+                                className="data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground"
+                              >
+                                Despesa
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="income"
+                                className="data-[state=active]:bg-green-600 data-[state=active]:text-primary-foreground"
+                              >
+                                Renda
+                              </TabsTrigger>
+                            </TabsList>
+                          </Tabs>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            field.onChange(date);
-                            setIsCalendarOpen(false);
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="account_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Conta</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma conta" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddAccountModalOpen(true)}>
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="category_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma categoria" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {filteredCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <FormControl>
-                      <Tabs
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        className="w-full"
-                      >
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="Concluído" disabled={isFutureDate}>
-                            Concluído
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="Pendente"
-                            className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground"
-                          >
-                            Pendente
-                          </TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    </FormControl>
-                    {isFutureDate && (
-                      <p className="text-xs text-muted-foreground pt-1">
-                        Transações futuras são definidas como pendentes.
-                      </p>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição (Opcional)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Adicione uma nota..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Adicionando..." : "Adicionar Transação"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+                  />
+
+                  {/* Nome - sempre em linha própria no mobile */}
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome</FormLabel>
+                        <Popover open={isNamePopoverOpen && filteredNameSuggestions.length > 0} onOpenChange={setIsNamePopoverOpen}>
+                          <PopoverAnchor asChild>
+                            <FormControl>
+                              <Input
+                                placeholder={transactionType === 'expense' ? "Ex: Uber" : "Ex: Salário"}
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  if (e.target.value) {
+                                    setIsNamePopoverOpen(true);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => setIsNamePopoverOpen(false), 150);
+                                  field.onBlur();
+                                }}
+                                onFocus={() => setIsNamePopoverOpen(true)}
+                                autoComplete="off"
+                              />
+                            </FormControl>
+                          </PopoverAnchor>
+                          <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-[--radix-popover-trigger-width] p-0" align="start">
+                            <Command>
+                              <CommandList>
+                                <CommandGroup>
+                                  {filteredNameSuggestions.map((suggestion) => (
+                                    <CommandItem
+                                      key={suggestion}
+                                      value={suggestion}
+                                      onSelect={() => {
+                                        form.setValue("name", suggestion, { shouldValidate: true });
+                                        setIsNamePopoverOpen(false);
+                                      }}
+                                    >
+                                      {suggestion}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Valor - sempre em linha própria no mobile */}
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valor</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Data - sempre em linha própria */}
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Data</FormLabel>
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP", { locale: ptBR })
+                                ) : (
+                                  <span>Escolha uma data</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setIsCalendarOpen(false);
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Conta - sempre em linha própria no mobile */}
+                  <FormField
+                    control={form.control}
+                    name="account_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Conta</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione uma conta" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" size="icon" onClick={() => setIsAddAccountModalOpen(true)}>
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Categoria - sempre em linha própria no mobile */}
+                  <FormField
+                    control={form.control}
+                    name="category_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Categoria</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione uma categoria" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {filteredCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Status - sempre em linha própria */}
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <FormControl>
+                          <Tabs
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="w-full"
+                          >
+                            <TabsList className="grid w-full grid-cols-2">
+                              <TabsTrigger value="Concluído" disabled={isFutureDate}>
+                                Concluído
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="Pendente"
+                                className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground"
+                              >
+                                Pendente
+                              </TabsTrigger>
+                            </TabsList>
+                          </Tabs>
+                        </FormControl>
+                        {isFutureDate && (
+                          <p className="text-xs text-muted-foreground pt-1">
+                            Transações futuras são definidas como pendentes.
+                          </p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Descrição - sempre em linha própria */}
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descrição (Opcional)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Adicione uma nota..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
+            </div>
+
+            <DialogFooter className={cn(
+              isMobile && "px-6 py-4 border-t flex-shrink-0 flex-col gap-2 sm:flex-col"
+            )}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                onClick={form.handleSubmit(handleSubmit)}
+                className={cn(isMobile && "w-full order-1")}
+              >
+                {isSubmitting ? "Adicionando..." : "Adicionar Transação"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={onClose}
+                className={cn(isMobile && "w-full order-2")}
+              >
+                Cancelar
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
       <AddAccountModal
