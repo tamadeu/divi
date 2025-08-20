@@ -42,7 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTheme } from "next-themes";
 import WorkspaceMembersModal from "@/components/settings/WorkspaceMembersModal";
 import { WorkspaceWithRole } from "@/types/workspace";
 
