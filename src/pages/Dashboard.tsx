@@ -1,4 +1,5 @@
 import SummaryCard from "@/components/dashboard/SummaryCard";
+import MobileSummaryCards from "@/components/dashboard/MobileSummaryCards";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import SpendingChart from "@/components/dashboard/SpendingChart";
 import { DollarSign, TrendingUp, TrendingDown, PlusCircle, ArrowRightLeft } from "lucide-react";
@@ -8,7 +9,6 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SummaryData {
@@ -100,41 +100,23 @@ const Dashboard = () => {
         </div>
       </div>
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+          <Skeleton className="h-24 md:hidden" />
+          <div className="grid grid-cols-2 gap-3 md:hidden">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+          <Skeleton className="h-24 hidden md:block" />
+          <Skeleton className="h-24 hidden lg:block" />
         </div>
       ) : (
         isMobile ? (
-          <Carousel className="w-full">
-            <CarouselContent className="-ml-4">
-              <CarouselItem className="pl-4 basis-full">
-                <SummaryCard
-                  title="Saldo Total"
-                  value={formatCurrency(summary?.total_balance)}
-                  icon={DollarSign}
-                  variant="default"
-                />
-              </CarouselItem>
-              <CarouselItem className="pl-4 basis-full">
-                <SummaryCard
-                  title="Renda Mensal"
-                  value={formatCurrency(summary?.monthly_income)}
-                  icon={TrendingUp}
-                  variant="income"
-                />
-              </CarouselItem>
-              <CarouselItem className="pl-4 basis-full">
-                <SummaryCard
-                  title="Despesas Mensais"
-                  value={formatCurrency(Math.abs(summary?.monthly_expenses || 0))}
-                  icon={TrendingDown}
-                  variant="expense"
-                />
-              </CarouselItem>
-            </CarouselContent>
-          </Carousel>
+          <MobileSummaryCards
+            totalBalance={summary?.total_balance || 0}
+            monthlyIncome={summary?.monthly_income || 0}
+            monthlyExpenses={summary?.monthly_expenses || 0}
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
