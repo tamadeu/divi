@@ -21,6 +21,13 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 
+interface Bank {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  color: string;
+}
+
 interface Account {
   id: string;
   name: string;
@@ -43,20 +50,40 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
     name: "",
     bank: "",
     type: "",
-    include_in_total: true,
+    includeInTotal: true,
   });
   const [loading, setLoading] = useState(false);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
 
+  // Initialize form data when account changes
   useEffect(() => {
-    if (account) {
+    if (account && isOpen) {
       setFormData({
         name: account.name,
         bank: account.bank,
         type: account.type,
-        include_in_total: account.include_in_total,
+        includeInTotal: account.include_in_total,
       });
+      fetchBanks();
     }
-  }, [account]);
+  }, [account, isOpen]);
+
+  const fetchBanks = async () => {
+    setLoadingBanks(true);
+    const { data, error } = await supabase
+      .from("banks")
+      .select("id, name, logo_url, color")
+      .order("name");
+
+    if (error) {
+      console.error("Error fetching banks:", error);
+      showError("Erro ao carregar bancos");
+    } else {
+      setBanks(data || []);
+    }
+    setLoadingBanks(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +95,7 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         name: formData.name,
         bank: formData.bank,
         type: formData.type,
-        include_in_total: formData.include_in_total,
+        include_in_total: formData.includeInTotal,
       })
       .eq("id", account.id);
 
@@ -79,14 +106,8 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
       showSuccess("Conta atualizada com sucesso!");
       onAccountUpdated();
     }
-    setLoading(false);
-  };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(amount);
+    setLoading(false);
   };
 
   const accountTypes = [
@@ -121,13 +142,35 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
             </div>
             <div className="grid gap-2">
               <Label htmlFor="bank">Banco</Label>
-              <Input
-                id="bank"
+              <Select
                 value={formData.bank}
-                onChange={(e) => setFormData({ ...formData, bank: e.target.value })}
-                placeholder="Ex: Banco do Brasil"
-                required
-              />
+                onValueChange={(value) => setFormData({ ...formData, bank: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingBanks ? "Carregando bancos..." : "Selecione o banco"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {banks.map((bank) => (
+                    <SelectItem key={bank.id} value={bank.name}>
+                      <div className="flex items-center gap-2">
+                        {bank.logo_url && (
+                          <img 
+                            src={bank.logo_url} 
+                            alt={bank.name}
+                            className="w-4 h-4 object-contain"
+                          />
+                        )}
+                        <span>{bank.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {banks.length === 0 && !loadingBanks && (
+                    <SelectItem value="outros" disabled>
+                      Nenhum banco encontrado
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="type">Tipo de Conta</Label>
@@ -147,32 +190,20 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="current_balance">Saldo Atual</Label>
-              <Input
-                id="current_balance"
-                value={formatCurrency(account.balance)}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">
-                O saldo é calculado automaticamente com base nas transações. Para alterá-lo, adicione uma nova transação.
-              </p>
-            </div>
             <div className="flex items-center space-x-2">
               <Switch
-                id="include_in_total"
-                checked={formData.include_in_total}
-                onCheckedChange={(checked) => setFormData({ ...formData, include_in_total: checked })}
+                id="includeInTotal"
+                checked={formData.includeInTotal}
+                onCheckedChange={(checked) => setFormData({ ...formData, includeInTotal: checked })}
               />
-              <Label htmlFor="include_in_total">Incluir no saldo total</Label>
+              <Label htmlFor="includeInTotal">Incluir no saldo total</Label>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !formData.bank || !formData.type}>
               {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>

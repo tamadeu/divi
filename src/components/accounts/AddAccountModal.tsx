@@ -22,6 +22,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
+interface Bank {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  color: string;
+}
+
 interface AddAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -37,11 +44,14 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
     includeInTotal: true,
   });
   const [loading, setLoading] = useState(false);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
   const { currentWorkspace } = useWorkspace();
 
-  // Reset form when modal opens
+  // Fetch banks when modal opens
   useEffect(() => {
     if (isOpen) {
+      fetchBanks();
       setFormData({
         name: "",
         bank: "",
@@ -51,6 +61,22 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
       });
     }
   }, [isOpen]);
+
+  const fetchBanks = async () => {
+    setLoadingBanks(true);
+    const { data, error } = await supabase
+      .from("banks")
+      .select("id, name, logo_url, color")
+      .order("name");
+
+    if (error) {
+      console.error("Error fetching banks:", error);
+      showError("Erro ao carregar bancos");
+    } else {
+      setBanks(data || []);
+    }
+    setLoadingBanks(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,13 +176,35 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
             </div>
             <div className="grid gap-2">
               <Label htmlFor="bank">Banco</Label>
-              <Input
-                id="bank"
+              <Select
                 value={formData.bank}
-                onChange={(e) => setFormData({ ...formData, bank: e.target.value })}
-                placeholder="Ex: Banco do Brasil"
-                required
-              />
+                onValueChange={(value) => setFormData({ ...formData, bank: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingBanks ? "Carregando bancos..." : "Selecione o banco"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {banks.map((bank) => (
+                    <SelectItem key={bank.id} value={bank.name}>
+                      <div className="flex items-center gap-2">
+                        {bank.logo_url && (
+                          <img 
+                            src={bank.logo_url} 
+                            alt={bank.name}
+                            className="w-4 h-4 object-contain"
+                          />
+                        )}
+                        <span>{bank.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {banks.length === 0 && !loadingBanks && (
+                    <SelectItem value="outros" disabled>
+                      Nenhum banco encontrado
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="type">Tipo de Conta</Label>
@@ -203,7 +251,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !formData.bank || !formData.type}>
               {loading ? "Criando..." : "Criar Conta"}
             </Button>
           </DialogFooter>
