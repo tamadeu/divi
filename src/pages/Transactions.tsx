@@ -31,7 +31,9 @@ import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
 import { useIsMobile } from "@/hooks/use-mobile";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
+import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+import AddTransferModal from "@/components/transfers/AddTransferModal"; // Importar AddTransferModal
+import { showError } from "@/utils/toast"; // Importar showError
 
 const ITEMS_PER_PAGE = 10;
 
@@ -40,7 +42,8 @@ const TransactionsPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddTransferModalOpen, setIsAddTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
 
@@ -135,13 +138,22 @@ const TransactionsPage = () => {
   }, [filteredTransactions, currentPage]);
 
   const handleRowClick = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setIsEditModalOpen(true); // Abrir o modal de edição
+    if (transaction.transfer_id) {
+      showError("A edição de transferências ainda não é suportada. Este modal é para novas transferências.");
+      setIsAddTransferModalOpen(true); // Abre o modal de adicionar transferência
+    } else {
+      setSelectedTransaction(transaction);
+      setIsEditModalOpen(true);
+    }
   };
 
-  const closeEditModal = () => { // Renomeado para closeEditModal
+  const closeEditModal = () => {
     setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
+  };
+
+  const closeAddTransferModal = () => {
+    setIsAddTransferModalOpen(false);
   };
 
   const handlePageChange = (page: number) => {
@@ -249,7 +261,7 @@ const TransactionsPage = () => {
               </div>
               <AllTransactionsTable
                 transactions={paginatedTransactions}
-                onEditTransaction={handleRowClick} // Pass the new function
+                onEditTransaction={handleRowClick}
                 companies={companies}
               />
               {totalPages > 1 && (
@@ -301,7 +313,12 @@ const TransactionsPage = () => {
         transaction={selectedTransaction}
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
-        onTransactionUpdated={fetchTransactions} // Recarregar dados após edição/exclusão
+        onTransactionUpdated={fetchTransactions}
+      />
+      <AddTransferModal
+        isOpen={isAddTransferModalOpen}
+        onClose={closeAddTransferModal}
+        onTransferAdded={fetchTransactions}
       />
     </>
   );

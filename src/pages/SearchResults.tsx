@@ -19,7 +19,9 @@ import AllTransactionsTable from "@/components/transactions/AllTransactionsTable
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Calendar } from "lucide-react";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
+import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+import AddTransferModal from "@/components/transfers/AddTransferModal"; // Importar AddTransferModal
+import { showError } from "@/utils/toast"; // Importar showError
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -29,7 +31,8 @@ const SearchResultsPage = () => {
   const [filteredResults, setFilteredResults] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddTransferModalOpen, setIsAddTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   // Gerar lista de meses para o filtro
@@ -83,7 +86,8 @@ const SearchResultsPage = () => {
           amount,
           status,
           description,
-          category:categories (name)
+          category:categories (name),
+          transfer_id
         `)
         .eq("user_id", user.id)
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
@@ -117,7 +121,8 @@ const SearchResultsPage = () => {
             amount,
             status,
             description,
-            category:categories (name)
+            category:categories (name),
+            transfer_id
           `)
           .eq("user_id", user.id)
           .in("category_id", categoryIds);
@@ -177,13 +182,22 @@ const SearchResultsPage = () => {
   }, [searchResults, selectedMonth]);
 
   const handleRowClick = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setIsEditModalOpen(true); // Abrir o modal de edição
+    if (transaction.transfer_id) {
+      showError("A edição de transferências ainda não é suportada. Este modal é para novas transferências.");
+      setIsAddTransferModalOpen(true); // Abre o modal de adicionar transferência
+    } else {
+      setSelectedTransaction(transaction);
+      setIsEditModalOpen(true);
+    }
   };
 
-  const closeEditModal = () => { // Renomeado para closeEditModal
+  const closeEditModal = () => {
     setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
+  };
+
+  const closeAddTransferModal = () => {
+    setIsAddTransferModalOpen(false);
   };
 
   // Calcular totais baseado nos resultados filtrados
@@ -311,7 +325,12 @@ const SearchResultsPage = () => {
         transaction={selectedTransaction}
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
-        onTransactionUpdated={fetchSearchResults} // Recarregar dados após edição/exclusão
+        onTransactionUpdated={fetchSearchResults}
+      />
+      <AddTransferModal
+        isOpen={isAddTransferModalOpen}
+        onClose={closeAddTransferModal}
+        onTransferAdded={fetchSearchResults}
       />
     </>
   );

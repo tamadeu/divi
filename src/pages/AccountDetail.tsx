@@ -29,7 +29,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Account, Transaction, Company } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
+import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+import AddTransferModal from "@/components/transfers/AddTransferModal"; // Importar AddTransferModal
+import { showError } from "@/utils/toast"; // Importar showError
 
 const ITEMS_PER_PAGE = 5;
 
@@ -41,7 +43,8 @@ const AccountDetailPage = () => {
   const [loading, setLoading] = useState(true);
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddTransferModalOpen, setIsAddTransferModalOpen] = useState(false); // Novo estado para o modal de transferência
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -140,13 +143,22 @@ const AccountDetailPage = () => {
   }, [filteredTransactions, currentPage]);
 
   const handleRowClick = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setIsEditModalOpen(true); // Abrir o modal de edição
+    if (transaction.transfer_id) {
+      showError("A edição de transferências ainda não é suportada. Este modal é para novas transferências.");
+      setIsAddTransferModalOpen(true); // Abre o modal de adicionar transferência
+    } else {
+      setSelectedTransaction(transaction);
+      setIsEditModalOpen(true);
+    }
   };
 
-  const closeEditModal = () => { // Renomeado para closeEditModal
+  const closeEditModal = () => {
     setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
+  };
+
+  const closeAddTransferModal = () => {
+    setIsAddTransferModalOpen(false);
   };
 
   const handlePageChange = (page: number) => {
@@ -229,6 +241,7 @@ const AccountDetailPage = () => {
                 placeholder="Pesquisar transações..."
                 value={searchQuery}
                 onChange={(e) => {
+                  e.preventDefault();
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
@@ -324,7 +337,12 @@ const AccountDetailPage = () => {
         transaction={selectedTransaction}
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
-        onTransactionUpdated={fetchAccountData} // Recarregar dados após edição/exclusão
+        onTransactionUpdated={fetchAccountData}
+      />
+      <AddTransferModal
+        isOpen={isAddTransferModalOpen}
+        onClose={closeAddTransferModal}
+        onTransferAdded={fetchAccountData}
       />
     </>
   );
