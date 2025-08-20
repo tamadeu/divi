@@ -2,6 +2,7 @@ import { Bell, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import NavLinks from "./NavLinks";
+import UserCard from "./UserCard";
 
 const Sidebar = () => {
   return (
@@ -17,6 +18,9 @@ const Sidebar = () => {
             <span className="sr-only">Alternar notificações</span>
           </Button>
         </div>
+        
+        <UserCard />
+        
         <div className="flex-1">
           <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
             <NavLinks />
