@@ -337,7 +337,12 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account, onDelete
               )}
             />
             <div className="flex items-center justify-between pt-4">
-              {!account.is_default && ( // Conditionally render the delete button
+              {account.is_default ? (
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Trash2 className="h-4 w-4 text-gray-400" />
+                  Contas padrão não podem ser excluídas.
+                </p>
+              ) : (
                 <Button 
                   type="button" 
                   variant="ghost" 
@@ -348,7 +353,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account, onDelete
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
-              <div className={`flex gap-2 ${account.is_default ? 'ml-auto' : ''}`}> {/* Adjust alignment if delete button is hidden */}
+              <div className={`flex gap-2 ${account.is_default ? 'ml-auto' : ''}`}>
                 <Button type="button" variant="ghost" onClick={onClose}>
                   Cancelar
                 </Button>
