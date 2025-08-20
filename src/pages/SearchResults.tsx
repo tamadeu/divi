@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Transaction } from "@/types/database";
+import { Transaction, Company } from "@/types/database";
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +29,7 @@ const SearchResultsPage = () => {
 
   const [searchResults, setSearchResults] = useState<Transaction[]>([]);
   const [filteredResults, setFilteredResults] = useState<Transaction[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]); // Adicionado estado para companies
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -76,6 +77,16 @@ const SearchResultsPage = () => {
     }
 
     try {
+      // Fetch companies first
+      const { data: companiesData, error: companiesError } = await supabase
+        .from("companies")
+        .select("name, logo_url");
+      if (companiesError) {
+        console.error("Error fetching companies:", companiesError);
+      } else {
+        setCompanies(companiesData || []);
+      }
+
       // Busca 1: Transações por nome e descrição
       const { data: transactionData, error: transactionError } = await supabase
         .from("transactions")
@@ -344,6 +355,7 @@ const SearchResultsPage = () => {
             <AllTransactionsTable
               transactions={filteredResults}
               onEditTransaction={handleRowClick}
+              companies={companies} {/* Passando a lista de companies */}
             />
           )}
         </CardContent>
