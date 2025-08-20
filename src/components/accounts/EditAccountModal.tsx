@@ -92,6 +92,8 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         return;
       }
 
+      console.log("EditAccountModal: Account received:", account); // Log the account object
+
       setLoadingBanks(true);
       const { data: fetchedBanks, error: banksError } = await supabase
         .from("banks")
@@ -102,7 +104,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         console.error("Error fetching banks:", banksError);
         showError("Erro ao carregar bancos");
         setBanks([]);
-        // Even on error, try to set other form data, but bank will be empty
         setFormData({
           name: account.name,
           bank: "", 
@@ -111,9 +112,10 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         });
       } else {
         setBanks(fetchedBanks || []);
+        console.log("EditAccountModal: Fetched banks:", fetchedBanks); // Log fetched banks
         const exactBankName = getExactBankName(account.bank, fetchedBanks || []);
+        console.log("EditAccountModal: Exact bank name determined:", exactBankName); // Log exact bank name
         
-        // Set all form data at once after fetching banks
         setFormData({
           name: account.name,
           bank: exactBankName,
