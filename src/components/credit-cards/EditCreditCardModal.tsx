@@ -68,29 +68,33 @@ const EditCreditCardModal = ({ isOpen, onClose, card, onCardUpdated }: EditCredi
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const { currentWorkspace } = useWorkspace();
 
-  // Inicializar dados do formulário quando o card ou modal abrir
-  useEffect(() => {
-    if (isOpen && card) {
-      console.log('Card data:', card); // Debug
-      setFormData({
-        name: card.name || "",
-        brand: card.brand || "",
-        lastFourDigits: card.last_four_digits || "",
-        creditLimit: card.credit_limit || 0,
-        closingDay: card.closing_day || 1,
-        dueDay: card.due_day || 10,
-        accountId: card.account_id || "",
-        isActive: card.is_active !== undefined ? card.is_active : true,
-      });
-    }
-  }, [isOpen, card]);
-
   // Buscar contas quando o modal abrir
   useEffect(() => {
     if (isOpen && currentWorkspace) {
       fetchAccounts();
     }
   }, [isOpen, currentWorkspace]);
+
+  // Inicializar dados do formulário após as contas serem carregadas
+  useEffect(() => {
+    if (isOpen && card && accounts.length > 0) {
+      console.log('Initializing form with card data:', card);
+      
+      // Usar setTimeout para garantir que os componentes Select estejam renderizados
+      setTimeout(() => {
+        setFormData({
+          name: card.name || "",
+          brand: card.brand || "",
+          lastFourDigits: card.last_four_digits || "",
+          creditLimit: card.credit_limit || 0,
+          closingDay: card.closing_day || 1,
+          dueDay: card.due_day || 10,
+          accountId: card.account_id || "",
+          isActive: card.is_active !== undefined ? card.is_active : true,
+        });
+      }, 100);
+    }
+  }, [isOpen, card, accounts]);
 
   const fetchAccounts = async () => {
     if (!currentWorkspace) return;
@@ -171,6 +175,9 @@ const EditCreditCardModal = ({ isOpen, onClose, card, onCardUpdated }: EditCredi
     "Diners Club",
     "Outros",
   ];
+
+  // Debug: mostrar valores atuais do formulário
+  console.log('Current form data:', formData);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
