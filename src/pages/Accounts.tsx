@@ -27,6 +27,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext";
 import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import EditAccountModal from "@/components/accounts/EditAccountModal";
 
 interface Account {
   id: string;
@@ -41,6 +42,8 @@ interface Account {
 const Accounts = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { openAddAccountModal } = useModal();
   const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
@@ -94,6 +97,17 @@ const Accounts = () => {
       showSuccess("Conta padrão definida!");
       fetchAccounts();
     }
+  };
+
+  const handleEditAccount = (account: Account) => {
+    setEditingAccount(account);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAccountUpdated = () => {
+    fetchAccounts();
+    setIsEditModalOpen(false);
+    setEditingAccount(null);
   };
 
   const formatCurrency = (amount: number) => {
@@ -170,7 +184,7 @@ const Accounts = () => {
         </Card>
       ) : (
         <>
-          {/* Mobile Cards - visible only on mobile */}
+          {/* Mobile Cards */}
           <div className="grid gap-4 md:hidden">
             {accounts.map((account) => (
               <Card key={account.id} className="relative">
@@ -215,7 +229,7 @@ const Accounts = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                      onClick={() => handleEditAccount(account)}
                       className="flex-1"
                     >
                       <Edit className="mr-2 h-4 w-4" />
@@ -267,7 +281,7 @@ const Accounts = () => {
             ))}
           </div>
 
-          {/* Desktop Table - hidden on mobile */}
+          {/* Desktop Table */}
           <Card className="hidden md:block">
             <CardHeader>
               <CardTitle>Suas Contas</CardTitle>
@@ -320,7 +334,7 @@ const Accounts = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/accounts/${account.id}/edit`)}
+                            onClick={() => handleEditAccount(account)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -367,6 +381,19 @@ const Accounts = () => {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Edit Account Modal */}
+      {editingAccount && (
+        <EditAccountModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingAccount(null);
+          }}
+          account={editingAccount}
+          onAccountUpdated={handleAccountUpdated}
+        />
       )}
     </div>
   );
