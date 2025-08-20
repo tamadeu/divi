@@ -133,16 +133,16 @@ const AccountsPage = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-2 right-2 h-8 w-8 z-10"
+                className="absolute top-3 right-3 h-8 w-8 z-10 hover:bg-muted/50"
                 onClick={(e) => handleEditAccount(account, e)}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
               <Link to={`/accounts/${account.id}`} className="flex-grow">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-base sm:text-lg pr-10">
-                    <span className="truncate pr-2">{account.name}</span>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <CardTitle className="flex items-center justify-between text-base sm:text-lg pr-12">
+                    <span className="truncate">{account.name}</span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
                   </CardTitle>
                   <CardDescription className="text-sm">
                     {account.bank} - {account.type}
