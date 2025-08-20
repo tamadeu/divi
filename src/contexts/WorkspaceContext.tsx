@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Workspace, WorkspaceWithRole } from '@/types/workspace';
 import { useSession } from './SessionContext';
@@ -99,26 +99,26 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       );
 
       const allWorkspaces = [...ownedWorkspacesWithRole, ...filteredMemberWorkspaces];
-      console.log('Fetched workspaces:', allWorkspaces); // Debug
 
       setWorkspaces(allWorkspaces);
 
-      // Verificar se o workspace atual ainda existe
-      const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
-      let workspaceToSelect = null;
+      // Só definir workspace atual se não houver um ou se o atual não existe mais
+      if (!currentWorkspace || !allWorkspaces.find(w => w.id === currentWorkspace.id)) {
+        const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
+        let workspaceToSelect = null;
 
-      if (savedWorkspaceId) {
-        workspaceToSelect = allWorkspaces.find(w => w.id === savedWorkspaceId);
-      }
+        if (savedWorkspaceId) {
+          workspaceToSelect = allWorkspaces.find(w => w.id === savedWorkspaceId);
+        }
 
-      if (!workspaceToSelect && allWorkspaces.length > 0) {
-        workspaceToSelect = allWorkspaces[0];
-      }
+        if (!workspaceToSelect && allWorkspaces.length > 0) {
+          workspaceToSelect = allWorkspaces[0];
+        }
 
-      if (workspaceToSelect) {
-        setCurrentWorkspace(workspaceToSelect);
-        localStorage.setItem('currentWorkspaceId', workspaceToSelect.id);
-        console.log('Set current workspace:', workspaceToSelect.name); // Debug
+        if (workspaceToSelect) {
+          setCurrentWorkspace(workspaceToSelect);
+          localStorage.setItem('currentWorkspaceId', workspaceToSelect.id);
+        }
       }
 
     } catch (error: any) {
@@ -130,16 +130,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const switchWorkspace = (workspaceId: string) => {
-    console.log('switchWorkspace called with:', workspaceId); // Debug
-    console.log('Available workspaces:', workspaces.map(w => ({ id: w.id, name: w.name }))); // Debug
-    
     const workspace = workspaces.find(w => w.id === workspaceId);
     if (workspace) {
-      console.log('Found workspace, switching to:', workspace.name); // Debug
       setCurrentWorkspace(workspace);
       localStorage.setItem('currentWorkspaceId', workspaceId);
-    } else {
-      console.error('Workspace not found:', workspaceId);
     }
   };
 
@@ -205,12 +199,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Só executar fetchWorkspaces quando a sessão estiver carregada
+  // CORRIGIDO: useEffect com dependências corretas para evitar loop infinito
   useEffect(() => {
-    if (!sessionLoading) {
+    if (!sessionLoading && session?.user?.id) {
       fetchWorkspaces();
     }
-  }, [sessionLoading, session?.user?.id]);
+  }, [sessionLoading, session?.user?.id]); // Removido fetchWorkspaces das dependências
 
   const value = {
     currentWorkspace,
