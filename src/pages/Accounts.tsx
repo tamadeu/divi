@@ -193,6 +193,7 @@ const AccountsPage = () => {
         onClose={() => setEditingAccount(null)}
         onAccountUpdated={fetchAccounts}
         account={editingAccount}
+        onDeleteRequest={handleDeleteAccount} // Pass the handleDeleteAccount function
       />
 
       <DeleteAccountAlert

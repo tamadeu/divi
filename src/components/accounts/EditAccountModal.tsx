@@ -59,11 +59,11 @@ interface EditAccountModalProps {
   onClose: () => void;
   onAccountUpdated: () => void;
   account: Account | null;
+  onDeleteRequest: (account: Account) => void; // New prop for delete request
 }
 
-const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAccountModalProps) => {
+const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account, onDeleteRequest }: EditAccountModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [availableBanks, setAvailableBanks] = useState<Bank[]>([]);
   const [showCustomBankInput, setShowCustomBankInput] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
@@ -178,39 +178,11 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
     setIsSubmitting(false);
   };
 
-  const handleDelete = async () => {
-    if (!account) return;
-    
-    setIsDeleting(true);
-    
-    try {
-      // First delete all transactions associated with this account
-      const { error: transactionsError } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("account_id", account.id);
-
-      if (transactionsError) {
-        throw transactionsError;
-      }
-
-      // Then delete the account
-      const { error: accountError } = await supabase
-        .from("accounts")
-        .delete()
-        .eq("id", account.id);
-
-      if (accountError) {
-        throw accountError;
-      }
-
-      showSuccess("Conta excluída com sucesso!");
-      onAccountUpdated();
-      onClose();
-    } catch (error: any) {
-      showError("Erro ao excluir conta: " + error.message);
-    } finally {
-      setIsDeleting(false);
+  // Handle delete request by calling the prop function
+  const handleInitiateDelete = () => {
+    if (account) {
+      onDeleteRequest(account);
+      onClose(); // Close the edit modal
     }
   };
 
@@ -369,8 +341,7 @@ const EditAccountModal = ({ isOpen, onClose, onAccountUpdated, account }: EditAc
                 type="button" 
                 variant="ghost" 
                 size="icon"
-                onClick={handleDelete}
-                disabled={isDeleting}
+                onClick={handleInitiateDelete} // Call the new handler
                 className="text-red-500 hover:text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4" />
