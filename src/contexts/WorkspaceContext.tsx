@@ -32,42 +32,51 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // Primeiro, buscar workspaces onde o usuário é owner
+      // Buscar workspaces onde o usuário é owner
       const { data: ownedWorkspaces, error: ownedError } = await supabase
         .from('workspaces')
         .select('*')
         .eq('created_by', session.user.id)
         .order('created_at', { ascending: true });
 
-      if (ownedError) throw ownedError;
+      if (ownedError) {
+        console.error('Error fetching owned workspaces:', ownedError);
+        throw ownedError;
+      }
 
-      // Depois, buscar workspaces onde o usuário é membro
-      const { data: memberWorkspaces, error: memberError } = await supabase
-        .from('workspaces')
+      // Buscar workspaces onde o usuário é membro
+      const { data: memberWorkspaceUsers, error: memberError } = await supabase
+        .from('workspace_users')
         .select(`
-          *,
-          workspace_users!inner(role)
+          workspace_id,
+          role,
+          workspaces:workspace_id (*)
         `)
-        .eq('workspace_users.user_id', session.user.id)
-        .neq('created_by', session.user.id) // Excluir os que já são owned
-        .order('created_at', { ascending: true });
+        .eq('user_id', session.user.id);
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        console.error('Error fetching member workspaces:', memberError);
+        throw memberError;
+      }
 
       // Combinar os resultados
-      const allWorkspaces = [
-        ...(ownedWorkspaces || []).map(workspace => ({
-          ...workspace,
-          user_role: 'owner' as const,
-          is_owner: true,
+      const ownedWorkspacesWithRole = (ownedWorkspaces || []).map(workspace => ({
+        ...workspace,
+        user_role: 'owner' as const,
+        is_owner: true,
+        workspace_users: []
+      }));
+
+      const memberWorkspacesWithRole = (memberWorkspaceUsers || [])
+        .filter(wu => wu.workspaces) // Garantir que o workspace existe
+        .map(wu => ({
+          ...wu.workspaces,
+          user_role: wu.role as 'admin' | 'user',
+          is_owner: false,
           workspace_users: []
-        })),
-        ...(memberWorkspaces || []).map(workspace => ({
-          ...workspace,
-          user_role: workspace.workspace_users[0]?.role || 'user' as const,
-          is_owner: false
-        }))
-      ];
+        }));
+
+      const allWorkspaces = [...ownedWorkspacesWithRole, ...memberWorkspacesWithRole];
 
       setWorkspaces(allWorkspaces);
 
