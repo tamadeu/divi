@@ -13,6 +13,12 @@ interface ModalContextType {
   openEditTransactionModal: (transaction: Transaction) => void;
   closeEditTransactionModal: () => void;
   editTransactionData: Transaction | null;
+
+  // Transaction Details Modal
+  isTransactionDetailsModalOpen: boolean;
+  openTransactionDetailsModal: (transaction: Transaction) => void;
+  closeTransactionDetailsModal: () => void;
+  transactionDetailsData: Transaction | null;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -38,6 +44,10 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   const [isEditTransactionModalOpen, setIsEditTransactionModalOpen] = useState(false);
   const [editTransactionData, setEditTransactionData] = useState<Transaction | null>(null);
 
+  // Transaction Details Modal
+  const [isTransactionDetailsModalOpen, setIsTransactionDetailsModalOpen] = useState(false);
+  const [transactionDetailsData, setTransactionDetailsData] = useState<Transaction | null>(null);
+
   const openAddTransactionModal = (initialData?: any) => {
     setAddTransactionInitialData(initialData);
     setIsAddTransactionModalOpen(true);
@@ -58,6 +68,16 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
     setEditTransactionData(null);
   };
 
+  const openTransactionDetailsModal = (transaction: Transaction) => {
+    setTransactionDetailsData(transaction);
+    setIsTransactionDetailsModalOpen(true);
+  };
+
+  const closeTransactionDetailsModal = () => {
+    setIsTransactionDetailsModalOpen(false);
+    setTransactionDetailsData(null);
+  };
+
   return (
     <ModalContext.Provider
       value={{
@@ -72,6 +92,12 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
         openEditTransactionModal,
         closeEditTransactionModal,
         editTransactionData,
+
+        // Transaction Details Modal
+        isTransactionDetailsModalOpen,
+        openTransactionDetailsModal,
+        closeTransactionDetailsModal,
+        transactionDetailsData,
       }}
     >
       {children}
