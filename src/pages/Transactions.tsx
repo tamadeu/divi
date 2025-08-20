@@ -35,6 +35,7 @@ import EditTransactionModal from "@/components/transactions/EditTransactionModal
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet"; // Import the new component
+import { format } from "date-fns";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -50,6 +51,7 @@ const TransactionsPage = () => {
   const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [monthFilter, setMonthFilter] = useState("all"); // Novo estado para o filtro de mês
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [accountTypeFilter, setAccountTypeFilter] = useState("all");
@@ -130,9 +132,14 @@ const TransactionsPage = () => {
       const accountTypeMatch =
         accountTypeFilter === "all" || transaction.account?.type === accountTypeFilter;
 
-      return searchMatch && statusMatch && categoryMatch && accountTypeMatch;
+      // Novo filtro de mês
+      const monthMatch =
+        monthFilter === "all" ||
+        format(new Date(transaction.date), 'yyyy-MM') === monthFilter;
+
+      return searchMatch && statusMatch && categoryMatch && accountTypeMatch && monthMatch;
     });
-  }, [allTransactions, searchQuery, statusFilter, categoryFilter, accountTypeFilter]);
+  }, [allTransactions, searchQuery, monthFilter, statusFilter, categoryFilter, accountTypeFilter]); // Adicionar monthFilter aqui
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
@@ -241,6 +248,31 @@ const TransactionsPage = () => {
                     }}
                     className="lg:col-span-2"
                   />
+                  {/* Filtro de Mês para Desktop */}
+                  <Select
+                    value={monthFilter}
+                    onValueChange={(value) => {
+                      setMonthFilter(value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por mês" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Meses</SelectItem>
+                      {Array.from({ length: 12 }).map((_, i) => {
+                        const month = subMonths(new Date(), i);
+                        const value = format(month, 'yyyy-MM');
+                        const label = format(month, 'MMMM yyyy', { locale: ptBR });
+                        return (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                   <Select
                     value={statusFilter}
                     onValueChange={(value) => {
@@ -363,6 +395,8 @@ const TransactionsPage = () => {
       <TransactionFiltersSheet
         isOpen={isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}
+        monthFilter={monthFilter} // Passar o novo filtro
+        setMonthFilter={setMonthFilter} // Passar o setter do novo filtro
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
         categoryFilter={categoryFilter}

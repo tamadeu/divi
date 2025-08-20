@@ -18,10 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Filter } from "lucide-react";
+import { format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface TransactionFiltersSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  monthFilter: string; // Novo prop
+  setMonthFilter: (value: string) => void; // Novo prop
   statusFilter: string;
   setStatusFilter: (value: string) => void;
   categoryFilter: string;
@@ -32,9 +36,24 @@ interface TransactionFiltersSheetProps {
   onApplyFilters: () => void;
 }
 
+const generateMonths = () => {
+  const months = [];
+  let currentDate = new Date();
+  for (let i = 0; i < 12; i++) {
+    const month = subMonths(currentDate, i);
+    months.push({
+      value: format(month, 'yyyy-MM'), // e.g., "2023-10"
+      label: format(month, 'MMMM yyyy', { locale: ptBR }), // e.g., "outubro de 2023"
+    });
+  }
+  return months;
+};
+
 const TransactionFiltersSheet = ({
   isOpen,
   onClose,
+  monthFilter, // Usar o novo prop
+  setMonthFilter, // Usar o novo prop
   statusFilter,
   setStatusFilter,
   categoryFilter,
@@ -45,19 +64,24 @@ const TransactionFiltersSheet = ({
   onApplyFilters,
 }: TransactionFiltersSheetProps) => {
   // Internal state for filters to allow "Apply" button
+  const [tempMonthFilter, setTempMonthFilter] = useState(monthFilter); // Novo estado temporário
   const [tempStatusFilter, setTempStatusFilter] = useState(statusFilter);
   const [tempCategoryFilter, setTempCategoryFilter] = useState(categoryFilter);
   const [tempAccountTypeFilter, setTempAccountTypeFilter] = useState(accountTypeFilter);
 
+  const availableMonths = generateMonths();
+
   useEffect(() => {
     if (isOpen) {
+      setTempMonthFilter(monthFilter); // Sincronizar ao abrir
       setTempStatusFilter(statusFilter);
       setTempCategoryFilter(categoryFilter);
       setTempAccountTypeFilter(accountTypeFilter);
     }
-  }, [isOpen, statusFilter, categoryFilter, accountTypeFilter]);
+  }, [isOpen, monthFilter, statusFilter, categoryFilter, accountTypeFilter]);
 
   const handleApply = () => {
+    setMonthFilter(tempMonthFilter); // Aplicar o novo filtro
     setStatusFilter(tempStatusFilter);
     setCategoryFilter(tempCategoryFilter);
     setAccountTypeFilter(tempAccountTypeFilter);
@@ -66,6 +90,7 @@ const TransactionFiltersSheet = ({
   };
 
   const handleReset = () => {
+    setTempMonthFilter("all"); // Resetar o novo filtro
     setTempStatusFilter("all");
     setTempCategoryFilter("all");
     setTempAccountTypeFilter("all");
@@ -80,9 +105,30 @@ const TransactionFiltersSheet = ({
             Aplique filtros para refinar sua lista de transações.
           </SheetDescription>
         </SheetHeader>
-        <div className="flex-1 overflow-y-auto px-4 py-4"> {/* Adicionado px-4 para padding horizontal */}
-          <div className="mb-4"> {/* Adicionado mb-4 para espaçamento entre os grupos de filtro */}
-            <label htmlFor="status-filter" className="text-sm font-medium block mb-2">Status</label> {/* Adicionado block e mb-2 */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {/* Novo filtro de Mês - Primeira Posição */}
+          <div className="mb-4">
+            <label htmlFor="month-filter" className="text-sm font-medium block mb-2">Mês</label>
+            <Select
+              value={tempMonthFilter}
+              onValueChange={setTempMonthFilter}
+            >
+              <SelectTrigger id="month-filter">
+                <SelectValue placeholder="Filtrar por mês" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Meses</SelectItem>
+                {availableMonths.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="status-filter" className="text-sm font-medium block mb-2">Status</label>
             <Select
               value={tempStatusFilter}
               onValueChange={setTempStatusFilter}
@@ -99,8 +145,8 @@ const TransactionFiltersSheet = ({
             </Select>
           </div>
 
-          <div className="mb-4"> {/* Adicionado mb-4 para espaçamento entre os grupos de filtro */}
-            <label htmlFor="category-filter" className="text-sm font-medium block mb-2">Categoria</label> {/* Adicionado block e mb-2 */}
+          <div className="mb-4">
+            <label htmlFor="category-filter" className="text-sm font-medium block mb-2">Categoria</label>
             <Select
               value={tempCategoryFilter}
               onValueChange={setTempCategoryFilter}
@@ -119,8 +165,8 @@ const TransactionFiltersSheet = ({
             </Select>
           </div>
 
-          <div className="mb-4"> {/* Adicionado mb-4 para espaçamento entre os grupos de filtro */}
-            <label htmlFor="account-type-filter" className="text-sm font-medium block mb-2">Tipo de Conta</label> {/* Adicionado block e mb-2 */}
+          <div className="mb-4">
+            <label htmlFor="account-type-filter" className="text-sm font-medium block mb-2">Tipo de Conta</label>
             <Select
               value={tempAccountTypeFilter}
               onValueChange={setTempAccountTypeFilter}
