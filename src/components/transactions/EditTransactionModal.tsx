@@ -165,6 +165,14 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
           status: transaction.status,
           description: transaction.description || "",
         });
+
+        // Explicitly set category_id again after a short delay
+        // This can help if there's a race condition with Select options loading
+        if (transaction.category_id) {
+          setTimeout(() => {
+            form.setValue('category_id', transaction.category_id!, { shouldValidate: true });
+          }, 50); // Small delay
+        }
       });
     }
   }, [isOpen, transaction, form, fetchData]);
@@ -641,14 +649,14 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
 
           <DialogFooter className={cn(
             "px-6 py-4 border-t flex-shrink-0",
-            isMobile ? "flex-col gap-2 sm:flex-col" : "flex-row justify-between" // Adjust for desktop layout
+            isMobile ? "flex-col gap-2 sm:flex-col" : "flex-row justify-between"
           )}>
             <Button
               type="button"
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
               disabled={isSubmitting || isDeleting}
-              className={cn(isMobile && "w-full order-3", !isMobile && "mr-auto")} // Push to left on desktop
+              className={cn(isMobile && "w-full order-3", !isMobile && "mr-auto")}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Excluir

@@ -30,8 +30,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Account, Transaction, Company } from "@/types/database";
 import { Skeleton } from "@/components/ui/skeleton";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import TransferModal from "@/components/transfers/TransferModal"; // Updated import
-import { showError } from "@/utils/toast"; // Importar showError
+import TransferModal from "@/components/transfers/TransferModal";
+import { showError } from "@/utils/toast";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -44,8 +44,8 @@ const AccountDetailPage = () => {
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null); // State for transfer data
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Changed state name
+  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -92,6 +92,7 @@ const AccountDetailPage = () => {
         amount,
         status,
         description,
+        category_id,
         category:categories (name),
         transfer_id
       `)
@@ -181,7 +182,7 @@ const AccountDetailPage = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  const closeTransferModal = () => { // Changed function name
+  const closeTransferModal = () => {
     setIsTransferModalOpen(false);
     setTimeout(() => setSelectedTransferData(null), 300);
   };
@@ -364,11 +365,11 @@ const AccountDetailPage = () => {
         onClose={closeEditModal}
         onTransactionUpdated={fetchAccountData}
       />
-      <TransferModal // Changed to TransferModal
-        isOpen={isTransferModalOpen} // Changed state name
-        onClose={closeTransferModal} // Changed function name
-        onTransferCompleted={fetchAccountData} // Changed prop name
-        initialTransferData={selectedTransferData} // Pass initial data
+      <TransferModal
+        isOpen={isTransferModalOpen}
+        onClose={closeTransferModal}
+        onTransferCompleted={fetchAccountData}
+        initialTransferData={selectedTransferData}
       />
     </>
   );

@@ -20,8 +20,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Calendar } from "lucide-react";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import TransferModal from "@/components/transfers/TransferModal"; // Updated import
-import { showError } from "@/utils/toast"; // Importar showError
+import TransferModal from "@/components/transfers/TransferModal";
+import { showError } from "@/utils/toast";
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -32,8 +32,8 @@ const SearchResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null); // State for transfer data
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Changed state name
+  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   // Gerar lista de meses para o filtro
@@ -87,6 +87,7 @@ const SearchResultsPage = () => {
           amount,
           status,
           description,
+          category_id,
           category:categories (name),
           transfer_id
         `)
@@ -122,6 +123,7 @@ const SearchResultsPage = () => {
             amount,
             status,
             description,
+            category_id,
             category:categories (name),
             transfer_id
           `)
@@ -220,7 +222,7 @@ const SearchResultsPage = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  const closeTransferModal = () => { // Changed function name
+  const closeTransferModal = () => {
     setIsTransferModalOpen(false);
     setTimeout(() => setSelectedTransferData(null), 300);
   };
@@ -352,11 +354,11 @@ const SearchResultsPage = () => {
         onClose={closeEditModal}
         onTransactionUpdated={fetchSearchResults}
       />
-      <TransferModal // Changed to TransferModal
-        isOpen={isTransferModalOpen} // Changed state name
-        onClose={closeTransferModal} // Changed function name
-        onTransferCompleted={fetchSearchResults} // Changed prop name
-        initialTransferData={selectedTransferData} // Pass initial data
+      <TransferModal
+        isOpen={isTransferModalOpen}
+        onClose={closeTransferModal}
+        onTransferCompleted={fetchSearchResults}
+        initialTransferData={selectedTransferData}
       />
     </>
   );

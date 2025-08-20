@@ -32,8 +32,8 @@ import VoiceTransactionButton from "@/components/transactions/VoiceTransactionBu
 import { getCompanyLogo } from "@/utils/transaction-helpers";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import TransferModal from "@/components/transfers/TransferModal"; // Updated import
-import { showError } from "@/utils/toast"; // Importar showError
+import TransferModal from "@/components/transfers/TransferModal";
+import { showError } from "@/utils/toast";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -43,8 +43,8 @@ const TransactionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null); // State for transfer data
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false); // Changed state name
+  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
   const isMobile = useIsMobile();
 
@@ -82,6 +82,7 @@ const TransactionsPage = () => {
         amount,
         status,
         description,
+        category_id,
         category:categories (name),
         account:accounts (name, type),
         transfer_id
@@ -176,7 +177,7 @@ const TransactionsPage = () => {
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
-  const closeTransferModal = () => { // Changed function name
+  const closeTransferModal = () => {
     setIsTransferModalOpen(false);
     setTimeout(() => setSelectedTransferData(null), 300);
   };
@@ -191,6 +192,20 @@ const TransactionsPage = () => {
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
+        {/* Botões apenas no mobile */}
+        {isMobile && (
+          <div className="flex flex-wrap justify-end gap-2">
+            <VoiceTransactionButton />
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(undefined, fetchTransactions)}>
+              <ArrowRightLeft className="h-4 w-4" />
+              Transferência
+            </Button>
+            <Button size="sm" className="gap-1" onClick={() => openAddTransactionModal(undefined, fetchTransactions)}>
+              <PlusCircle className="h-4 w-4" />
+              Nova Transação
+            </Button>
+          </div>
+        )}
       </div>
       <Card>
         <CardHeader>
@@ -326,11 +341,11 @@ const TransactionsPage = () => {
         onClose={closeEditModal}
         onTransactionUpdated={fetchTransactions}
       />
-      <TransferModal // Changed to TransferModal
-        isOpen={isTransferModalOpen} // Changed state name
-        onClose={closeTransferModal} // Changed function name
-        onTransferCompleted={fetchTransactions} // Changed prop name
-        initialTransferData={selectedTransferData} // Pass initial data
+      <TransferModal
+        isOpen={isTransferModalOpen}
+        onClose={closeTransferModal}
+        onTransferCompleted={fetchTransactions}
+        initialTransferData={selectedTransferData}
       />
     </>
   );
