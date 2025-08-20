@@ -6,12 +6,30 @@ import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast
 import { useModal } from "@/contexts/ModalContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { createPortal } from "react-dom";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+
+interface VoiceTransactionData {
+  name: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category?: string;
+  description?: string;
+  date?: string;
+}
 
 const VoiceTransactionButton = () => {
   const [showModal, setShowModal] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const { openAddTransactionModal } = useModal();
+  const { currentWorkspace } = useWorkspace();
+
+  // Verificar suporte do navegador
+  const isSpeechRecognitionSupported = () => {
+    return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  };
 
   // Prevenir scroll quando modal estiver aberto
   useEffect(() => {
@@ -35,37 +53,171 @@ const VoiceTransactionButton = () => {
     };
   }, [showModal]);
 
-  const handleVoiceInput = () => {
-    console.log("🔥 Botão clicado - abrindo modal");
-    setShowModal(true);
-    setIsListening(true);
+  // Configurar reconhecimento de voz
+  useEffect(() => {
+    if (!isSpeechRecognitionSupported()) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognitionInstance = new SpeechRecognition();
     
-    // Simular listening por 5 segundos
-    setTimeout(() => {
-      console.log("🔥 Mudando para processing");
+    recognitionInstance.continuous = false;
+    recognitionInstance.interimResults = false;
+    recognitionInstance.lang = 'pt-BR';
+    recognitionInstance.maxAlternatives = 1;
+
+    recognitionInstance.onstart = () => {
+      console.log("🎤 Reconhecimento de voz iniciado");
+      setIsListening(true);
+    };
+
+    recognitionInstance.onresult = (event) => {
+      const speechResult = event.results[0][0].transcript;
+      console.log("🎤 Resultado:", speechResult);
+      setTranscript(speechResult);
       setIsListening(false);
-      setIsProcessing(true);
+      processVoiceInput(speechResult);
+    };
+
+    recognitionInstance.onerror = (event) => {
+      console.error("🎤 Erro no reconhecimento:", event.error);
+      setIsListening(false);
+      setIsProcessing(false);
       
-      // Simular processing por 3 segundos
-      setTimeout(() => {
-        console.log("🔥 Fechando modal");
-        setIsProcessing(false);
+      let errorMessage = "Erro no reconhecimento de voz.";
+      switch (event.error) {
+        case 'no-speech':
+          errorMessage = "Nenhuma fala detectada. Tente novamente.";
+          break;
+        case 'audio-capture':
+          errorMessage = "Erro ao acessar o microfone.";
+          break;
+        case 'not-allowed':
+          errorMessage = "Permissão para usar o microfone foi negada.";
+          break;
+        case 'network':
+          errorMessage = "Erro de rede. Verifique sua conexão.";
+          break;
+      }
+      
+      showError(errorMessage);
+      setShowModal(false);
+    };
+
+    recognitionInstance.onend = () => {
+      console.log("🎤 Reconhecimento de voz finalizado");
+      setIsListening(false);
+    };
+
+    setRecognition(recognitionInstance);
+
+    return () => {
+      if (recognitionInstance) {
+        recognitionInstance.abort();
+      }
+    };
+  }, []);
+
+  const processVoiceInput = async (speechText: string) => {
+    if (!currentWorkspace) {
+      showError("Nenhum núcleo financeiro selecionado.");
+      setShowModal(false);
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      console.log("🤖 Processando com IA:", speechText);
+      
+      // Chamar edge function para processar com IA
+      const { data, error } = await supabase.functions.invoke('process-voice-transaction', {
+        body: { 
+          text: speechText,
+          workspace_id: currentWorkspace.id
+        }
+      });
+
+      if (error) {
+        console.error("Erro na edge function:", error);
+        showError("Erro ao processar transação por voz: " + error.message);
         setShowModal(false);
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log("🤖 Resultado da IA:", data);
+      
+      if (data && data.success) {
+        const transactionData: VoiceTransactionData = data.transaction;
         
-        // Simular abertura do modal de transação
+        // Fechar modal de voz
+        setShowModal(false);
+        setIsProcessing(false);
+        
+        // Aguardar um pouco e abrir modal de transação com dados preenchidos
         setTimeout(() => {
-          console.log("🔥 Abrindo modal de transação");
-          openAddTransactionModal();
+          openAddTransactionModal({
+            name: transactionData.name,
+            type: transactionData.type,
+            amount: transactionData.amount,
+            description: transactionData.description || `Criado por voz: "${speechText}"`,
+            date: transactionData.date ? new Date(transactionData.date) : new Date(),
+          });
         }, 500);
-      }, 3000);
-    }, 5000);
+        
+        showSuccess("Transação processada! Verifique os dados antes de salvar.");
+      } else {
+        showError(data?.error || "Não foi possível processar a transação por voz.");
+        setShowModal(false);
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error("Erro ao processar voz:", error);
+      showError("Erro inesperado ao processar transação por voz.");
+      setShowModal(false);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleVoiceInput = () => {
+    if (!isSpeechRecognitionSupported()) {
+      showError("Seu navegador não suporta reconhecimento de voz. Tente usar Chrome, Edge ou Safari.");
+      return;
+    }
+
+    if (!currentWorkspace) {
+      showError("Selecione um núcleo financeiro antes de usar a transação por voz.");
+      return;
+    }
+
+    console.log("🔥 Iniciando transação por voz");
+    setShowModal(true);
+    setTranscript("");
+    setIsProcessing(false);
+    
+    // Pequeno delay para garantir que o modal apareça antes de iniciar o reconhecimento
+    setTimeout(() => {
+      if (recognition) {
+        try {
+          recognition.start();
+        } catch (error) {
+          console.error("Erro ao iniciar reconhecimento:", error);
+          showError("Erro ao iniciar reconhecimento de voz.");
+          setShowModal(false);
+        }
+      }
+    }, 300);
   };
 
   const closeModal = () => {
     console.log("🔥 Fechando modal manualmente");
+    if (recognition && isListening) {
+      recognition.abort();
+    }
     setShowModal(false);
     setIsListening(false);
     setIsProcessing(false);
+    setTranscript("");
   };
 
   const modalContent = showModal ? (
@@ -112,7 +264,9 @@ const VoiceTransactionButton = () => {
                     <div className="absolute inset-0 rounded-full border-4 border-blue-500 animate-ping"></div>
                   </div>
                   <h3 className="text-lg font-semibold text-blue-600 mb-2">Ouvindo...</h3>
-                  <p className="text-sm text-gray-600">Diga algo como: "Gastei 50 reais no Uber hoje"</p>
+                  <p className="text-sm text-gray-600 mb-2">Diga algo como:</p>
+                  <p className="text-xs text-gray-500 italic">"Gastei 50 reais no Uber hoje"</p>
+                  <p className="text-xs text-gray-500 italic">"Recebi 2000 reais de salário"</p>
                 </div>
               )}
               
@@ -120,7 +274,12 @@ const VoiceTransactionButton = () => {
                 <div>
                   <Loader2 className="h-16 w-16 text-green-500 animate-spin mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-green-600 mb-2">Processando...</h3>
-                  <p className="text-sm text-gray-600">Analisando sua fala e criando a transação...</p>
+                  <p className="text-sm text-gray-600 mb-2">Analisando sua fala e criando a transação...</p>
+                  {transcript && (
+                    <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+                      "{transcript}"
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -138,6 +297,11 @@ const VoiceTransactionButton = () => {
     </div>
   ) : null;
 
+  // Não mostrar o botão se o navegador não suportar reconhecimento de voz
+  if (!isSpeechRecognitionSupported()) {
+    return null;
+  }
+
   return (
     <>
       <Button
@@ -145,7 +309,7 @@ const VoiceTransactionButton = () => {
         variant="outline"
         className="gap-1 w-full md:w-auto"
         onClick={handleVoiceInput}
-        disabled={isListening || isProcessing}
+        disabled={isListening || isProcessing || !currentWorkspace}
       >
         {isProcessing ? (
           <Loader2 className="h-4 w-4 animate-spin" />
