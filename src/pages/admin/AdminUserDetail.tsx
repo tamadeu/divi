@@ -19,7 +19,7 @@ import {
   Calendar, 
   Activity,
   Brain,
-  Building,
+  Building, // Changed from Building to Building2 for consistency with AdminNavLinks
   Clock,
   MapPin,
   Smartphone,
@@ -76,7 +76,7 @@ interface AIRequestLog {
   success: boolean;
   error_message: string | null;
   created_at: string;
-  workspace: {
+  workspaces: {
     name: string;
   } | null;
 }
@@ -357,7 +357,7 @@ const AdminUserDetail = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
+          <TabsTrigger value="workspaces">Núcleos Financeiros</TabsTrigger>
           <TabsTrigger value="ai-logs">Logs de IA</TabsTrigger>
           <TabsTrigger value="sessions">Sessões</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
@@ -368,7 +368,7 @@ const AdminUserDetail = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Workspaces</CardTitle>
+                <CardTitle className="text-sm font-medium">Núcleos</CardTitle>
                 <Building className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -454,9 +454,9 @@ const AdminUserDetail = () => {
         <TabsContent value="workspaces" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Workspaces do Usuário</CardTitle>
+              <CardTitle>Núcleos Financeiros do Usuário</CardTitle>
               <CardDescription>
-                Todos os workspaces que o usuário participa ou possui
+                Todos os núcleos financeiros que o usuário participa ou possui
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -495,7 +495,7 @@ const AdminUserDetail = () => {
                 </div>
               ) : (
                 <p className="text-center text-muted-foreground py-8">
-                  Usuário não participa de nenhum workspace
+                  Usuário não participa de nenhum núcleo financeiro
                 </p>
               )}
             </CardContent>
@@ -519,7 +519,7 @@ const AdminUserDetail = () => {
                         <TableHead>Data</TableHead>
                         <TableHead>Provedor</TableHead>
                         <TableHead>Modelo</TableHead>
-                        <TableHead>Workspace</TableHead>
+                        <TableHead>Núcleo</TableHead>
                         <TableHead>Tempo</TableHead>
                         <TableHead>Custo</TableHead>
                         <TableHead>Status</TableHead>
@@ -533,7 +533,7 @@ const AdminUserDetail = () => {
                             <Badge variant="outline">{log.ai_provider}</Badge>
                           </TableCell>
                           <TableCell>{log.ai_model || '-'}</TableCell>
-                          <TableCell>{log.workspace?.name || '-'}</TableCell>
+                          <TableCell>{log.workspaces?.name || '-'}</TableCell>
                           <TableCell>{formatDuration(log.processing_time_ms)}</TableCell>
                           <TableCell>{formatCurrency(log.cost_usd)}</TableCell>
                           <TableCell>

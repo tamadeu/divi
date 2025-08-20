@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Users, BarChart3, Building2, Menu, Package } from "lucide-react";
+import { Users, BarChart3, Building2, Menu, Package, Building } from "lucide-react"; // Added Building icon
 import { cn } from "@/lib/utils";
 
 interface AdminBottomNavProps {
@@ -14,6 +14,7 @@ const AdminBottomNav = ({ onMenuClick }: AdminBottomNavProps) => {
     { to: "/admin/users", icon: Users, label: "Usuários" },
     { to: "/admin/plans", icon: Package, label: "Planos" },
     { to: "/admin/banks", icon: Building2, label: "Bancos" },
+    { to: "/admin/companies", icon: Building, label: "Empresas" }, // Added Companies to bottom nav
   ];
 
   return (

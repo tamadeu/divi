@@ -122,16 +122,16 @@ export const PLAN_FEATURES: PlanFeature[] = [
   },
   {
     key: 'max_workspaces',
-    label: 'Workspaces',
-    description: 'Número máximo de workspaces que podem ser criados',
+    label: 'Núcleos Financeiros',
+    description: 'Número máximo de núcleos financeiros que podem ser criados',
     type: 'limit',
     category: 'core',
     alwaysEnabled: true
   },
   {
     key: 'max_users_per_workspace',
-    label: 'Usuários por workspace',
-    description: 'Número máximo de usuários que podem ser adicionados a cada workspace',
+    label: 'Usuários por núcleo',
+    description: 'Número máximo de usuários que podem ser adicionados a cada núcleo financeiro',
     type: 'limit',
     category: 'core',
     alwaysEnabled: true
@@ -182,15 +182,15 @@ export const PLAN_FEATURES: PlanFeature[] = [
   },
   {
     key: 'enable_multiple_workspaces',
-    label: 'Múltiplos workspaces',
-    description: 'Criar e gerenciar múltiplos workspaces',
+    label: 'Múltiplos núcleos',
+    description: 'Criar e gerenciar múltiplos núcleos financeiros',
     type: 'feature',
     category: 'optional'
   },
   {
     key: 'enable_workspace_sharing',
-    label: 'Compartilhamento de workspace',
-    description: 'Compartilhar workspaces com outros usuários',
+    label: 'Compartilhamento de núcleo',
+    description: 'Compartilhar núcleos financeiros com outros usuários',
     type: 'feature',
     category: 'optional'
   }

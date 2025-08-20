@@ -181,7 +181,7 @@ const SubscriptionPlansTable = ({
                   <div className="text-sm space-y-1">
                     <div>Transações: {formatLimit(plan.max_transactions)}</div>
                     <div>Contas: {formatLimit(plan.max_accounts)}</div>
-                    <div>Workspaces: {formatLimit(plan.max_workspaces)}</div>
+                    <div>Núcleos: {formatLimit(plan.max_workspaces)}</div>
                   </div>
                 </TableCell>
                 <TableCell>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Shield, Database, Settings, TrendingUp, Activity } from "lucide-react";
+import { Users, Shield, Database, Settings, TrendingUp, Activity, Building } from "lucide-react"; // Added Building icon
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -13,6 +13,7 @@ const AdminDashboard = () => {
     totalAccounts: 0,
     totalCategories: 0,
     recentSignups: 0,
+    totalWorkspaces: 0, // Added totalWorkspaces
   });
 
   const fetchStats = async () => {
@@ -51,6 +52,11 @@ const AdminDashboard = () => {
         .from('categories')
         .select('*', { count: 'exact', head: true });
 
+      // Fetch total workspaces count
+      const { count: workspacesCount } = await supabase
+        .from('workspaces')
+        .select('*', { count: 'exact', head: true });
+
       setStats({
         totalUsers,
         adminUsers,
@@ -58,6 +64,7 @@ const AdminDashboard = () => {
         totalAccounts: accountsCount || 0,
         totalCategories: categoriesCount || 0,
         recentSignups,
+        totalWorkspaces: workspacesCount || 0, // Set totalWorkspaces
       });
     } catch (error) {
       console.error('Error fetching admin stats:', error);
@@ -159,13 +166,13 @@ const AdminDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Crescimento</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total de Núcleos</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{stats.recentSignups}</div>
+            <div className="text-2xl font-bold">{stats.totalWorkspaces}</div>
             <p className="text-xs text-muted-foreground">
-              Novos usuários esta semana
+              Núcleos financeiros criados
             </p>
           </CardContent>
         </Card>

@@ -7,7 +7,7 @@ import {
   BarChart3,
   FileText,
   Building2,
-  Building,
+  Building, // Changed from Building to Building2 for consistency
   Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
