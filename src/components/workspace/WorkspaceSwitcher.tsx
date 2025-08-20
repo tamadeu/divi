@@ -40,12 +40,6 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
     onWorkspaceChange?.();
   };
 
-  const handleCreateWorkspace = () => {
-    navigate('/workspaces/new');
-    setOpen(false);
-    onWorkspaceChange?.();
-  };
-
   if (!currentWorkspace) {
     return null;
   }
