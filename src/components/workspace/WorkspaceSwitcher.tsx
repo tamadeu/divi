@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown, Plus, Settings } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronsUpDown, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,20 +40,6 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
     onWorkspaceChange?.();
   };
 
-  // Se não há workspace atual ou está carregando, mostrar loading
-  if (loading || !currentWorkspace) {
-    return (
-      <Button
-        variant="outline"
-        disabled
-        className="w-full justify-between"
-      >
-        <span>Carregando...</span>
-        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-      </Button>
-    );
-  }
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -62,8 +48,11 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={loading}
         >
-          <span className="truncate">{currentWorkspace.name}</span>
+          <span className="truncate">
+            {currentWorkspace?.name || "Selecionar núcleo..."}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -83,7 +72,7 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        currentWorkspace.id === workspace.id ? "opacity-100" : "opacity-0"
+                        currentWorkspace?.id === workspace.id ? "opacity-100" : "opacity-0"
                       )}
                     />
                     <div className="flex flex-col">
