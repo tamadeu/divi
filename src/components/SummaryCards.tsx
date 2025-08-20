@@ -54,7 +54,7 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, s
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            Renda Mensal
+            Receitas
           </CardTitle>
           <ArrowUp className="h-4 w-4 text-green-500" />
         </CardHeader>
@@ -68,7 +68,7 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, s
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            Despesas Mensais
+            Despesas
           </CardTitle>
           <ArrowDown className="h-4 w-4 text-red-500" />
         </CardHeader>
