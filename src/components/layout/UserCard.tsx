@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdmin } from "@/hooks/useAdmin";
+import WorkspaceSwitcher from "@/components/workspace/WorkspaceSwitcher";
 
 interface Profile {
   first_name: string | null;
@@ -89,7 +90,7 @@ const UserCard = () => {
   if (loading) {
     return (
       <Card className="mx-2 mb-4">
-        <CardContent className="p-3">
+        <CardContent className="p-3 space-y-3">
           <div className="flex items-center gap-3">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="flex-1 min-w-0">
@@ -98,6 +99,7 @@ const UserCard = () => {
             </div>
             <Skeleton className="h-8 w-8" />
           </div>
+          <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
     );
@@ -105,7 +107,7 @@ const UserCard = () => {
 
   return (
     <Card className="mx-2 mb-4">
-      <CardContent className="p-3">
+      <CardContent className="p-3 space-y-3">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             <AvatarImage src={profile?.avatar_url || ""} alt={getDisplayName()} />
@@ -116,8 +118,7 @@ const UserCard = () => {
           
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{getDisplayName()}</p>
-            {/* E-mail removido para otimização de espaço */}
-            {/* <p className="text-xs text-muted-foreground truncate">{email}</p> */}
+            <p className="text-xs text-muted-foreground truncate">{email}</p>
           </div>
 
           <DropdownMenu>
@@ -147,6 +148,14 @@ const UserCard = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+
+        {/* Workspace Switcher */}
+        <div className="border-t pt-3">
+          <div className="text-xs text-muted-foreground mb-2 px-1">
+            Núcleo Financeiro
+          </div>
+          <WorkspaceSwitcher />
         </div>
       </CardContent>
     </Card>

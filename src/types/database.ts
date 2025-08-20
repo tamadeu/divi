@@ -1,6 +1,7 @@
 export interface Account {
   id: string;
   user_id: string;
+  workspace_id: string;
   name: string;
   bank: string;
   type: string;
@@ -13,6 +14,7 @@ export interface Account {
 export interface Category {
   id: string;
   user_id: string;
+  workspace_id: string;
   name: string;
   type: string;
   created_at: string;
@@ -21,6 +23,7 @@ export interface Category {
 export interface Transaction {
   id: string;
   user_id: string;
+  workspace_id: string;
   category_id?: string;
   category?: string;
   date: string;
@@ -37,10 +40,17 @@ export interface Transaction {
 export interface Budget {
   id: string;
   user_id: string;
+  workspace_id: string;
   category_id: string;
   amount: number;
   month: string;
   created_at: string;
+}
+
+export interface BudgetWithSpending extends Budget {
+  category_name: string;
+  budgeted_amount: number;
+  spent_amount: number;
 }
 
 export interface Profile {
@@ -68,4 +78,11 @@ export interface Company {
   logo_url?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  created_at: string;
+  profile?: Profile;
 }

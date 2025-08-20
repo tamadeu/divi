@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider, useSession } from "@/contexts/SessionContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import Layout from "@/components/layout/Layout";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -44,7 +45,11 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Layout />;
+  return (
+    <WorkspaceProvider>
+      <Layout />
+    </WorkspaceProvider>
+  );
 };
 
 const AdminProtectedRoute = () => {
