@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // Import useCallback
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -61,7 +61,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
   const [showTransferOwnership, setShowTransferOwnership] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!workspace.id) return;
 
     setLoading(true);
@@ -181,13 +181,13 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspace.id, session?.user?.id, showError]); // Adicionar dependências para useCallback
 
   useEffect(() => {
     if (isOpen && workspace.id) {
       fetchMembers();
     }
-  }, [isOpen, workspace.id]);
+  }, [isOpen, workspace.id, fetchMembers]); // Adicionar fetchMembers às dependências do useEffect
 
   const handleRemoveMember = async (memberId: string) => {
     setRemovingMemberId(memberId);
