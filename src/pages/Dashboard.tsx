@@ -109,17 +109,7 @@ const Dashboard = () => {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Painel</h1>
-        <div className="hidden md:flex gap-2">
-           <VoiceTransactionButton />
-           <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(fetchDashboardData)}>
-            <ArrowRightLeft className="h-4 w-4" />
-            Transferência
-          </Button>
-          <Button size="sm" className="gap-1" onClick={() => openAddTransactionModal(fetchDashboardData)}>
-            <PlusCircle className="h-4 w-4" />
-            Nova Transação
-          </Button>
-        </div>
+       
       </div>
       {loading ? (
         <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3">
