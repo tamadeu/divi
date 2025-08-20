@@ -35,7 +35,7 @@ const WorkspaceSwitcher = ({ onWorkspaceChange }: WorkspaceSwitcherProps = {}) =
   };
 
   const handleManageWorkspaces = () => {
-    navigate('/workspaces');
+    navigate('/settings#workspace-management');
     setOpen(false);
     onWorkspaceChange?.();
   };
