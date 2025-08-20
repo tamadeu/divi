@@ -15,7 +15,6 @@ import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import AddTransferModal from "@/components/transfers/AddTransferModal";
 import UserCard from "./UserCard";
-import { showSuccess } from "@/utils/toast";
 
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -35,16 +34,6 @@ const Layout = () => {
     closeAddTransferModal,
     onTransferAdded,
   } = useModal();
-
-  const handleRefresh = async () => {
-    // Simula um delay de atualização
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Recarrega a página atual
-    window.location.reload();
-    
-    showSuccess("Página atualizada!");
-  };
 
   return (
     <>
@@ -71,7 +60,7 @@ const Layout = () => {
 
         <div className="flex flex-col">
           <Header />
-          <PullToRefreshWrapper onRefresh={handleRefresh}>
+          <PullToRefreshWrapper onRefresh={() => Promise.resolve()}>
             <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6">
               <Outlet />
             </main>

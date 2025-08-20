@@ -1,10 +1,13 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { showSuccess } from "@/utils/toast";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
 
   const handleSearchSubmit = (event: FormEvent) => {
@@ -12,6 +15,24 @@ const Header = () => {
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    
+    try {
+      // Simula um delay de atualização
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Recarrega a página atual
+      window.location.reload();
+      
+      showSuccess("Página atualizada!");
+    } catch (error) {
+      console.error("Erro ao atualizar:", error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -31,6 +52,17 @@ const Header = () => {
           </div>
         </form>
       </div>
+      
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        className="h-9 w-9 shrink-0"
+      >
+        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        <span className="sr-only">Atualizar página</span>
+      </Button>
     </header>
   );
 };
