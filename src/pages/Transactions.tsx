@@ -26,7 +26,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ArrowRightLeft } from "lucide-react";
+import { PlusCircle, ArrowRightLeft, Filter } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
@@ -34,6 +34,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
+import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet"; // Import the new component
 
 const ITEMS_PER_PAGE = 10;
 
@@ -53,6 +54,7 @@ const TransactionsPage = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [accountTypeFilter, setAccountTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false); // New state for filter sheet
 
   const fetchTransactions = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -188,6 +190,10 @@ const TransactionsPage = () => {
     }
   };
 
+  const handleApplyFilters = () => {
+    setCurrentPage(1); // Reset to first page when filters are applied
+  };
+
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -205,72 +211,93 @@ const TransactionsPage = () => {
             <Skeleton className="h-64 w-full" />
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                <Input
-                  placeholder="Pesquisar por nome ou descrição..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="lg:col-span-2"
-                />
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) => {
-                    setStatusFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Status</SelectItem>
-                    <SelectItem value="Concluído">Concluído</SelectItem>
-                    <SelectItem value="Pendente">Pendente</SelectItem>
-                    <SelectItem value="Falhou">Falhou</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={categoryFilter}
-                  onValueChange={(value) => {
-                    setCategoryFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas Categorias</SelectItem>
-                    {uniqueCategories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                 <Select
-                  value={accountTypeFilter}
-                  onValueChange={(value) => {
-                    setAccountTypeFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por tipo de conta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Tipos de Conta</SelectItem>
-                    <SelectItem value="Conta Corrente">Conta Corrente</SelectItem>
-                    <SelectItem value="Poupança">Poupança</SelectItem>
-                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                    <SelectItem value="Investimento">Investimento</SelectItem>
-                    <SelectItem value="Outro">Outro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {isMobile ? (
+                <div className="flex gap-2 mb-4">
+                  <Input
+                    placeholder="Pesquisar por nome ou descrição..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsFilterSheetOpen(true)}
+                  >
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                  <Input
+                    placeholder="Pesquisar por nome ou descrição..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="lg:col-span-2"
+                  />
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => {
+                      setStatusFilter(value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos Status</SelectItem>
+                      <SelectItem value="Concluído">Concluído</SelectItem>
+                      <SelectItem value="Pendente">Pendente</SelectItem>
+                      <SelectItem value="Falhou">Falhou</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={categoryFilter}
+                    onValueChange={(value) => {
+                      setCategoryFilter(value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas Categorias</SelectItem>
+                      {uniqueCategories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={accountTypeFilter}
+                    onValueChange={(value) => {
+                      setAccountTypeFilter(value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por tipo de conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos Tipos de Conta</SelectItem>
+                      <SelectItem value="Conta Corrente">Conta Corrente</SelectItem>
+                      <SelectItem value="Poupança">Poupança</SelectItem>
+                      <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                      <SelectItem value="Investimento">Investimento</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <AllTransactionsTable
                 transactions={paginatedTransactions}
                 onEditTransaction={handleRowClick}
@@ -332,6 +359,18 @@ const TransactionsPage = () => {
         onClose={closeTransferModal}
         onTransferCompleted={fetchTransactions}
         initialTransferData={selectedTransferData}
+      />
+      <TransactionFiltersSheet
+        isOpen={isFilterSheetOpen}
+        onClose={() => setIsFilterSheetOpen(false)}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        accountTypeFilter={accountTypeFilter}
+        setAccountTypeFilter={setAccountTypeFilter}
+        uniqueCategories={uniqueCategories}
+        onApplyFilters={handleApplyFilters}
       />
     </>
   );
