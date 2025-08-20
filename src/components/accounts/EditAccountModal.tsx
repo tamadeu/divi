@@ -31,7 +31,8 @@ interface Bank {
 interface Account {
   id: string;
   name: string;
-  bank: string;
+  bank: string; // Keep for now for display/backward compatibility
+  bank_id: string | null; // New field
   type: string;
   balance: number;
   is_default: boolean;
@@ -48,7 +49,7 @@ interface EditAccountModalProps {
 const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAccountModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
-    bank: "",
+    bank_id: "", // Changed from 'bank' to 'bank_id'
     type: "",
     includeInTotal: true,
   });
@@ -70,14 +71,6 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
     }
   };
 
-  // Helper function to find the exact bank name from the fetched list
-  const getExactBankName = (dbBankName: string, availableBanks: Bank[]) => {
-    const foundBank = availableBanks.find(
-      (bank) => bank.name.trim().toLowerCase() === dbBankName.trim().toLowerCase()
-    );
-    return foundBank ? foundBank.name : ""; // Return the exact name from the list, or empty string
-  };
-
   // Initialize form data when account changes or modal opens
   useEffect(() => {
     const initializeFormData = async () => {
@@ -85,14 +78,12 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         // Reset form data when modal closes or account is null
         setFormData({
           name: "",
-          bank: "",
+          bank_id: "",
           type: "",
           includeInTotal: true,
         });
         return;
       }
-
-      console.log("EditAccountModal: Account received:", account); // Log the account object
 
       setLoadingBanks(true);
       const { data: fetchedBanks, error: banksError } = await supabase
@@ -104,21 +95,20 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
         console.error("Error fetching banks:", banksError);
         showError("Erro ao carregar bancos");
         setBanks([]);
+        // Set other form data, but bank_id will be empty
         setFormData({
           name: account.name,
-          bank: "", 
+          bank_id: "", 
           type: mapAccountTypeForDisplay(account.type),
           includeInTotal: account.include_in_total,
         });
       } else {
         setBanks(fetchedBanks || []);
-        console.log("EditAccountModal: Fetched banks:", fetchedBanks); // Log fetched banks
-        const exactBankName = getExactBankName(account.bank, fetchedBanks || []);
-        console.log("EditAccountModal: Exact bank name determined:", exactBankName); // Log exact bank name
         
+        // Set all form data at once after fetching banks
         setFormData({
           name: account.name,
-          bank: exactBankName,
+          bank_id: account.bank_id || "", // Use bank_id from account, fallback to empty string
           type: mapAccountTypeForDisplay(account.type),
           includeInTotal: account.include_in_total,
         });
@@ -133,11 +123,16 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
     e.preventDefault();
     setLoading(true);
 
+    // Find the bank name based on the selected bank_id for the 'bank' column (for backward compatibility)
+    const selectedBank = banks.find(b => b.id === formData.bank_id);
+    const bankName = selectedBank ? selectedBank.name : "";
+
     const { error } = await supabase
       .from("accounts")
       .update({
         name: formData.name,
-        bank: formData.bank,
+        bank_id: formData.bank_id, // Using bank_id
+        bank: bankName, // Keeping 'bank' column for now for backward compatibility
         type: formData.type,
         include_in_total: formData.includeInTotal,
       })
@@ -188,15 +183,15 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
             <div className="grid gap-2">
               <Label htmlFor="bank">Banco</Label>
               <Select
-                value={formData.bank}
-                onValueChange={(value) => setFormData({ ...formData, bank: value })}
+                value={formData.bank_id} // Using bank_id as value
+                onValueChange={(value) => setFormData({ ...formData, bank_id: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={loadingBanks ? "Carregando bancos..." : "Selecione o banco"} />
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((bank) => (
-                    <SelectItem key={bank.id} value={bank.name}>
+                    <SelectItem key={bank.id} value={bank.id}> {/* Using bank.id as value */}
                       <div className="flex items-center gap-2">
                         {bank.logo_url && (
                           <img 
@@ -210,7 +205,7 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
                     </SelectItem>
                   ))}
                   {banks.length === 0 && !loadingBanks && (
-                    <SelectItem value="outros" disabled>
+                    <SelectItem value="no-banks" disabled> {/* Changed value for consistency */}
                       Nenhum banco encontrado
                     </SelectItem>
                   )}
@@ -248,7 +243,7 @@ const EditAccountModal = ({ isOpen, onClose, account, onAccountUpdated }: EditAc
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !formData.bank || !formData.type}>
+            <Button type="submit" disabled={loading || !formData.bank_id || !formData.type}> {/* Check bank_id */}
               {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>

@@ -38,7 +38,7 @@ interface AddAccountModalProps {
 const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
-    bank: "",
+    bank_id: "", // Changed from 'bank' to 'bank_id'
     type: "",
     initialBalance: 0,
     includeInTotal: true,
@@ -54,7 +54,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
       fetchBanks();
       setFormData({
         name: "",
-        bank: "",
+        bank_id: "", // Reset bank_id
         type: "",
         initialBalance: 0,
         includeInTotal: true,
@@ -95,6 +95,10 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
       return;
     }
 
+    // Find the bank name based on the selected bank_id for the 'bank' column (for backward compatibility)
+    const selectedBank = banks.find(b => b.id === formData.bank_id);
+    const bankName = selectedBank ? selectedBank.name : "";
+
     // Create account
     const { data: account, error: accountError } = await supabase
       .from("accounts")
@@ -102,7 +106,8 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
         user_id: user.id,
         workspace_id: currentWorkspace.id,
         name: formData.name,
-        bank: formData.bank,
+        bank_id: formData.bank_id, // Using bank_id
+        bank: bankName, // Keeping 'bank' column for now for backward compatibility
         type: formData.type,
         balance: formData.initialBalance,
         include_in_total: formData.includeInTotal,
@@ -178,15 +183,15 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
             <div className="grid gap-2">
               <Label htmlFor="bank">Banco</Label>
               <Select
-                value={formData.bank}
-                onValueChange={(value) => setFormData({ ...formData, bank: value })}
+                value={formData.bank_id} // Using bank_id as value
+                onValueChange={(value) => setFormData({ ...formData, bank_id: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={loadingBanks ? "Carregando bancos..." : "Selecione o banco"} />
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((bank) => (
-                    <SelectItem key={bank.id} value={bank.name}>
+                    <SelectItem key={bank.id} value={bank.id}> {/* Using bank.id as value */}
                       <div className="flex items-center gap-2">
                         {bank.logo_url && (
                           <img 
@@ -200,7 +205,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
                     </SelectItem>
                   ))}
                   {banks.length === 0 && !loadingBanks && (
-                    <SelectItem value="outros" disabled>
+                    <SelectItem value="no-banks" disabled> {/* Changed value for consistency */}
                       Nenhum banco encontrado
                     </SelectItem>
                   )}
@@ -253,7 +258,7 @@ const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalPro
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !formData.bank || !formData.type}>
+            <Button type="submit" disabled={loading || !formData.bank_id || !formData.type}> {/* Check bank_id */}
               {loading ? "Criando..." : "Criar Conta"}
             </Button>
           </DialogFooter>

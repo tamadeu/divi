@@ -19,13 +19,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { showError, showSuccess } from "@/utils/toast";
-import { Account, Transaction } from "@/types/database";
+import { Account, Transaction } from "@/types/database"; // Assuming Account is imported from here or defined locally
 import { Loader2 } from "lucide-react";
+
+// Redefine Account interface locally to include bank_id if not in global types
+interface AccountWithBankId extends Account {
+  bank_id: string | null;
+}
 
 interface ConfirmDeleteAccountWithTransactionsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  account: Account | null;
+  account: AccountWithBankId | null; // Use the updated interface
   onAccountDeleted: () => void; // Callback to refresh accounts list
 }
 
@@ -37,7 +42,7 @@ const ConfirmDeleteAccountWithTransactionsModal = ({
 }: ConfirmDeleteAccountWithTransactionsModalProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasTransactions, setHasTransactions] = useState(false);
-  const [otherAccounts, setOtherAccounts] = useState<Account[]>([]);
+  const [otherAccounts, setOtherAccounts] = useState<AccountWithBankId[]>([]); // Use the updated interface
   const [selectedReassignAccountId, setSelectedReassignAccountId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,7 +84,7 @@ const ConfirmDeleteAccountWithTransactionsModal = ({
       if ((transactionsCount || 0) > 0) {
         const { data: accountsData, error: accountsError } = await supabase
           .from("accounts")
-          .select("*")
+          .select("*") // Ensure bank_id is fetched
           .eq("user_id", user.id)
           .neq("id", account.id) // Exclude the account being deleted
           .order("name", { ascending: true });
@@ -313,7 +318,7 @@ const ConfirmDeleteAccountWithTransactionsModal = ({
                     ) : (
                       otherAccounts.map((acc) => (
                         <SelectItem key={acc.id} value={acc.id}>
-                          {acc.name} ({acc.bank})
+                          {acc.name} ({acc.bank}) {/* Still using acc.bank for display */}
                         </SelectItem>
                       ))
                     )}

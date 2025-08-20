@@ -49,6 +49,7 @@ interface Account {
   id: string;
   name: string;
   bank: string;
+  bank_id: string | null; // Added bank_id
   type: string;
   balance: number;
   is_default: boolean;
@@ -88,7 +89,7 @@ const Accounts = () => {
 
     const { data, error } = await supabase
       .from("accounts")
-      .select("*")
+      .select("*, bank_id") // Ensure bank_id is selected
       .eq("workspace_id", currentWorkspace.id)
       .order("created_at", { ascending: false });
 
@@ -411,7 +412,7 @@ const Accounts = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{account.bank}</TableCell>
+                      <TableCell>{account.bank}</TableCell> {/* Still using account.bank for display */}
                       <TableCell>
                         <Badge className={getTypeColor(account.type)}>
                           {account.type}

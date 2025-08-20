@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, Star } from "lucide-react";
-import { Account } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import {
@@ -26,6 +25,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+interface Account {
+  id: string;
+  name: string;
+  bank: string;
+  bank_id: string | null; // Added bank_id
+  type: string;
+  balance: number;
+  is_default: boolean;
+  include_in_total: boolean;
+}
 
 interface AccountsTableProps {
   accounts: Account[];
@@ -131,7 +141,7 @@ const AccountsTable = ({ accounts, onAccountUpdated }: AccountsTableProps) => {
                   {account.name}
                 </div>
               </TableCell>
-              <TableCell>{account.bank}</TableCell>
+              <TableCell>{account.bank}</TableCell> {/* Still using account.bank for display */}
               <TableCell>
                 <Badge className={getAccountTypeColor(account.type)}>
                   {account.type}

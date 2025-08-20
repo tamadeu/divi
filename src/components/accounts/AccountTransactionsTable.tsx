@@ -11,8 +11,25 @@ import { Transaction, Company } from "@/types/database"; // Importar Company
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "@/components/transactions/TransactionCardList";
 
+// Redefine Account interface locally to include bank_id if not in global types
+interface AccountWithBankId {
+  id: string;
+  name: string;
+  bank: string;
+  bank_id: string | null; // Added bank_id
+  type: string;
+  balance: number;
+  is_default: boolean;
+  include_in_total: boolean;
+}
+
+// Extend Transaction to include account details if needed, or ensure it's fetched
+interface TransactionWithAccount extends Transaction {
+  accounts?: AccountWithBankId; // Assuming transactions might join with accounts
+}
+
 interface AccountTransactionsTableProps {
-  transactions: Transaction[];
+  transactions: TransactionWithAccount[]; // Use the extended interface
   onRowClick: (transaction: Transaction) => void;
   companies: Company[]; // Adicionar prop companies
 }
