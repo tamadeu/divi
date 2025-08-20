@@ -43,7 +43,6 @@ export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
   if (variant === "buttons") {
     return (
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground px-3">Tema</p>
         <div className="flex gap-1 p-1 bg-muted rounded-lg">
           <Button
             variant="ghost"
