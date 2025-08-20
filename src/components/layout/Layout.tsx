@@ -19,22 +19,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Layout = () => {
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const location = useLocation();
   const { getPlatformName, getPlatformLogo, loading } = usePublicPlatformSettings();
   const {
     isAddTransactionModalOpen,
     closeAddTransactionModal,
-    onTransactionAdded,
     addTransactionInitialData,
     isAddAccountModalOpen,
     closeAddAccountModal,
-    onAccountAdded,
     isAddCategoryModalOpen,
     closeAddCategoryModal,
-    onCategoryAdded,
     isAddTransferModalOpen,
     closeAddTransferModal,
-    onTransferAdded,
     addTransferInitialData,
   } = useModal();
 
@@ -46,6 +43,28 @@ const Layout = () => {
 
   const closeMobileSidebar = () => {
     setMobileSidebarOpen(false);
+  };
+
+  // Function to trigger refresh in child components
+  const triggerRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Handler functions that trigger refresh
+  const handleTransactionAdded = () => {
+    triggerRefresh();
+  };
+
+  const handleAccountAdded = () => {
+    triggerRefresh();
+  };
+
+  const handleCategoryAdded = () => {
+    triggerRefresh();
+  };
+
+  const handleTransferAdded = () => {
+    triggerRefresh();
   };
 
   return (
@@ -92,7 +111,7 @@ const Layout = () => {
         <div className="flex flex-col">
           <Header />
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-20 md:pb-6 overflow-auto">
-            <Outlet />
+            <Outlet key={refreshTrigger} />
           </main>
         </div>
         <BottomNav onMenuClick={() => setMobileSidebarOpen(true)} />
@@ -105,23 +124,23 @@ const Layout = () => {
       <AddTransactionModal
         isOpen={isAddTransactionModalOpen}
         onClose={closeAddTransactionModal}
-        onTransactionAdded={onTransactionAdded}
+        onTransactionAdded={handleTransactionAdded}
         initialData={addTransactionInitialData}
       />
       <AddAccountModal
         isOpen={isAddAccountModalOpen}
         onClose={closeAddAccountModal}
-        onAccountAdded={onAccountAdded}
+        onAccountAdded={handleAccountAdded}
       />
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={closeAddCategoryModal}
-        onCategoryAdded={onCategoryAdded}
+        onCategoryAdded={handleCategoryAdded}
       />
       <TransferModal
         isOpen={isAddTransferModalOpen}
         onClose={closeAddTransferModal}
-        onTransferCompleted={onTransferAdded}
+        onTransferCompleted={handleTransferAdded}
         initialTransferData={addTransferInitialData}
       />
     </>

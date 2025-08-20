@@ -1,10 +1,4 @@
-"use client"
-
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,15 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -30,29 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Bank } from "@/types/database";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-
-const accountSchema = z.object({
-  name: z.string().min(1, "O nome é obrigatório."),
-  bank_selection: z.string().min(1, "Selecione um banco ou digite um novo."),
-  custom_bank_name: z.string().optional(),
-  type: z.string().min(1, "O tipo é obrigatório."),
-  balance: z.coerce.number(),
-  include_in_total: z.boolean().default(true),
-}).refine(data => {
-  if (data.bank_selection === "custom_bank_input") {
-    return data.custom_bank_name && data.custom_bank_name.trim().length > 0;
-  }
-  return true;
-}, {
-  message: "O nome do novo banco é obrigatório.",
-  path: ["custom_bank_name"],
-});
-
-type AccountFormValues = z.infer<typeof accountSchema>;
 
 interface AddAccountModalProps {
   isOpen: boolean;
@@ -61,236 +29,185 @@ interface AddAccountModalProps {
 }
 
 const AddAccountModal = ({ isOpen, onClose, onAccountAdded }: AddAccountModalProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableBanks, setAvailableBanks] = useState<Bank[]>([]);
-  const [showCustomBankInput, setShowCustomBankInput] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    bank: "",
+    type: "",
+    initialBalance: 0,
+    includeInTotal: true,
+  });
+  const [loading, setLoading] = useState(false);
   const { currentWorkspace } = useWorkspace();
 
-  const form = useForm<AccountFormValues>({
-    resolver: zodResolver(accountSchema),
-    defaultValues: {
-      name: "",
-      bank_selection: "",
-      custom_bank_name: "",
-      type: "",
-      balance: 0,
-      include_in_total: true,
-    },
-  });
-
+  // Reset form when modal opens
   useEffect(() => {
-    const fetchBanks = async () => {
-      const { data, error } = await supabase
-        .from("banks")
-        .select("id, name")
-        .order("name", { ascending: true });
-      if (error) {
-        console.error("Error fetching banks:", error);
-      } else {
-        setAvailableBanks(data || []);
-      }
-    };
     if (isOpen) {
-      fetchBanks();
-      setShowCustomBankInput(false); // Reset custom input state when modal opens
-      form.setValue('custom_bank_name', ''); // Clear custom bank name
-      form.clearErrors('custom_bank_name'); // Clear errors for custom bank name
+      setFormData({
+        name: "",
+        bank: "",
+        type: "",
+        initialBalance: 0,
+        includeInTotal: true,
+      });
     }
-  }, [isOpen, form]);
+  }, [isOpen]);
 
-  const handleSubmit = async (values: AccountFormValues) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!currentWorkspace) {
-      showError("Nenhum núcleo financeiro selecionado.");
+      showError("Nenhum workspace selecionado");
       return;
     }
 
-    setIsSubmitting(true);
+    setLoading(true);
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      showError("Você precisa estar logado para adicionar uma conta.");
-      setIsSubmitting(false);
+      showError("Usuário não autenticado");
+      setLoading(false);
       return;
     }
 
-    let bankNameToInsert: string;
-    if (values.bank_selection === "custom_bank_input") {
-      bankNameToInsert = values.custom_bank_name || "";
-    } else {
-      const selectedBank = availableBanks.find(b => b.id === values.bank_selection);
-      bankNameToInsert = selectedBank ? selectedBank.name : "";
+    // Create account
+    const { data: account, error: accountError } = await supabase
+      .from("accounts")
+      .insert({
+        user_id: user.id,
+        workspace_id: currentWorkspace.id,
+        name: formData.name,
+        bank: formData.bank,
+        type: formData.type,
+        balance: formData.initialBalance,
+        include_in_total: formData.includeInTotal,
+      })
+      .select()
+      .single();
+
+    if (accountError) {
+      showError("Erro ao criar conta");
+      console.error("Error creating account:", accountError);
+      setLoading(false);
+      return;
     }
 
-    const { error } = await supabase.from("accounts").insert({
-      name: values.name,
-      bank: bankNameToInsert, // Use the determined bank name
-      type: values.type,
-      balance: values.balance,
-      user_id: user.id,
-      workspace_id: currentWorkspace.id,
-      include_in_total: values.include_in_total,
-    });
+    // If there's an initial balance, create a transaction
+    if (formData.initialBalance !== 0) {
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          workspace_id: currentWorkspace.id,
+          account_id: account.id,
+          name: "Saldo inicial",
+          amount: formData.initialBalance,
+          date: new Date().toISOString(),
+          description: `Saldo inicial da conta ${formData.name}`,
+          status: "Concluído",
+        });
 
-    if (error) {
-      showError("Erro ao adicionar conta: " + error.message);
-    } else {
-      showSuccess("Conta adicionada com sucesso!");
-      onAccountAdded();
-      form.reset();
-      onClose();
+      if (transactionError) {
+        console.error("Error creating initial transaction:", transactionError);
+        // Don't show error to user as account was created successfully
+      }
     }
-    setIsSubmitting(false);
+
+    showSuccess("Conta criada com sucesso!");
+    setLoading(false);
+    onClose();
+    onAccountAdded(); // This will refresh the accounts list
   };
 
-  if (!currentWorkspace) {
-    return null;
-  }
+  const accountTypes = [
+    "Conta Corrente",
+    "Poupança",
+    "Investimento",
+    "Cartão de Crédito",
+    "Dinheiro",
+    "Outros",
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Nova Conta</DialogTitle>
+          <DialogTitle>Nova Conta</DialogTitle>
           <DialogDescription>
-            Preencha os detalhes da sua nova conta.
+            Adicione uma nova conta bancária ou cartão de crédito.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Conta</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Conta Principal" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bank_selection"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Banco</FormLabel>
-                  <Select 
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      if (value === "custom_bank_input") {
-                        setShowCustomBankInput(true);
-                        form.trigger("custom_bank_name"); // Trigger validation for custom name
-                      } else {
-                        setShowCustomBankInput(false);
-                        form.setValue("custom_bank_name", ""); // Clear custom name if not needed
-                        form.clearErrors("custom_bank_name"); // Clear errors
-                      }
-                    }} 
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um banco" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableBanks.map((bank) => (
-                        <SelectItem key={bank.id} value={bank.id}>
-                          {bank.name}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="custom_bank_input">
-                        Não encontrou seu banco?
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {showCustomBankInput && (
-              <FormField
-                control={form.control}
-                name="custom_bank_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Novo Banco</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Meu Novo Banco" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome da Conta</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Conta Corrente Banco do Brasil"
+                required
               />
-            )}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Conta</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Conta Corrente">Conta Corrente</SelectItem>
-                      <SelectItem value="Poupança">Poupança</SelectItem>
-                      <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                      <SelectItem value="Investimento">Investimento</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="balance"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Saldo Inicial</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="include_in_total"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Incluir no saldo total
-                    </FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      O saldo desta conta será incluído no cálculo do saldo total da página inicial.
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adicionando..." : "Adicionar Conta"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="bank">Banco</Label>
+              <Input
+                id="bank"
+                value={formData.bank}
+                onChange={(e) => setFormData({ ...formData, bank: e.target.value })}
+                placeholder="Ex: Banco do Brasil"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="type">Tipo de Conta</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData({ ...formData, type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="initialBalance">Saldo Inicial</Label>
+              <Input
+                id="initialBalance"
+                type="number"
+                step="0.01"
+                value={formData.initialBalance}
+                onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se informado, será criada uma transação de saldo inicial.
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="includeInTotal"
+                checked={formData.includeInTotal}
+                onCheckedChange={(checked) => setFormData({ ...formData, includeInTotal: checked })}
+              />
+              <Label htmlFor="includeInTotal">Incluir no saldo total</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Criando..." : "Criar Conta"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
