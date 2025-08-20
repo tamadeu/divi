@@ -1,13 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ArrowUp, ArrowDown } from "lucide-react";
-import { cn } from "@/lib/utils"; // Importar cn para classes condicionais
+import { cn } from "@/lib/utils";
 
 interface SummaryCardsProps {
   totalBalance: number;
   monthlyIncome: number;
   monthlyExpenses: number;
   loading: boolean;
-  showTotalBalance?: boolean; // Nova prop opcional
+  showTotalBalance?: boolean;
 }
 
 const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, showTotalBalance = true }: SummaryCardsProps) => {
@@ -20,7 +20,7 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, s
 
   const gridClasses = cn(
     "grid gap-4 mb-6",
-    showTotalBalance ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-2"
+    showTotalBalance ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2"
   );
 
   if (loading) {
@@ -59,7 +59,7 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, s
           <ArrowUp className="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600">{formatCurrency(monthlyIncome)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(monthlyIncome)}</div>
           <p className="text-xs text-muted-foreground">
             Renda do mês selecionado.
           </p>
@@ -73,7 +73,7 @@ const SummaryCards = ({ totalBalance, monthlyIncome, monthlyExpenses, loading, s
           <ArrowDown className="h-4 w-4 text-red-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-600">{formatCurrency(monthlyExpenses)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-red-600">{formatCurrency(monthlyExpenses)}</div>
           <p className="text-xs text-muted-foreground">
             Despesas do mês selecionado.
           </p>
