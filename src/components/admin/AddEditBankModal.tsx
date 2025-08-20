@@ -26,11 +26,12 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { showError, showSuccess } from "@/utils/toast";
 import { Bank } from "@/types/database";
-import { Building2 } from "lucide-react";
+import { Building2, Upload, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const bankSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
-  logo_url: z.string().url("URL inválida").optional().or(z.literal("")),
+  logo_url: z.string().optional(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, "Cor deve estar no formato hexadecimal (#000000)"),
 });
 
@@ -45,6 +46,9 @@ interface AddEditBankModalProps {
 
 const AddEditBankModal = ({ isOpen, onClose, onBankSaved, bank }: AddEditBankModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const isEditing = !!bank;
 
   const form = useForm<BankFormValues>({
@@ -67,23 +71,119 @@ const AddEditBankModal = ({ isOpen, onClose, onBankSaved, bank }: AddEditBankMod
           logo_url: bank.logo_url || "",
           color: bank.color,
         });
+        setUploadedImageUrl(bank.logo_url || "");
       } else {
         form.reset({
           name: "",
           logo_url: "",
           color: "#000000",
         });
+        setUploadedImageUrl("");
       }
+      setSelectedFile(null);
     }
   }, [isOpen, bank, form]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+      if (!allowedTypes.includes(file.type)) {
+        showError('Tipo de arquivo não suportado. Use JPEG, PNG, WebP ou SVG.');
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showError('Arquivo muito grande. O tamanho máximo é 5MB.');
+        return;
+      }
+
+      setSelectedFile(file);
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setUploadedImageUrl(previewUrl);
+      form.setValue('logo_url', previewUrl);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      setIsUploading(true);
+      
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('bank-logos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('bank-logos')
+        .getPublicUrl(data.path);
+
+      return publicUrl;
+    } catch (error: any) {
+      showError('Erro ao fazer upload da imagem: ' + error.message);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const deleteOldImage = async (url: string) => {
+    try {
+      // Extract filename from URL
+      const urlParts = url.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      
+      if (fileName && url.includes('supabase')) {
+        await supabase.storage
+          .from('bank-logos')
+          .remove([fileName]);
+      }
+    } catch (error) {
+      console.error('Error deleting old image:', error);
+      // Don't throw error, just log it
+    }
+  };
 
   const handleSubmit = async (values: BankFormValues) => {
     setIsSubmitting(true);
 
     try {
+      let finalLogoUrl = values.logo_url;
+
+      // Upload new image if selected
+      if (selectedFile) {
+        const uploadedUrl = await uploadImage(selectedFile);
+        if (!uploadedUrl) {
+          setIsSubmitting(false);
+          return;
+        }
+        finalLogoUrl = uploadedUrl;
+
+        // Delete old image if editing
+        if (isEditing && bank?.logo_url && bank.logo_url !== uploadedUrl) {
+          await deleteOldImage(bank.logo_url);
+        }
+      }
+
       const bankData = {
         name: values.name,
-        logo_url: values.logo_url || null,
+        logo_url: finalLogoUrl || null,
         color: values.color,
       };
 
@@ -113,9 +213,17 @@ const AddEditBankModal = ({ isOpen, onClose, onBankSaved, bank }: AddEditBankMod
     }
   };
 
+  const removeImage = () => {
+    setSelectedFile(null);
+    setUploadedImageUrl("");
+    form.setValue('logo_url', "");
+  };
+
+  const currentImageUrl = uploadedImageUrl || watchedLogoUrl;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Editar Banco' : 'Adicionar Novo Banco'}
@@ -134,7 +242,7 @@ const AddEditBankModal = ({ isOpen, onClose, onBankSaved, bank }: AddEditBankMod
             <div className="flex items-center justify-center p-4 border rounded-lg bg-muted/50">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={watchedLogoUrl || ""} alt="Preview" />
+                  <AvatarImage src={currentImageUrl} alt="Preview" />
                   <AvatarFallback 
                     className="text-white font-semibold"
                     style={{ backgroundColor: watchedColor }}
@@ -168,14 +276,52 @@ const AddEditBankModal = ({ isOpen, onClose, onBankSaved, bank }: AddEditBankMod
               name="logo_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL do Logo (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="https://exemplo.com/logo.png" 
-                      type="url"
-                      {...field} 
-                    />
-                  </FormControl>
+                  <FormLabel>Logo do Banco</FormLabel>
+                  <Tabs defaultValue="upload" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="upload">Upload de Imagem</TabsTrigger>
+                      <TabsTrigger value="url">URL Externa</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="upload" className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                          onChange={handleFileSelect}
+                          className="flex-1"
+                        />
+                        {currentImageUrl && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={removeImage}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Formatos aceitos: JPEG, PNG, WebP, SVG. Tamanho máximo: 5MB.
+                      </p>
+                    </TabsContent>
+                    
+                    <TabsContent value="url">
+                      <FormControl>
+                        <Input 
+                          placeholder="https://exemplo.com/logo.png" 
+                          type="url"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setUploadedImageUrl(e.target.value);
+                            setSelectedFile(null);
+                          }}
+                        />
+                      </FormControl>
+                    </TabsContent>
+                  </Tabs>
                   <FormMessage />
                 </FormItem>
               )}
@@ -211,11 +357,17 @@ const AddEditBankModal = ({ isOpen, onClose, onBankSaved, bank }: AddEditBankMod
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting 
-                  ? (isEditing ? "Salvando..." : "Adicionando...") 
-                  : (isEditing ? "Salvar Alterações" : "Adicionar Banco")
-                }
+              <Button type="submit" disabled={isSubmitting || isUploading}>
+                {isUploading ? (
+                  <>
+                    <Upload className="mr-2 h-4 w-4 animate-spin" />
+                    Fazendo upload...
+                  </>
+                ) : isSubmitting ? (
+                  isEditing ? "Salvando..." : "Adicionando..."
+                ) : (
+                  isEditing ? "Salvar Alterações" : "Adicionar Banco"
+                )}
               </Button>
             </DialogFooter>
           </form>

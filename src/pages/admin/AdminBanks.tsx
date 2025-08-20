@@ -79,10 +79,35 @@ const AdminBanks = () => {
     setIsDeleteAlertOpen(true);
   };
 
+  const deleteImageFromStorage = async (url: string) => {
+    try {
+      if (url && url.includes('supabase')) {
+        // Extract filename from URL
+        const urlParts = url.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        
+        if (fileName) {
+          await supabase.storage
+            .from('bank-logos')
+            .remove([fileName]);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting image from storage:', error);
+      // Don't throw error, just log it
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!deletingBank) return;
 
     try {
+      // Delete image from storage if it exists
+      if (deletingBank.logo_url) {
+        await deleteImageFromStorage(deletingBank.logo_url);
+      }
+
+      // Delete bank from database
       const { error } = await supabase
         .from('banks')
         .delete()
