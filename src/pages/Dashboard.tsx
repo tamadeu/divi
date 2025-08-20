@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Transaction } from "@/types/database"; // Import Transaction type
 
 interface SummaryData {
   total_balance: number;
@@ -52,7 +53,8 @@ const Dashboard = () => {
         amount,
         status,
         description,
-        category:categories (name)
+        category:categories (name),
+        transfer_id
       `)
       .eq("user_id", user.id)
       .order("date", { ascending: false })

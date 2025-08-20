@@ -78,7 +78,8 @@ const AccountDetailPage = () => {
           amount,
           status,
           description,
-          category:categories (name)
+          category:categories (name),
+          transfer_id
         `)
         .eq("account_id", accountId)
         .order("date", { ascending: false });
