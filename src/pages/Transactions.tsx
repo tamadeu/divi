@@ -31,6 +31,7 @@ import { PlusCircle, ArrowRightLeft } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -41,6 +42,7 @@ const TransactionsPage = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { openAddTransactionModal, openAddTransferModal } = useModal();
+  const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -152,17 +154,20 @@ const TransactionsPage = () => {
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
-        <div className="hidden md:flex flex-wrap justify-end gap-2">
-          <VoiceTransactionButton />
-          <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(fetchTransactions)}>
-            <ArrowRightLeft className="h-4 w-4" />
-            Transferência
-          </Button>
-          <Button size="sm" className="gap-1" onClick={() => openAddTransactionModal(fetchTransactions)}>
-            <PlusCircle className="h-4 w-4" />
-            Nova Transação
-          </Button>
-        </div>
+        {/* Botões apenas no mobile */}
+        {isMobile && (
+          <div className="flex flex-wrap justify-end gap-2">
+            <VoiceTransactionButton />
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal(fetchTransactions)}>
+              <ArrowRightLeft className="h-4 w-4" />
+              Transferência
+            </Button>
+            <Button size="sm" className="gap-1" onClick={() => openAddTransactionModal(fetchTransactions)}>
+              <PlusCircle className="h-4 w-4" />
+              Nova Transação
+            </Button>
+          </div>
+        )}
       </div>
       <Card>
         <CardHeader>
