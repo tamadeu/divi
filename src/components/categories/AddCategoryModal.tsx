@@ -1,10 +1,4 @@
-"use client"
-
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,15 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -30,160 +17,126 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Category } from "@/types/database";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-
-const categorySchema = z.object({
-  name: z.string().min(1, "Nome da categoria é obrigatório."),
-  type: z.enum(["income", "expense"], {
-    required_error: "Selecione um tipo de categoria.",
-  }),
-});
-
-type CategoryFormValues = z.infer<typeof categorySchema>;
 
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCategoryAdded: (category: Category | null) => void;
-  defaultType?: "income" | "expense";
+  onCategoryAdded: () => void;
 }
 
-const AddCategoryModal = ({ 
-  isOpen, 
-  onClose, 
-  onCategoryAdded, 
-  defaultType 
-}: AddCategoryModalProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded }: AddCategoryModalProps) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    type: "",
+  });
+  const [loading, setLoading] = useState(false);
   const { currentWorkspace } = useWorkspace();
 
-  const form = useForm<CategoryFormValues>({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      name: "",
-      type: defaultType || undefined,
-    },
-  });
-
-  // Reset form quando o modal abrir com o tipo padrão
-  React.useEffect(() => {
+  // Reset form when modal opens
+  useEffect(() => {
     if (isOpen) {
-      form.reset({
+      setFormData({
         name: "",
-        type: defaultType || undefined,
+        type: "",
       });
     }
-  }, [isOpen, defaultType, form]);
+  }, [isOpen]);
 
-  const handleSubmit = async (values: CategoryFormValues) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!currentWorkspace) {
-      showError("Nenhum núcleo financeiro selecionado.");
+      showError("Nenhum workspace selecionado");
       return;
     }
 
-    setIsSubmitting(true);
+    setLoading(true);
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      showError("Você precisa estar logado.");
-      setIsSubmitting(false);
+      showError("Usuário não autenticado");
+      setLoading(false);
       return;
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("categories")
       .insert({
         user_id: user.id,
         workspace_id: currentWorkspace.id,
-        name: values.name,
-        type: values.type,
-      })
-      .select()
-      .single();
+        name: formData.name,
+        type: formData.type,
+      });
 
     if (error) {
-      showError("Erro ao criar categoria: " + error.message);
-      setIsSubmitting(false);
-      return;
+      showError("Erro ao criar categoria");
+      console.error("Error creating category:", error);
+    } else {
+      showSuccess("Categoria criada com sucesso!");
+      onClose();
+      onCategoryAdded();
     }
 
-    showSuccess("Categoria criada com sucesso!");
-    onCategoryAdded(data);
-    onClose();
-    setIsSubmitting(false);
+    setLoading(false);
   };
 
-  if (!currentWorkspace) {
-    return null;
-  }
+  const categoryTypes = [
+    { value: "Receita", label: "Receita" },
+    { value: "Despesa", label: "Despesa" },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Nova Categoria</DialogTitle>
+          <DialogTitle>Nova Categoria</DialogTitle>
           <DialogDescription>
-            Crie uma nova categoria para suas transações.
+            Adicione uma nova categoria para organizar suas transações.
           </DialogDescription>
         </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Categoria</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Supermercado" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value}
-                    disabled={!!defaultType}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="income">Renda</SelectItem>
-                      <SelectItem value="expense">Despesa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
-
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
-            onClick={form.handleSubmit(handleSubmit)}
-          >
-            {isSubmitting ? "Criando..." : "Adicionar Categoria"}
-          </Button>
-        </DialogFooter>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome da Categoria</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Alimentação, Salário, Transporte..."
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="type">Tipo</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData({ ...formData, type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || !formData.name || !formData.type}>
+              {loading ? "Criando..." : "Criar Categoria"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

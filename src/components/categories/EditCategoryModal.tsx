@@ -40,14 +40,15 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
   });
   const [loading, setLoading] = useState(false);
 
+  // Initialize form data when category changes
   useEffect(() => {
-    if (category) {
+    if (category && isOpen) {
       setFormData({
         name: category.name,
         type: category.type,
       });
     }
-  }, [category]);
+  }, [category, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,12 +69,14 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
       showSuccess("Categoria atualizada com sucesso!");
       onCategoryUpdated();
     }
+
     setLoading(false);
   };
 
-  const getTypeLabel = (type: string) => {
-    return type === "income" ? "Receita" : "Despesa";
-  };
+  const categoryTypes = [
+    { value: "Receita", label: "Receita" },
+    { value: "Despesa", label: "Despesa" },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -92,7 +95,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Alimentação"
+                placeholder="Ex: Alimentação, Salário, Transporte..."
                 required
               />
             </div>
@@ -106,8 +109,11 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="income">Receita</SelectItem>
-                  <SelectItem value="expense">Despesa</SelectItem>
+                  {categoryTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -116,7 +122,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !formData.name || !formData.type}>
               {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
