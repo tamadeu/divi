@@ -1,221 +1,77 @@
-export interface Database {
-  public: {
-    Tables: {
-      profiles: {
-        Row: {
-          id: string;
-          first_name: string | null;
-          last_name: string | null;
-          avatar_url: string | null;
-          updated_at: string | null;
-          ai_provider: string | null;
-          user_type: string | null;
-        };
-        Insert: {
-          id: string;
-          first_name?: string | null;
-          last_name?: string | null;
-          avatar_url?: string | null;
-          updated_at?: string | null;
-          ai_provider?: string | null;
-          user_type?: string | null;
-        };
-        Update: {
-          id?: string;
-          first_name?: string | null;
-          last_name?: string | null;
-          avatar_url?: string | null;
-          updated_at?: string | null;
-          ai_provider?: string | null;
-          user_type?: string | null;
-        };
-      };
-      categories: {
-        Row: {
-          id: string;
-          user_id: string;
-          name: string;
-          type: string;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          name: string;
-          type: string;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          name?: string;
-          type?: string;
-          created_at?: string | null;
-        };
-      };
-      transactions: {
-        Row: {
-          id: string;
-          user_id: string;
-          category_id: string | null;
-          date: string;
-          name: string;
-          amount: number;
-          description: string | null;
-          created_at: string | null;
-          account_id: string | null;
-          status: string;
-          transfer_id: string | null;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          category_id?: string | null;
-          date: string;
-          name: string;
-          amount: number;
-          description?: string | null;
-          created_at?: string | null;
-          account_id?: string | null;
-          status?: string;
-          transfer_id?: string | null;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          category_id?: string | null;
-          date?: string;
-          name?: string;
-          amount?: number;
-          description?: string | null;
-          created_at?: string | null;
-          account_id?: string | null;
-          status?: string;
-          transfer_id?: string | null;
-        };
-      };
-      budgets: {
-        Row: {
-          id: string;
-          user_id: string;
-          category_id: string;
-          amount: number;
-          month: string;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          category_id: string;
-          amount: number;
-          month: string;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          category_id?: string;
-          amount?: number;
-          month?: string;
-          created_at?: string | null;
-        };
-      };
-      accounts: {
-        Row: {
-          id: string;
-          user_id: string;
-          name: string;
-          bank: string;
-          type: string;
-          balance: number;
-          created_at: string | null;
-          is_default: boolean;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          name: string;
-          bank: string;
-          type: string;
-          balance?: number;
-          created_at?: string | null;
-          is_default?: boolean;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          name?: string;
-          bank?: string;
-          type?: string;
-          balance?: number;
-          created_at?: string | null;
-          is_default?: boolean;
-        };
-      };
-      banks: {
-        Row: {
-          id: string;
-          name: string;
-          logo_url: string | null;
-          color: string;
-          created_at: string;
-          updated_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          logo_url?: string | null;
-          color?: string;
-          created_at?: string;
-          updated_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          logo_url?: string | null;
-          color?: string;
-          created_at?: string;
-          updated_at?: string | null;
-        };
-      };
-      companies: {
-        Row: {
-          id: string;
-          name: string;
-          logo_url: string | null;
-          created_at: string;
-          updated_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          logo_url?: string | null;
-          created_at?: string;
-          updated_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          logo_url?: string | null;
-          created_at?: string;
-          updated_at?: string | null;
-        };
-      };
-    };
-  };
-}
+export type Account = {
+  id: string;
+  user_id: string;
+  name: string;
+  bank: string;
+  type: string;
+  balance: number;
+  created_at: string;
+  is_default: boolean;
+};
+
+export type Category = {
+  id: string;
+  user_id: string;
+  name: string;
+  type: "income" | "expense";
+  created_at: string;
+};
+
+export type Profile = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  updated_at: string;
+  user_type: "admin" | "user";
+};
+
+export type Bank = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  color: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Representa uma transação com o nome da categoria já incluído (via JOIN)
+export type Transaction = {
+  id: string;
+  account_id: string;
+  date: string;
+  name: string;
+  amount: number;
+  status: "Concluído" | "Pendente" | "Falhou";
+  description: string | null;
+  category: string | null; // Categoria pode ser nula para transferências
+  transfer_id?: string | null;
+  account?: {
+    name: string;
+    type: string;
+  } | null;
+};
+
+export type Budget = {
+  id: string;
+  user_id: string;
+  category_id: string;
+  amount: number;
+  month: string; // date string
+  created_at: string;
+};
+
+export type BudgetWithSpending = {
+  id: string;
+  category_id: string;
+  category_name: string;
+  budgeted_amount: number;
+  spent_amount: number;
+};
 
 export type User = {
   id: string;
   email: string;
   created_at: string;
-  profile?: {
-    first_name?: string | null;
-    last_name?: string | null;
-    avatar_url?: string | null;
-    user_type?: string | null;
-  } | null;
+  profile?: Profile;
 };
-
-export type Bank = Database['public']['Tables']['banks']['Row'];
-export type Company = Database['public']['Tables']['companies']['Row'];

@@ -7,7 +7,6 @@ import {
   BarChart3,
   FileText,
   Building2,
-  Building,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +16,6 @@ const AdminNavLinks = () => {
   const adminNavItems = [
     { to: "/admin", icon: BarChart3, label: "Dashboard" },
     { to: "/admin/users", icon: Users, label: "Usuários" },
-    { to: "/admin/companies", icon: Building, label: "Empresas" },
     { to: "/admin/banks", icon: Building2, label: "Bancos" },
     { to: "/admin/system", icon: Database, label: "Sistema" },
     { to: "/admin/reports", icon: FileText, label: "Relatórios" },
