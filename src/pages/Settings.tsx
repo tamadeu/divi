@@ -71,7 +71,6 @@ const Settings = () => {
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const { refreshWorkspaces } = useWorkspace();
-  const { theme, setTheme } = useTheme();
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
