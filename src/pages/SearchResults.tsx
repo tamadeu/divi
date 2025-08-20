@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Card,
@@ -16,10 +16,10 @@ import {
 } from "@/components/ui/select";
 import { Transaction } from "@/types/database";
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
-import TransactionDetailsModal from "@/components/transactions/TransactionDetailsModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Importar o modal de edição
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -29,7 +29,7 @@ const SearchResultsPage = () => {
   const [filteredResults, setFilteredResults] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Renomeado para isEditModalOpen
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   // Gerar lista de meses para o filtro
@@ -57,24 +57,57 @@ const SearchResultsPage = () => {
 
   const monthOptions = generateMonthOptions();
 
-  useEffect(() => {
-    const fetchSearchResults = async () => {
-      if (!query) {
-        setSearchResults([]);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
+  const fetchSearchResults = useCallback(async () => {
+    if (!query) {
+      setSearchResults([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Busca 1: Transações por nome e descrição
+      const { data: transactionData, error: transactionError } = await supabase
+        .from("transactions")
+        .select(`
+          id,
+          account_id,
+          date,
+          name,
+          amount,
+          status,
+          description,
+          category:categories (name)
+        `)
+        .eq("user_id", user.id)
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+
+      if (transactionError) {
+        console.error("Error fetching transactions:", transactionError);
       }
 
-      try {
-        // Busca 1: Transações por nome e descrição
-        const { data: transactionData, error: transactionError } = await supabase
+      // Busca 2: Categorias que correspondem à busca
+      const { data: categoryData, error: categoryError } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("user_id", user.id)
+        .ilike("name", `%${query}%`);
+
+      if (categoryError) {
+        console.error("Error fetching categories:", categoryError);
+      }
+
+      // Busca 3: Transações das categorias encontradas
+      let categoryTransactionData = [];
+      if (categoryData && categoryData.length > 0) {
+        const categoryIds = categoryData.map(cat => cat.id);
+        const { data: catTransData, error: catTransError } = await supabase
           .from("transactions")
           .select(`
             id,
@@ -87,77 +120,44 @@ const SearchResultsPage = () => {
             category:categories (name)
           `)
           .eq("user_id", user.id)
-          .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+          .in("category_id", categoryIds);
 
-        if (transactionError) {
-          console.error("Error fetching transactions:", transactionError);
+        if (catTransError) {
+          console.error("Error fetching category transactions:", catTransError);
+        } else {
+          categoryTransactionData = catTransData || [];
         }
-
-        // Busca 2: Categorias que correspondem à busca
-        const { data: categoryData, error: categoryError } = await supabase
-          .from("categories")
-          .select("id")
-          .eq("user_id", user.id)
-          .ilike("name", `%${query}%`);
-
-        if (categoryError) {
-          console.error("Error fetching categories:", categoryError);
-        }
-
-        // Busca 3: Transações das categorias encontradas
-        let categoryTransactionData = [];
-        if (categoryData && categoryData.length > 0) {
-          const categoryIds = categoryData.map(cat => cat.id);
-          const { data: catTransData, error: catTransError } = await supabase
-            .from("transactions")
-            .select(`
-              id,
-              account_id,
-              date,
-              name,
-              amount,
-              status,
-              description,
-              category:categories (name)
-            `)
-            .eq("user_id", user.id)
-            .in("category_id", categoryIds);
-
-          if (catTransError) {
-            console.error("Error fetching category transactions:", catTransError);
-          } else {
-            categoryTransactionData = catTransData || [];
-          }
-        }
-
-        // Combinar e remover duplicatas
-        const allTransactions = [
-          ...(transactionData || []),
-          ...categoryTransactionData
-        ];
-
-        // Remover duplicatas baseado no ID
-        const uniqueTransactions = allTransactions.filter((transaction, index, self) =>
-          index === self.findIndex(t => t.id === transaction.id)
-        );
-
-        // Formatar dados
-        const formattedData = uniqueTransactions.map((t: any) => ({
-          ...t,
-          category: t.category?.name || "Sem categoria",
-        }));
-
-        setSearchResults(formattedData);
-      } catch (error) {
-        console.error("Error in search:", error);
-        setSearchResults([]);
       }
 
-      setLoading(false);
-    };
+      // Combinar e remover duplicatas
+      const allTransactions = [
+        ...(transactionData || []),
+        ...categoryTransactionData
+      ];
 
-    fetchSearchResults();
+      // Remover duplicatas baseado no ID
+      const uniqueTransactions = allTransactions.filter((transaction, index, self) =>
+        index === self.findIndex(t => t.id === transaction.id)
+      );
+
+      // Formatar dados
+      const formattedData = uniqueTransactions.map((t: any) => ({
+        ...t,
+        category: t.category?.name || "Sem categoria",
+      }));
+
+      setSearchResults(formattedData);
+    } catch (error) {
+      console.error("Error in search:", error);
+      setSearchResults([]);
+    }
+
+    setLoading(false);
   }, [query]);
+
+  useEffect(() => {
+    fetchSearchResults();
+  }, [fetchSearchResults]);
 
   // Filtrar resultados por mês
   useEffect(() => {
@@ -178,11 +178,11 @@ const SearchResultsPage = () => {
 
   const handleRowClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true); // Abrir o modal de edição
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closeEditModal = () => { // Renomeado para closeEditModal
+    setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
   };
 
@@ -302,15 +302,16 @@ const SearchResultsPage = () => {
           ) : (
             <AllTransactionsTable
               transactions={filteredResults}
-              onRowClick={handleRowClick}
+              onEditTransaction={handleRowClick}
             />
           )}
         </CardContent>
       </Card>
-      <TransactionDetailsModal
+      <EditTransactionModal
         transaction={selectedTransaction}
-        isOpen={isModalOpen}
-        onClose={closeModal}
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        onTransactionUpdated={fetchSearchResults} // Recarregar dados após edição/exclusão
       />
     </>
   );
