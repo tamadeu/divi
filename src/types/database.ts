@@ -35,6 +35,14 @@ export type Bank = {
   updated_at: string;
 };
 
+export type Company = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // Representa uma transação com o nome da categoria já incluído (via JOIN)
 export type Transaction = {
   id: string;

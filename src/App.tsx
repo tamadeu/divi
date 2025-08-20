@@ -17,6 +17,7 @@ import SettingsPage from "./pages/Settings";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminBanks from "./pages/admin/AdminBanks";
+import AdminCompanies from "./pages/admin/AdminCompanies";
 import AdminSystem from "./pages/admin/AdminSystem";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -95,6 +96,7 @@ function AppRoutes() {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="banks" element={<AdminBanks />} />
+          <Route path="companies" element={<AdminCompanies />} />
           <Route path="system" element={<AdminSystem />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="settings" element={<AdminSettings />} />
