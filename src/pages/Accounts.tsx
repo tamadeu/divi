@@ -38,7 +38,6 @@ const AccountsPage = () => {
     const { data, error } = await supabase
       .from("accounts")
       .select("*")
-      .eq("user_id", user.id)
       .eq("workspace_id", currentWorkspace.id)
       .order("created_at", { ascending: false });
 
