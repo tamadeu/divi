@@ -113,7 +113,7 @@ const Layout = () => {
 
               {/* Theme Toggle for mobile */}
               <div className="border-t p-4">
-                <ThemeToggle variant="compact" />
+                <ThemeToggle variant="buttons" />
               </div>
             </div>
           </SheetContent>

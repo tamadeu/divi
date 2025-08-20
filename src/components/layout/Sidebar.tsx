@@ -52,7 +52,7 @@ const Sidebar = () => {
 
       {/* Theme Toggle at bottom */}
       <div className="border-t p-2 lg:p-4">
-        <ThemeToggle variant="compact" />
+        <ThemeToggle variant="buttons" />
       </div>
     </div>
   );

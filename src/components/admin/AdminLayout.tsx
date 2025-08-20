@@ -48,7 +48,7 @@ const AdminLayout = () => {
 
           {/* Theme Toggle at bottom */}
           <div className="border-t p-2 lg:p-4">
-            <ThemeToggle variant="compact" />
+            <ThemeToggle variant="buttons" />
           </div>
         </div>
       </div>
@@ -81,7 +81,7 @@ const AdminLayout = () => {
 
             {/* Theme Toggle for mobile */}
             <div className="border-t pt-4 mt-4">
-              <ThemeToggle variant="compact" />
+              <ThemeToggle variant="buttons" />
             </div>
           </nav>
         </SheetContent>

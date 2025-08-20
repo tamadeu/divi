@@ -9,9 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Moon, Sun, Monitor } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ThemeToggleProps {
-  variant?: "default" | "compact"
+  variant?: "default" | "compact" | "buttons"
 }
 
 export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
@@ -37,6 +38,49 @@ export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
       default:
         return "Sistema"
     }
+  }
+
+  if (variant === "buttons") {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground px-3">Tema</p>
+        <div className="flex gap-1 p-1 bg-muted rounded-lg">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTheme("light")}
+            className={cn(
+              "flex-1 h-8 px-2",
+              theme === "light" && "bg-background shadow-sm"
+            )}
+          >
+            <Sun className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTheme("dark")}
+            className={cn(
+              "flex-1 h-8 px-2",
+              theme === "dark" && "bg-background shadow-sm"
+            )}
+          >
+            <Moon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTheme("system")}
+            className={cn(
+              "flex-1 h-8 px-2",
+              theme === "system" && "bg-background shadow-sm"
+            )}
+          >
+            <Monitor className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (variant === "compact") {
