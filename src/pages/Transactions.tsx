@@ -74,37 +74,45 @@ const TransactionsPage = () => {
       return;
     }
 
-    let summaryData;
-    if (monthFilter === "all") {
-      const { data, error } = await supabase.rpc('get_dashboard_summary');
-      if (error) {
-        console.error("Error fetching dashboard summary (all months):", error);
-        showError("Erro ao carregar o resumo do dashboard.");
-        setLoadingSummary(false);
-        return;
-      }
-      summaryData = data[0];
-    } else {
+    const rpcArgs: {
+      summary_month?: string;
+      filter_status?: string;
+      filter_category_name?: string;
+      filter_account_type?: string;
+    } = {};
+
+    if (monthFilter !== "all") {
       const [year, month] = monthFilter.split('-');
-      // Supabase RPC expects ISO string for date parameters
-      const summaryMonthDate = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString(); 
-      const { data, error } = await supabase.rpc('get_dashboard_summary', { summary_month: summaryMonthDate });
-      if (error) {
-        console.error("Error fetching dashboard summary (specific month):", error);
-        showError("Erro ao carregar o resumo do mês selecionado.");
-        setLoadingSummary(false);
-        return;
-      }
-      summaryData = data[0];
+      rpcArgs.summary_month = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString();
     }
+    if (statusFilter !== "all") {
+      rpcArgs.filter_status = statusFilter;
+    }
+    if (categoryFilter !== "all") {
+      rpcArgs.filter_category_name = categoryFilter;
+    }
+    if (accountTypeFilter !== "all") {
+      rpcArgs.filter_account_type = accountTypeFilter;
+    }
+
+    const { data, error } = await supabase.rpc('get_dashboard_summary', rpcArgs);
+
+    if (error) {
+      console.error("Error fetching dashboard summary:", error);
+      showError("Erro ao carregar o resumo do dashboard.");
+      setLoadingSummary(false);
+      return;
+    }
+    
+    const summaryData = data[0];
 
     if (summaryData) {
       setTotalBalance(summaryData.total_balance || 0);
       setMonthlyIncome(summaryData.monthly_income || 0);
-      setMonthlyExpenses(Math.abs(summaryData.monthly_expenses || 0)); // Garante que seja positivo para exibição
+      setMonthlyExpenses(Math.abs(summaryData.monthly_expenses || 0));
     }
     setLoadingSummary(false);
-  }, [monthFilter]);
+  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter]); // Adicionado todos os filtros como dependências
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -162,7 +170,7 @@ const TransactionsPage = () => {
 
   useEffect(() => {
     fetchSummaryData();
-  }, [monthFilter, fetchSummaryData]); // Recarrega o resumo quando o filtro de mês muda
+  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, fetchSummaryData]); // Recarrega o resumo quando qualquer filtro relevante muda
 
   const uniqueCategories = useMemo(() => {
     const categories = new Set(allTransactions.map((t) => t.category).filter(Boolean));
@@ -255,7 +263,7 @@ const TransactionsPage = () => {
 
   const handleApplyFilters = () => {
     setCurrentPage(1); // Reset to first page when filters are applied
-    fetchSummaryData(); // Recarrega o resumo com o novo filtro de mês
+    fetchSummaryData(); // Recarrega o resumo com os novos filtros
   };
 
   return (
