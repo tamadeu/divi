@@ -69,7 +69,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
       if (usersError) throw usersError;
 
-      // Depois, para cada usuário real, buscar o perfil
+      // Depois, para cada usuário real, buscar o perfil e email
       const membersWithProfiles = [];
       
       for (const user of workspaceUsers || []) {
@@ -77,7 +77,8 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
           // Usuário fantasma - adicionar diretamente
           membersWithProfiles.push({
             ...user,
-            profile: null
+            profile: null,
+            email: user.ghost_user_email || null
           });
         } else {
           // Usuário real - buscar perfil
@@ -85,15 +86,30 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
             .from('profiles')
             .select('first_name, last_name, avatar_url')
             .eq('id', user.user_id)
-            .single();
+            .maybeSingle(); // Use maybeSingle() ao invés de single()
 
           if (profileError && profileError.code !== 'PGRST116') {
             console.error('Error fetching profile for user:', user.user_id, profileError);
           }
 
+          // Buscar email do usuário usando a função edge
+          let userEmail = null;
+          try {
+            const { data: userData, error: emailError } = await supabase.functions.invoke('get-user-email', {
+              body: { userId: user.user_id }
+            });
+            
+            if (!emailError && userData?.email) {
+              userEmail = userData.email;
+            }
+          } catch (emailError) {
+            console.error('Error fetching user email:', emailError);
+          }
+
           membersWithProfiles.push({
             ...user,
-            profile: profile || null
+            profile: profile || null,
+            email: userEmail
           });
         }
       }
@@ -160,7 +176,12 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
       return `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim();
     }
     
-    return 'Usuário';
+    // Se não tem perfil, usar parte do email ou ID
+    if (member.email) {
+      return member.email.split('@')[0];
+    }
+    
+    return `Usuário ${member.user_id?.slice(0, 8) || 'Desconhecido'}`;
   };
 
   const getMemberEmail = (member: WorkspaceUser) => {
@@ -168,7 +189,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
       return member.ghost_user_email || 'Usuário fictício';
     }
     
-    return 'Email não disponível';
+    return member.email || 'Email não disponível';
   };
 
   const getMemberInitials = (member: WorkspaceUser) => {

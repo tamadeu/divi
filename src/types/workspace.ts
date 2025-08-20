@@ -17,6 +17,7 @@ export interface WorkspaceUser {
   is_ghost_user: boolean;
   ghost_user_name?: string;
   ghost_user_email?: string;
+  email?: string; // Email do usuário (para usuários reais)
   profile?: {
     first_name?: string;
     last_name?: string;
