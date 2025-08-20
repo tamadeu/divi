@@ -136,7 +136,6 @@ const SearchResultsPage = () => {
             category:categories (name),
             transfer_id
           `)
-          .eq("user_id", user.id)
           .in("category_id", categoryIds);
 
         if (catTransError) {
