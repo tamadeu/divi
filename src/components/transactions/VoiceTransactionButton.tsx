@@ -68,8 +68,6 @@ const VoiceTransactionButton = () => {
     setIsProcessing(false);
   };
 
-  console.log("🔥 Render - showModal:", showModal, "isListening:", isListening, "isProcessing:", isProcessing);
-
   const modalContent = showModal ? (
     <div 
       className="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
