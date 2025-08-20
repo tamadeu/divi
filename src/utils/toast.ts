@@ -1,25 +1,17 @@
-import { toast } from "@/hooks/use-toast";
+import toast from 'react-hot-toast';
 
 export const showSuccess = (message: string) => {
-  toast({
-    title: "Sucesso",
-    description: message,
-    variant: "default",
-  });
+  toast.success(message);
 };
 
 export const showError = (message: string) => {
-  toast({
-    title: "Erro",
-    description: message,
-    variant: "destructive",
-  });
+  toast.error(message);
 };
 
-export const showInfo = (message: string) => {
-  toast({
-    title: "Informação",
-    description: message,
-    variant: "default",
-  });
+export const showLoading = (message: string) => {
+  return toast.loading(message);
+};
+
+export const dismissToast = (toastId: string) => {
+  toast.dismiss(toastId);
 };

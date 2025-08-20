@@ -1,129 +1,130 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { SessionProvider, useSession } from "@/contexts/SessionContext";
-import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import { ModalProvider } from "@/contexts/ModalContext";
-import Layout from "@/components/layout/Layout";
-import AdminLayout from "@/components/admin/AdminLayout";
-import AdminRoute from "@/components/admin/AdminRoute";
-import Dashboard from "./pages/Dashboard";
-import AccountsPage from "./pages/Accounts";
-import AccountDetailPage from "./pages/AccountDetail";
-import TransactionsPage from "./pages/Transactions";
-import SearchResultsPage from "./pages/SearchResults";
-import BudgetsPage from "./pages/Budgets";
-import ReportsPage from "./pages/Reports";
-import SettingsPage from "./pages/Settings";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminBanks from "./pages/admin/AdminBanks";
-import AdminCompanies from "./pages/admin/AdminCompanies";
-import AdminSystem from "./pages/admin/AdminSystem";
-import AdminReports from "./pages/admin/AdminReports";
-import AdminSettings from "./pages/admin/AdminSettings";
-import LoginPage from "./pages/Login";
-import SignUpPage from "./pages/SignUp";
-import NotFound from "./pages/NotFound";
-import CategoriesPage from "./pages/Categories";
-import { Skeleton } from "./components/ui/skeleton";
-import ForgotPasswordPage from "./pages/ForgotPassword";
-import ResetPasswordPage from "./pages/ResetPassword";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useSession } from '@/contexts/SessionContext';
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
+import { useAdmin } from '@/hooks/useAdmin';
 
-const ProtectedRoute = () => {
+// Layouts
+import Layout from '@/components/layout/Layout';
+import AdminLayout from '@/components/admin/AdminLayout';
+
+// Auth pages
+import Login from '@/pages/Login';
+
+// Main app pages
+import Index from '@/pages/Index';
+import Transactions from '@/pages/Transactions';
+import Accounts from '@/pages/Accounts';
+import Categories from '@/pages/Categories';
+import Budgets from '@/pages/Budgets';
+import Settings from '@/pages/Settings';
+
+// Admin pages
+import AdminRoute from '@/components/admin/AdminRoute';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminUsers from '@/pages/admin/AdminUsers';
+import AdminBanks from '@/pages/admin/AdminBanks';
+import AdminCompanies from '@/pages/admin/AdminCompanies';
+import AdminSystem from '@/pages/admin/AdminSystem';
+import AdminReports from '@/pages/admin/AdminReports';
+import AdminSettings from '@/pages/admin/AdminSettings';
+
+// Protected Route Component for regular users
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useSession();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen">Carregando...</div>;
   }
 
   if (!session) {
     return <Navigate to="/login" replace />;
   }
 
-  return (
-    <WorkspaceProvider>
-      <Layout />
-    </WorkspaceProvider>
-  );
+  return <>{children}</>;
 };
 
-const AdminProtectedRoute = () => {
-  const { session, loading } = useSession();
+// Protected Route Component for admin users
+const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, loading: sessionLoading } = useSession();
+  const { isAdmin, loading: adminLoading } = useAdmin();
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
-      </div>
-    );
+  if (sessionLoading || adminLoading) {
+    return <div className="flex items-center justify-center h-screen">Carregando...</div>;
   }
 
   if (!session) {
     return <Navigate to="/login" replace />;
   }
 
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  const { session, loading } = useSession();
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Carregando...</div>;
+  }
+
   return (
-    <AdminRoute>
-      <AdminLayout />
-    </AdminRoute>
+    <Routes>
+      {/* Public routes */}
+      <Route 
+        path="/login" 
+        element={
+          session ? <Navigate to="/" replace /> : <Login />
+        } 
+      />
+
+      {/* Admin routes - separate from workspace context */}
+      <Route path="/admin" element={
+        <AdminProtectedRoute>
+          <AdminLayout />
+        </AdminProtectedRoute>
+      }>
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="banks" element={<AdminBanks />} />
+        <Route path="companies" element={<AdminCompanies />} />
+        <Route path="system" element={<AdminSystem />} />
+        <Route path="reports" element={<AdminReports />} />
+        <Route path="settings" element={<AdminSettings />} />
+      </Route>
+
+      {/* Regular app routes - wrapped with workspace context */}
+      <Route path="/*" element={
+        <ProtectedRoute>
+          <WorkspaceProvider>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Index />} />
+                <Route path="transactions" element={<Transactions />} />
+                <Route path="accounts" element={<Accounts />} />
+                <Route path="categories" element={<Categories />} />
+                <Route path="budgets" element={<Budgets />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
+            </Routes>
+          </WorkspaceProvider>
+        </ProtectedRoute>
+      } />
+
+      {/* Fallback route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
 
-function AppRoutes() {
+const App = () => {
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        
-        {/* Main App Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/accounts" element={<AccountsPage />} />
-          <Route path="/accounts/:accountId" element={<AccountDetailPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/search" element={<SearchResultsPage />} />
-          <Route path="/categories" element={<CategoriesPage />} />
-          <Route path="/budgets" element={<BudgetsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminProtectedRoute />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="banks" element={<AdminBanks />} />
-          <Route path="companies" element={<AdminCompanies />} />
-          <Route path="system" element={<AdminSystem />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="settings" element={<AdminSettings />} />
-        </Route>
-
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AppRoutes />
     </Router>
   );
-}
-
-function App() {
-  return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <SessionProvider>
-        <ModalProvider>
-          <AppRoutes />
-        </ModalProvider>
-      </SessionProvider>
-      <Toaster />
-    </ThemeProvider>
-  );
-}
+};
 
 export default App;
