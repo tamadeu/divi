@@ -40,12 +40,23 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
   });
   const [loading, setLoading] = useState(false);
 
+  // Helper function to map database types to display types
+  const mapCategoryTypeForDisplay = (dbType: string) => {
+    const normalizedType = dbType.trim().toLowerCase();
+    if (normalizedType === "receita" || normalizedType === "income") {
+      return "Receita";
+    } else if (normalizedType === "despesa" || normalizedType === "expense") {
+      return "Despesa";
+    }
+    return ""; // Fallback for unknown types
+  };
+
   // Initialize form data when category prop changes
   useEffect(() => {
     if (category) {
       setFormData({
         name: category.name,
-        type: category.type,
+        type: mapCategoryTypeForDisplay(category.type), // Map type for the Select component
       });
     }
   }, [category]); // Depend on 'category' to re-initialize when a new category is selected
@@ -54,11 +65,14 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
     e.preventDefault();
     setLoading(true);
 
+    // Map display type back to database type if necessary, though current DB seems to accept "Receita"/"Despesa"
+    const typeToSave = formData.type; 
+
     const { error } = await supabase
       .from("categories")
       .update({
         name: formData.name,
-        type: formData.type,
+        type: typeToSave,
       })
       .eq("id", category.id);
 
