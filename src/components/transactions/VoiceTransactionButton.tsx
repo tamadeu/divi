@@ -54,13 +54,13 @@ const VoiceTransactionButton = () => {
     return 'MediaRecorder' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
   };
 
-  // Prevenir scroll quando modal estiver aberto - versão melhorada para mobile
+  // Prevenir scroll quando modal estiver aberto - CORRIGIDO
   useEffect(() => {
     if (showModal) {
       // Salvar posição atual do scroll
       const scrollY = window.scrollY;
       
-      // Aplicar estilos para prevenir scroll
+      // Aplicar estilos para prevenir scroll - SEM pointer-events: none
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.left = '0';
@@ -68,6 +68,7 @@ const VoiceTransactionButton = () => {
       document.body.style.overflow = 'hidden';
       document.body.style.height = '100vh';
       document.body.style.width = '100vw';
+      // REMOVIDO: document.body.style.pointerEvents = 'none'; // ❌ Isso estava bloqueando cliques!
       
       // Prevenir zoom no iOS
       const viewport = document.querySelector('meta[name=viewport]');
@@ -84,6 +85,7 @@ const VoiceTransactionButton = () => {
         document.body.style.overflow = '';
         document.body.style.height = '';
         document.body.style.width = '';
+        // document.body.style.pointerEvents = ''; // ❌ Não precisamos mais disso
         
         // Restaurar posição do scroll
         window.scrollTo(0, scrollY);
@@ -421,10 +423,11 @@ const VoiceTransactionButton = () => {
         bottom: 0,
         width: '100vw',
         height: '100vh',
+        pointerEvents: 'auto', // ✅ GARANTIR que o modal aceite cliques
       }}
     >
       <div className="w-full max-w-sm mx-auto">
-        <Card className="relative bg-white shadow-2xl border-2">
+        <Card className="relative bg-white shadow-2xl border-2" style={{ pointerEvents: 'auto' }}>
           <CardContent className="p-6 text-center">
             <Button
               variant="ghost"
@@ -456,7 +459,8 @@ const VoiceTransactionButton = () => {
                       style={{ 
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
                       }}
                     >
                       <Mic className="h-6 w-6" style={{ margin: 0, padding: 0 }} />
@@ -483,7 +487,8 @@ const VoiceTransactionButton = () => {
                       style={{ 
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
                       }}
                     >
                       <Square className="h-6 w-6" style={{ margin: 0, padding: 0 }} />
@@ -510,7 +515,8 @@ const VoiceTransactionButton = () => {
                       style={{ 
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
                       }}
                     >
                       <Trash2 className="h-5 w-5" />
@@ -523,7 +529,8 @@ const VoiceTransactionButton = () => {
                       style={{ 
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        pointerEvents: 'auto', // ✅ GARANTIR que o botão aceite cliques
                       }}
                     >
                       <Send className="h-5 w-5" />
