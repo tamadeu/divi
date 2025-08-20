@@ -10,21 +10,21 @@ interface TransactionCardProps {
 }
 
 const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCardProps) => {
-  const statusVariant = {
-    "Concluído": "default",
-    "Pendente": "secondary",
-    "Falhou": "destructive",
-  } as const;
+  // A badge de status foi removida conforme solicitado, então esta constante não é mais necessária aqui.
+  // const statusVariant = {
+  //   "Concluído": "default",
+  //   "Pendente": "secondary",
+  //   "Falhou": "destructive",
+  // } as const;
 
   const getTransactionType = () => {
     if (transaction.transfer_id) {
-      return "Transferência"; // Changed to Portuguese
+      return "Transferência";
     }
     return transaction.category || "Sem categoria";
   };
 
   const getAvatarContent = () => {
-    // Se é uma transferência, usar avatar de pessoa
     if (transaction.transfer_id) {
       return (
         <Avatar className="h-12 w-12">
@@ -35,7 +35,6 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
       );
     }
 
-    // Se tem logo da empresa, usar
     if (companyLogo) {
       return (
         <Avatar className="h-12 w-12">
@@ -47,7 +46,6 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
       );
     }
 
-    // Fallback padrão
     return (
       <Avatar className="h-12 w-12">
         <AvatarFallback className="bg-gray-100 text-gray-600">
@@ -65,14 +63,12 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
       <div className="flex items-center gap-3 flex-1">
         {getAvatarContent()}
         
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0"> {/* Adicionado min-w-0 para permitir truncamento */}
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-foreground truncate">
+            <h3 className="font-medium text-foreground truncate"> {/* Garantindo que o nome trunque */}
               {transaction.name}
             </h3>
-            <Badge variant={statusVariant[transaction.status]} className="text-xs">
-              {transaction.status}
-            </Badge>
+            {/* A badge de status foi removida daqui */}
           </div>
           <p className="text-sm text-muted-foreground truncate">
             {getTransactionType()}
