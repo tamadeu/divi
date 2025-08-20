@@ -98,19 +98,19 @@ const AddMemberModal = ({ workspace, isOpen, onClose, onMemberAdded }: AddMember
         return;
       }
 
-      // Verificar se o usuário já é membro do workspace
-      const { data: existingMember, error: memberError } = await supabase
+      // Verificar se o usuário já é membro do workspace (sem usar .single())
+      const { data: existingMembers, error: memberError } = await supabase
         .from('workspace_users')
         .select('id')
         .eq('workspace_id', workspace.id)
-        .eq('user_id', userData.user.id)
-        .single();
+        .eq('user_id', userData.user.id);
 
-      if (memberError && memberError.code !== 'PGRST116') {
+      if (memberError) {
+        console.error('Error checking existing member:', memberError);
         throw memberError;
       }
 
-      if (existingMember) {
+      if (existingMembers && existingMembers.length > 0) {
         showError('Este usuário já é membro deste núcleo.');
         return;
       }
