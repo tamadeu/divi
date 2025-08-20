@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider, useSession } from "@/contexts/SessionContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import Layout from "@/components/layout/Layout";
+import AdminRoute from "@/components/admin/AdminRoute";
 import Dashboard from "./pages/Dashboard";
 import AccountsPage from "./pages/Accounts";
 import AccountDetailPage from "./pages/AccountDetail";
@@ -12,6 +13,7 @@ import SearchResultsPage from "./pages/SearchResults";
 import BudgetsPage from "./pages/Budgets";
 import ReportsPage from "./pages/Reports";
 import SettingsPage from "./pages/Settings";
+import AdminPage from "./pages/Admin";
 import LoginPage from "./pages/Login";
 import SignUpPage from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
@@ -56,6 +58,11 @@ function AppRoutes() {
           <Route path="/budgets" element={<BudgetsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin" element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
+          } />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

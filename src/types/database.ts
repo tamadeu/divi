@@ -17,6 +17,15 @@ export type Category = {
   created_at: string;
 };
 
+export type Profile = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  updated_at: string;
+  user_type: "admin" | "user";
+};
+
 // Representa uma transação com o nome da categoria já incluído (via JOIN)
 export type Transaction = {
   id: string;
@@ -49,4 +58,11 @@ export type BudgetWithSpending = {
   category_name: string;
   budgeted_amount: number;
   spent_amount: number;
+};
+
+export type User = {
+  id: string;
+  email: string;
+  created_at: string;
+  profile?: Profile;
 };
