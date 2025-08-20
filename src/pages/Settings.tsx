@@ -10,6 +10,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Plus, Users, Trash2, LogOut, MoreVertical, Moon, Sun, Monitor, Key } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,7 @@ const Settings = () => {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const { refreshWorkspaces } = useWorkspace();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -128,7 +130,7 @@ const Settings = () => {
         )
       `)
       .eq("user_id", user.id)
-      .neq("workspaces.workspace_owner", user.id); // Excluir workspaces onde já é owner
+      .neq("workspaces.workspace_owner", user.id);
 
     if (ownedError || memberError) {
       console.error("Error fetching workspaces:", ownedError || memberError);
@@ -266,6 +268,10 @@ const Settings = () => {
     setCreatingWorkspace(false);
   };
 
+  const handleManageUsers = (workspaceId: string) => {
+    navigate(`/workspaces/${workspaceId}/users`);
+  };
+
   const handleDeleteWorkspace = async (workspaceId: string, workspaceName: string) => {
     if (!confirm(`Tem certeza que deseja excluir o núcleo "${workspaceName}"? Esta ação não pode ser desfeita.`)) {
       return;
@@ -341,17 +347,6 @@ const Settings = () => {
       return email[0].toUpperCase();
     }
     return "U";
-  };
-
-  const getThemeIcon = (themeValue: string) => {
-    switch (themeValue) {
-      case "light":
-        return <Sun className="h-4 w-4" />;
-      case "dark":
-        return <Moon className="h-4 w-4" />;
-      default:
-        return <Monitor className="h-4 w-4" />;
-    }
   };
 
   if (loading) {
@@ -447,65 +442,7 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Security Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Segurança</CardTitle>
-          <CardDescription>
-            Gerencie sua senha e configurações de segurança.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={() => setIsPasswordModalOpen(true)}>
-            <Key className="h-4 w-4 mr-2" />
-            Alterar Senha
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Appearance Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Aparência</CardTitle>
-          <CardDescription>
-            Personalize a aparência da aplicação.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="theme">Tema</Label>
-              <Select value={theme} onValueChange={setTheme}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione o tema" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">
-                    <div className="flex items-center gap-2">
-                      <Sun className="h-4 w-4" />
-                      Claro
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="dark">
-                    <div className="flex items-center gap-2">
-                      <Moon className="h-4 w-4" />
-                      Escuro
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="system">
-                    <div className="flex items-center gap-2">
-                      <Monitor className="h-4 w-4" />
-                      Sistema
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Workspaces Settings */}
+      {/* Workspaces Settings - MOVIDO PARA CIMA */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -563,7 +500,7 @@ const Settings = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {(workspace.user_role === "owner" || workspace.user_role === "admin") && (
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleManageUsers(workspace.id)}>
                           <Users className="h-4 w-4 mr-2" />
                           Gerenciar Usuários
                         </DropdownMenuItem>
@@ -598,6 +535,64 @@ const Settings = () => {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Security Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Segurança</CardTitle>
+          <CardDescription>
+            Gerencie sua senha e configurações de segurança.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => setIsPasswordModalOpen(true)}>
+            <Key className="h-4 w-4 mr-2" />
+            Alterar Senha
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Appearance Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Aparência</CardTitle>
+          <CardDescription>
+            Personalize a aparência da aplicação.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="theme">Tema</Label>
+              <Select value={theme} onValueChange={setTheme}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o tema" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      Claro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="dark">
+                    <div className="flex items-center gap-2">
+                      <Moon className="h-4 w-4" />
+                      Escuro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="system">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4" />
+                      Sistema
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
