@@ -142,6 +142,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
     const { data: categoriesData } = await supabase
       .from("categories")
       .select("*")
+      .eq("user_id", user.id)
       .order("name", { ascending: true });
     setCategories(categoriesData || []);
 
