@@ -1,101 +1,106 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-
-type SuccessCallback = () => void;
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { Transaction } from '@/types/database';
 
 interface ModalContextType {
+  // Add Transaction Modal
   isAddTransactionModalOpen: boolean;
-  openAddTransactionModal: (onSuccess?: SuccessCallback, initialData?: any) => void;
+  openAddTransactionModal: (initialData?: any) => void;
   closeAddTransactionModal: () => void;
-  onTransactionAdded: SuccessCallback;
   addTransactionInitialData: any;
 
-  isAddAccountModalOpen: boolean;
-  openAddAccountModal: (onSuccess?: SuccessCallback) => void;
-  closeAddAccountModal: () => void;
-  onAccountAdded: SuccessCallback;
+  // Edit Transaction Modal
+  isEditTransactionModalOpen: boolean;
+  openEditTransactionModal: (transaction: Transaction) => void;
+  closeEditTransactionModal: () => void;
+  editTransactionData: Transaction | null;
 
-  isAddCategoryModalOpen: boolean;
-  openAddCategoryModal: (onSuccess?: SuccessCallback) => void;
-  closeAddCategoryModal: () => void;
-  onCategoryAdded: SuccessCallback;
-
-  isAddTransferModalOpen: boolean;
-  openAddTransferModal: (onSuccess?: SuccessCallback) => void;
-  closeAddTransferModal: () => void;
-  onTransferAdded: SuccessCallback;
+  // Transaction Details Modal
+  isTransactionDetailsModalOpen: boolean;
+  openTransactionDetailsModal: (transaction: Transaction) => void;
+  closeTransactionDetailsModal: () => void;
+  transactionDetailsData: Transaction | null;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
-export const ModalProvider = ({ children }: { children: ReactNode }) => {
-  const [isAddTransactionModalOpen, setAddTransactionModalOpen] = useState(false);
-  const [onTransactionAdded, setOnTransactionAdded] = useState<SuccessCallback>(() => () => {});
-  const [addTransactionInitialData, setAddTransactionInitialData] = useState<any>(null);
-
-  const [isAddAccountModalOpen, setAddAccountModalOpen] = useState(false);
-  const [onAccountAdded, setOnAccountAdded] = useState<SuccessCallback>(() => () => {});
-
-  const [isAddCategoryModalOpen, setAddCategoryModalOpen] = useState(false);
-  const [onCategoryAdded, setOnCategoryAdded] = useState<SuccessCallback>(() => () => {});
-
-  const [isAddTransferModalOpen, setAddTransferModalOpen] = useState(false);
-  const [onTransferAdded, setOnTransferAdded] = useState<SuccessCallback>(() => () => {});
-
-  const openAddTransactionModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload(), initialData: any = null) => {
-    setOnTransactionAdded(() => onSuccess);
-    setAddTransactionInitialData(initialData);
-    setAddTransactionModalOpen(true);
-  }, []);
-
-  const openAddAccountModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload()) => {
-    setOnAccountAdded(() => onSuccess);
-    setAddAccountModalOpen(true);
-  }, []);
-
-  const openAddCategoryModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload()) => {
-    setOnCategoryAdded(() => onSuccess);
-    setAddCategoryModalOpen(true);
-  }, []);
-
-  const openAddTransferModal = useCallback((onSuccess: SuccessCallback = () => window.location.reload()) => {
-    setOnTransferAdded(() => onSuccess);
-    setAddTransferModalOpen(true);
-  }, []);
-
-  const value = {
-    isAddTransactionModalOpen,
-    openAddTransactionModal,
-    closeAddTransactionModal: () => setAddTransactionModalOpen(false),
-    onTransactionAdded,
-    addTransactionInitialData,
-
-    isAddAccountModalOpen,
-    openAddAccountModal,
-    closeAddAccountModal: () => setAddAccountModalOpen(false),
-    onAccountAdded,
-
-    isAddCategoryModalOpen,
-    openAddCategoryModal,
-    closeAddCategoryModal: () => setAddCategoryModalOpen(false),
-    onCategoryAdded,
-
-    isAddTransferModalOpen,
-    openAddTransferModal,
-    closeAddTransferModal: () => setAddTransferModalOpen(false),
-    onTransferAdded,
-  };
-
-  return (
-    <ModalContext.Provider value={value}>
-      {children}
-    </ModalContext.Provider>
-  );
-};
-
 export const useModal = () => {
   const context = useContext(ModalContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useModal must be used within a ModalProvider');
   }
   return context;
+};
+
+interface ModalProviderProps {
+  children: ReactNode;
+}
+
+export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
+  // Add Transaction Modal
+  const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] = useState(false);
+  const [addTransactionInitialData, setAddTransactionInitialData] = useState<any>(null);
+
+  // Edit Transaction Modal
+  const [isEditTransactionModalOpen, setIsEditTransactionModalOpen] = useState(false);
+  const [editTransactionData, setEditTransactionData] = useState<Transaction | null>(null);
+
+  // Transaction Details Modal
+  const [isTransactionDetailsModalOpen, setIsTransactionDetailsModalOpen] = useState(false);
+  const [transactionDetailsData, setTransactionDetailsData] = useState<Transaction | null>(null);
+
+  const openAddTransactionModal = (initialData?: any) => {
+    setAddTransactionInitialData(initialData);
+    setIsAddTransactionModalOpen(true);
+  };
+
+  const closeAddTransactionModal = () => {
+    setIsAddTransactionModalOpen(false);
+    setAddTransactionInitialData(null);
+  };
+
+  const openEditTransactionModal = (transaction: Transaction) => {
+    setEditTransactionData(transaction);
+    setIsEditTransactionModalOpen(true);
+  };
+
+  const closeEditTransactionModal = () => {
+    setIsEditTransactionModalOpen(false);
+    setEditTransactionData(null);
+  };
+
+  const openTransactionDetailsModal = (transaction: Transaction) => {
+    setTransactionDetailsData(transaction);
+    setIsTransactionDetailsModalOpen(true);
+  };
+
+  const closeTransactionDetailsModal = () => {
+    setIsTransactionDetailsModalOpen(false);
+    setTransactionDetailsData(null);
+  };
+
+  return (
+    <ModalContext.Provider
+      value={{
+        // Add Transaction Modal
+        isAddTransactionModalOpen,
+        openAddTransactionModal,
+        closeAddTransactionModal,
+        addTransactionInitialData,
+
+        // Edit Transaction Modal
+        isEditTransactionModalOpen,
+        openEditTransactionModal,
+        closeEditTransactionModal,
+        editTransactionData,
+
+        // Transaction Details Modal
+        isTransactionDetailsModalOpen,
+        openTransactionDetailsModal,
+        closeTransactionDetailsModal,
+        transactionDetailsData,
+      }}
+    >
+      {children}
+    </ModalContext.Provider>
+  );
 };
