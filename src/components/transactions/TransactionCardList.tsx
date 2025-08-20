@@ -1,16 +1,16 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Transaction, Company } from "@/types/database"; // Importar Company
-import TransactionCard from "./TransactionCard"; // Importar o TransactionCard existente
-import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
+import { Transaction, Company } from "@/types/database";
+import TransactionCard from "./TransactionCard";
+import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface TransactionCardListProps {
   transactions: Transaction[];
   loading: boolean;
-  onRowClick: (transaction: Transaction) => void; // Adicionar prop onRowClick
-  companies: Company[]; // Adicionar prop companies
+  onEditTransaction: (transaction: Transaction) => void; // Changed prop name
+  companies: Company[];
 }
 
-const TransactionCardList = ({ transactions, loading, onRowClick, companies }: TransactionCardListProps) => {
+const TransactionCardList = ({ transactions, loading, onEditTransaction, companies }: TransactionCardListProps) => {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -36,8 +36,8 @@ const TransactionCardList = ({ transactions, loading, onRowClick, companies }: T
         <TransactionCard
           key={transaction.id}
           transaction={transaction}
-          onRowClick={onRowClick} // Passar a função onRowClick
-          companyLogo={getCompanyLogo(transaction.name, companies)} // Usar a função para obter o logo
+          onRowClick={onEditTransaction} // Pass the new function
+          companyLogo={getCompanyLogo(transaction.name, companies)}
         />
       ))}
     </div>

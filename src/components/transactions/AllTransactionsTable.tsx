@@ -7,18 +7,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction, Company } from "@/types/database"; // Importar Company
+import { Transaction, Company } from "@/types/database";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "./TransactionCardList";
-import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
+import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface AllTransactionsTableProps {
   transactions: Transaction[];
-  onRowClick: (transaction: Transaction) => void;
-  companies: Company[]; // Adicionar prop companies
+  onEditTransaction: (transaction: Transaction) => void; // Changed prop name
+  companies: Company[];
 }
 
-const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransactionsTableProps) => {
+const AllTransactionsTable = ({ transactions, onEditTransaction, companies }: AllTransactionsTableProps) => {
   const isMobile = useIsMobile();
   
   const statusVariant = {
@@ -29,7 +29,7 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
 
   // Renderizar cards no mobile
   if (isMobile) {
-    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} companies={companies} loading={false} />;
+    return <TransactionCardList transactions={transactions} onEditTransaction={onEditTransaction} companies={companies} loading={false} />;
   }
 
   // Renderizar tabela no desktop
@@ -50,7 +50,7 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
             transactions.map((transaction) => (
               <TableRow
                 key={transaction.id}
-                onClick={() => onRowClick(transaction)}
+                onClick={() => onEditTransaction(transaction)} // Pass the new function
                 className="cursor-pointer hover:bg-muted/50"
               >
                 <TableCell className="min-w-[150px]">

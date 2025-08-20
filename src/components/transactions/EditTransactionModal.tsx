@@ -35,7 +35,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
 import { Account, Category, Transaction } from "@/types/database";
-import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon } from "lucide-react";
+import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon, Trash2 } from "lucide-react";
 import { format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,16 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Calculator } from "@/components/ui/calculator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -77,7 +87,8 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFutureDate, setIsFutureDate] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
-  const [originalBalance, setOriginalBalance] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // New state for delete confirmation
+  const [isDeleting, setIsDeleting] = useState(false); // New state for delete loading
   const isMobile = useIsMobile();
 
   const form = useForm<TransactionFormValues>({
@@ -109,7 +120,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
         form.setValue("status", "Pendente", { shouldValidate: true });
       } else {
         setIsFutureDate(false);
-        if (form.getValues("status") === "Pendente" && !transaction?.status) {
+        if (form.getValues("status") === "Pendente" && transaction?.status !== "Pendente") {
           form.setValue("status", "Concluído", { shouldValidate: true });
         }
       }
@@ -144,12 +155,6 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
         const transactionType = transaction.amount > 0 ? "income" : "expense";
         const absoluteAmount = Math.abs(transaction.amount);
         
-        // Armazenar o saldo original da conta para cálculos
-        const account = accounts.find(acc => acc.id === transaction.account_id);
-        if (account) {
-          setOriginalBalance(account.balance);
-        }
-
         form.reset({
           name: transaction.name,
           type: transactionType,
@@ -162,7 +167,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
         });
       });
     }
-  }, [isOpen, transaction, form, fetchData, accounts]);
+  }, [isOpen, transaction, form, fetchData]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -214,6 +219,8 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
 
     const newAmount = values.type === 'expense' ? -Math.abs(values.amount) : Math.abs(values.amount);
     const oldAmount = transaction.amount;
+    const oldStatus = transaction.status;
+    const oldAccountId = transaction.account_id;
 
     // Atualizar a transação
     const { error: transactionError } = await supabase
@@ -235,44 +242,42 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
       return;
     }
 
-    // Atualizar saldos das contas se necessário
-    if (values.status === 'Concluído') {
-      // Se a conta mudou ou o valor mudou, precisamos ajustar os saldos
-      if (transaction.account_id !== values.account_id || oldAmount !== newAmount) {
-        // Reverter o valor antigo da conta antiga (se a transação estava concluída)
-        if (transaction.status === 'Concluído' && transaction.account_id) {
-          const oldAccount = accounts.find(acc => acc.id === transaction.account_id);
-          if (oldAccount) {
-            const revertedBalance = oldAccount.balance - oldAmount;
-            await supabase
-              .from("accounts")
-              .update({ balance: revertedBalance })
-              .eq("id", transaction.account_id);
-          }
-        }
+    // Lógica de ajuste de saldo
+    if (oldStatus === 'Concluído' && oldAccountId) {
+      // Reverter o impacto da transação antiga na conta antiga
+      const { data: oldAccountData, error: oldAccountError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", oldAccountId)
+        .single();
 
-        // Aplicar o novo valor na nova conta
-        const newAccount = accounts.find(acc => acc.id === values.account_id);
-        if (newAccount) {
-          const newBalance = (transaction.account_id === values.account_id && transaction.status === 'Concluído') 
-            ? newAccount.balance - oldAmount + newAmount  // Mesma conta, ajustar diferença
-            : newAccount.balance + newAmount; // Conta diferente ou transação era pendente
-          
-          await supabase
-            .from("accounts")
-            .update({ balance: newBalance })
-            .eq("id", values.account_id);
-        }
-      }
-    } else if (transaction.status === 'Concluído' && values.status === 'Pendente') {
-      // Transação mudou de concluída para pendente - reverter o saldo
-      const account = accounts.find(acc => acc.id === transaction.account_id);
-      if (account) {
-        const revertedBalance = account.balance - oldAmount;
+      if (oldAccountData && !oldAccountError) {
+        const revertedBalance = oldAccountData.balance - oldAmount;
         await supabase
           .from("accounts")
           .update({ balance: revertedBalance })
-          .eq("id", transaction.account_id);
+          .eq("id", oldAccountId);
+      } else if (oldAccountError) {
+        console.error("Error fetching old account balance:", oldAccountError);
+      }
+    }
+
+    if (values.status === 'Concluído' && values.account_id) {
+      // Aplicar o impacto da nova transação na nova conta
+      const { data: newAccountData, error: newAccountError } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", values.account_id)
+        .single();
+
+      if (newAccountData && !newAccountError) {
+        const updatedBalance = newAccountData.balance + newAmount;
+        await supabase
+          .from("accounts")
+          .update({ balance: updatedBalance })
+          .eq("id", values.account_id);
+      } else if (newAccountError) {
+        console.error("Error fetching new account balance:", newAccountError);
       }
     }
 
@@ -288,6 +293,57 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
       form.setValue("amount", numericValue, { shouldValidate: true });
     }
     setShowCalculator(false);
+  };
+
+  const handleDelete = async () => {
+    if (!transaction) return;
+    setIsDeleting(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        showError("Você precisa estar logado.");
+        return;
+      }
+
+      // Se a transação estava concluída, precisamos reverter o saldo da conta
+      if (transaction.status === 'Concluído' && transaction.account_id) {
+        const { data: accountData } = await supabase
+          .from("accounts")
+          .select("balance")
+          .eq("id", transaction.account_id)
+          .single();
+
+        if (accountData) {
+          const newBalance = accountData.balance - transaction.amount;
+          await supabase
+            .from("accounts")
+            .update({ balance: newBalance })
+            .eq("id", transaction.account_id);
+        }
+      }
+
+      // Deletar a transação
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", transaction.id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        showError("Erro ao excluir transação: " + error.message);
+        return;
+      }
+
+      showSuccess("Transação excluída com sucesso!");
+      onTransactionUpdated();
+      setShowDeleteDialog(false);
+      onClose();
+    } catch (error) {
+      showError("Erro inesperado ao excluir transação.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (!transaction) return null;
@@ -307,6 +363,15 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
             <DialogDescription>
               Modifique os detalhes da sua transação.
             </DialogDescription>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 h-8 w-8 hover:bg-gray-100"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={isSubmitting || isDeleting}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
           </DialogHeader>
           
           <div className={cn(
@@ -589,7 +654,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
           )}>
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
               onClick={form.handleSubmit(handleSubmit)}
               className={cn(isMobile && "w-full order-1")}
             >
@@ -617,6 +682,35 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
           />
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+              {transaction.status === 'Concluído' && (
+                <span className="block mt-2 text-sm font-medium">
+                  O saldo da conta será ajustado automaticamente.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AddAccountModal
         isOpen={isAddAccountModalOpen}
