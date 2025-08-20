@@ -529,11 +529,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
         onCategoryAdded={(newCategory) => {
-          fetchData().then(() => {
-            if (newCategory) {
-              form.setValue('category_id', newCategory.id, { shouldValidate: true });
-            }
-          });
+          if (newCategory) {
+            // Adiciona a nova categoria ao estado local e a seleciona no formulário
+            setCategories(prevCategories => [...prevCategories, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
+            form.setValue('category_id', newCategory.id, { shouldValidate: true });
+          }
           setIsAddCategoryModalOpen(false);
         }}
         defaultType={transactionType}
