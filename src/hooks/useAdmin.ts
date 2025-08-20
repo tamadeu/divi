@@ -1,38 +1,20 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useSession } from '@/contexts/SessionContext';
+import { useProfile } from './useProfile';
 
 export const useAdmin = () => {
-  const { session } = useSession();
+  const { session, loading: sessionLoading } = useSession();
+  const { profile, loading: profileLoading } = useProfile();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!session?.user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
+    if (!sessionLoading && !profileLoading) {
+      setIsAdmin(profile?.user_type === 'admin');
+    }
+  }, [profile?.user_type, sessionLoading, profileLoading]);
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', session.user.id)
-        .single();
-
-      if (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      } else {
-        setIsAdmin(data?.user_type === 'admin');
-      }
-      
-      setLoading(false);
-    };
-
-    checkAdminStatus();
-  }, [session]);
-
-  return { isAdmin, loading };
+  return {
+    isAdmin,
+    loading: sessionLoading || profileLoading
+  };
 };

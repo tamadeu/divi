@@ -4,7 +4,7 @@ import { Bell, Package, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import AdminNavLinks from "./AdminNavLinks";
-import UserCard from "../layout/UserCard";
+import AdminUserCard from "./AdminUserCard";
 import Header from "../layout/Header";
 import BottomNav from "./AdminBottomNav";
 
@@ -37,7 +37,7 @@ const AdminLayout = () => {
             </Button>
           </div>
           
-          <UserCard />
+          <AdminUserCard />
           
           <div className="flex-1">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
@@ -67,7 +67,7 @@ const AdminLayout = () => {
               </Link>
             </Button>
             
-            <UserCard />
+            <AdminUserCard />
             
             <div onClick={() => setMobileSidebarOpen(false)}>
               <AdminNavLinks />
