@@ -141,7 +141,6 @@ const Settings = () => {
           </p>
         </div>
 
-        <ThemeToggle variant="buttons" />
       </div>
 
       {/* Alterar Senha */}
