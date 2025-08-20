@@ -13,12 +13,16 @@ interface Profile {
 }
 
 export const useProfile = () => {
-  const { session } = useSession();
+  const { session, loading: sessionLoading } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
+      if (sessionLoading) {
+        return; // Aguardar sessão carregar
+      }
+
       if (!session?.user?.id) {
         setProfile(null);
         setLoading(false);
@@ -26,6 +30,7 @@ export const useProfile = () => {
       }
 
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -34,18 +39,20 @@ export const useProfile = () => {
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching profile:', error);
+          setProfile(null);
         } else {
           setProfile(data);
         }
       } catch (error) {
         console.error('Error in fetchProfile:', error);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, sessionLoading]);
 
   return { profile, loading };
 };

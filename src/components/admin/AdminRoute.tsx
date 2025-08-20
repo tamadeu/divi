@@ -2,7 +2,6 @@ import { Navigate } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from '@/contexts/SessionContext';
-import { useProfile } from '@/hooks/useProfile';
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -10,21 +9,18 @@ interface AdminRouteProps {
 
 const AdminRoute = ({ children }: AdminRouteProps) => {
   const { session, loading: sessionLoading } = useSession();
-  const { profile, loading: profileLoading } = useProfile();
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   // Debug logs
   console.log('AdminRoute Debug:', {
     sessionLoading,
-    profileLoading,
     adminLoading,
     session: !!session,
-    profile,
     isAdmin
   });
 
   // Se ainda está carregando qualquer coisa
-  if (sessionLoading || profileLoading || adminLoading) {
+  if (sessionLoading || adminLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center space-y-4">
