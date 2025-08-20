@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -36,7 +36,8 @@ import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet";
 import { format, subMonths } from "date-fns";
-import { ptBR } from "date-fns/locale"; // Adicionado ptBR aqui
+import { ptBR } from "date-fns/locale";
+import SummaryCards from "@/components/SummaryCards"; // Importando o novo componente
 
 const ITEMS_PER_PAGE = 10;
 
@@ -59,7 +60,54 @@ const TransactionsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
+  // Estados para os dados de resumo
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
+  const [monthlyExpenses, setMonthlyExpenses] = useState<number>(0);
+  const [loadingSummary, setLoadingSummary] = useState(true);
+
+  const fetchSummaryData = useCallback(async () => {
+    setLoadingSummary(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoadingSummary(false);
+      return;
+    }
+
+    let summaryData;
+    if (monthFilter === "all") {
+      const { data, error } = await supabase.rpc('get_dashboard_summary');
+      if (error) {
+        console.error("Error fetching dashboard summary (all months):", error);
+        showError("Erro ao carregar o resumo do dashboard.");
+        setLoadingSummary(false);
+        return;
+      }
+      summaryData = data[0];
+    } else {
+      const [year, month] = monthFilter.split('-');
+      // Supabase RPC expects ISO string for date parameters
+      const summaryMonthDate = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString(); 
+      const { data, error } = await supabase.rpc('get_dashboard_summary', { summary_month: summaryMonthDate });
+      if (error) {
+        console.error("Error fetching dashboard summary (specific month):", error);
+        showError("Erro ao carregar o resumo do mês selecionado.");
+        setLoadingSummary(false);
+        return;
+      }
+      summaryData = data[0];
+    }
+
+    if (summaryData) {
+      setTotalBalance(summaryData.total_balance || 0);
+      setMonthlyIncome(summaryData.monthly_income || 0);
+      setMonthlyExpenses(Math.abs(summaryData.monthly_expenses || 0)); // Garante que seja positivo para exibição
+    }
+    setLoadingSummary(false);
+  }, [monthFilter]);
+
   const fetchTransactions = async () => {
+    setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
@@ -109,9 +157,12 @@ const TransactionsPage = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
     fetchTransactions();
-  }, []);
+  }, []); // Dependência vazia para carregar transações apenas uma vez
+
+  useEffect(() => {
+    fetchSummaryData();
+  }, [monthFilter, fetchSummaryData]); // Recarrega o resumo quando o filtro de mês muda
 
   const uniqueCategories = useMemo(() => {
     const categories = new Set(allTransactions.map((t) => t.category).filter(Boolean));
@@ -185,11 +236,15 @@ const TransactionsPage = () => {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
+    fetchTransactions(); // Recarrega as transações após edição/exclusão
+    fetchSummaryData(); // Recarrega o resumo também
   };
 
   const closeTransferModal = () => {
     setIsTransferModalOpen(false);
     setTimeout(() => setSelectedTransferData(null), 300);
+    fetchTransactions(); // Recarrega as transações após transferência
+    fetchSummaryData(); // Recarrega o resumo também
   };
 
   const handlePageChange = (page: number) => {
@@ -200,6 +255,7 @@ const TransactionsPage = () => {
 
   const handleApplyFilters = () => {
     setCurrentPage(1); // Reset to first page when filters are applied
+    fetchSummaryData(); // Recarrega o resumo com o novo filtro de mês
   };
 
   return (
@@ -215,6 +271,12 @@ const TransactionsPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <SummaryCards 
+            totalBalance={totalBalance}
+            monthlyIncome={monthlyIncome}
+            monthlyExpenses={monthlyExpenses}
+            loading={loadingSummary}
+          />
           {loading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
@@ -397,7 +459,10 @@ const TransactionsPage = () => {
         isOpen={isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}
         monthFilter={monthFilter}
-        setMonthFilter={setMonthFilter}
+        setMonthFilter={(value) => {
+          setMonthFilter(value);
+          setCurrentPage(1); // Reset page when month filter changes
+        }}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
         categoryFilter={categoryFilter}
