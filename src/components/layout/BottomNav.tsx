@@ -1,4 +1,4 @@
-import { Link, useLocation } => "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Home, LineChart, Menu, Plus, ReceiptText, Mic, CreditCard } from "lucide-react"; // Added CreditCard icon
 import { Button } from "@/components/ui/button";
 import {
