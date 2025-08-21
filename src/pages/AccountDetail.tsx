@@ -196,7 +196,7 @@ const AccountDetailPage = () => {
   if (loading) {
     return (
       <>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-4">
           <Skeleton className="h-10 w-10" />
           <Skeleton className="h-8 w-48" />
         </div>
