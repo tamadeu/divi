@@ -1,6 +1,6 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, PlusCircle, ArrowRightLeft, Mic, RotateCcw } from "lucide-react";
+import { Search, PlusCircle, ArrowRightLeft, Mic, RotateCcw, CreditCard } from "lucide-react"; // Added CreditCard icon
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showSuccess } from "@/utils/toast";
@@ -10,7 +10,7 @@ import VoiceTransactionButton from "@/components/transactions/VoiceTransactionBu
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-  const { openAddTransactionModal, openAddAccountModal, openAddCategoryModal, openAddTransferModal } = useModal();
+  const { openAddTransactionModal, openAddAccountModal, openAddCategoryModal, openAddTransferModal, openAddCreditCardTransactionModal } = useModal(); // Added openAddCreditCardTransactionModal
 
   const handleSearchSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -58,6 +58,10 @@ const Header = () => {
         <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddTransferModal()}>
           <ArrowRightLeft className="h-4 w-4" />
           Transferência
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1" onClick={() => openAddCreditCardTransactionModal()}> {/* New button */}
+          <CreditCard className="h-4 w-4" />
+          Cartão
         </Button>
         <Button size="sm" className="gap-1" onClick={() => openAddTransactionModal()}>
           <PlusCircle className="h-4 w-4" />

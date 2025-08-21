@@ -13,6 +13,7 @@ import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import TransferModal from "@/components/transfers/TransferModal";
+import AddCreditCardTransactionModal from "@/components/transactions/AddCreditCardTransactionModal"; // New import
 import UserCard from "./UserCard";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
@@ -34,6 +35,9 @@ const Layout = () => {
     isAddTransferModalOpen,
     closeAddTransferModal,
     addTransferInitialData,
+    isAddCreditCardTransactionModalOpen, // New
+    closeAddCreditCardTransactionModal, // New
+    addCreditCardTransactionInitialData, // New
   } = useModal();
 
   const platformName = getPlatformName();
@@ -65,6 +69,10 @@ const Layout = () => {
   };
 
   const handleTransferAdded = () => {
+    triggerRefresh();
+  };
+
+  const handleCreditCardTransactionAdded = () => { // New handler
     triggerRefresh();
   };
 
@@ -157,6 +165,12 @@ const Layout = () => {
         onClose={closeAddTransferModal}
         onTransferCompleted={handleTransferAdded}
         initialTransferData={addTransferInitialData}
+      />
+      <AddCreditCardTransactionModal // New modal
+        isOpen={isAddCreditCardTransactionModalOpen}
+        onClose={closeAddCreditCardTransactionModal}
+        onCreditCardTransactionAdded={handleCreditCardTransactionAdded}
+        initialData={addCreditCardTransactionInitialData}
       />
     </>
   );

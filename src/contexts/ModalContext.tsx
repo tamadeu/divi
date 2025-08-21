@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { Transaction } from '@/types/database';
 
 interface AddTransactionData {
   amount?: number;
@@ -6,12 +7,24 @@ interface AddTransactionData {
   description?: string;
   category_id?: string;
   account_id?: string;
+  date?: Date;
 }
 
 interface AddTransferData {
   fromAccountId?: string;
   toAccountId?: string;
   amount?: number;
+}
+
+interface AddCreditCardTransactionData {
+  name?: string;
+  amount?: number;
+  date?: Date;
+  credit_card_id?: string;
+  category_id?: string;
+  description?: string;
+  is_installment_purchase?: boolean;
+  installments?: number;
 }
 
 interface ModalContextType {
@@ -40,6 +53,13 @@ interface ModalContextType {
   closeAddTransferModal: () => void;
   onTransferAdded: () => void;
   addTransferInitialData: AddTransferData | undefined;
+
+  // Add Credit Card Transaction Modal
+  isAddCreditCardTransactionModalOpen: boolean;
+  openAddCreditCardTransactionModal: (initialData?: AddCreditCardTransactionData) => void;
+  closeAddCreditCardTransactionModal: () => void;
+  onCreditCardTransactionAdded: () => void;
+  addCreditCardTransactionInitialData: AddCreditCardTransactionData | undefined;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -70,6 +90,10 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
   // Add Transfer Modal State
   const [isAddTransferModalOpen, setIsAddTransferModalOpen] = useState(false);
   const [addTransferInitialData, setAddTransferInitialData] = useState<AddTransferData | undefined>();
+
+  // Add Credit Card Transaction Modal State
+  const [isAddCreditCardTransactionModalOpen, setIsAddCreditCardTransactionModalOpen] = useState(false);
+  const [addCreditCardTransactionInitialData, setAddCreditCardTransactionInitialData] = useState<AddCreditCardTransactionData | undefined>();
 
   // Add Transaction Modal Functions
   const openAddTransactionModal = (initialData?: AddTransactionData) => {
@@ -131,6 +155,22 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
     // For now, it's just a placeholder that components can override
   };
 
+  // Add Credit Card Transaction Modal Functions
+  const openAddCreditCardTransactionModal = (initialData?: AddCreditCardTransactionData) => {
+    setAddCreditCardTransactionInitialData(initialData);
+    setIsAddCreditCardTransactionModalOpen(true);
+  };
+
+  const closeAddCreditCardTransactionModal = () => {
+    setIsAddCreditCardTransactionModalOpen(false);
+    setAddCreditCardTransactionInitialData(undefined);
+  };
+
+  const onCreditCardTransactionAdded = () => {
+    // This function can be used to trigger refreshes in components that need it
+    // For now, it's just a placeholder that components can override
+  };
+
   const value: ModalContextType = {
     // Add Transaction Modal
     isAddTransactionModalOpen,
@@ -157,6 +197,13 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
     closeAddTransferModal,
     onTransferAdded,
     addTransferInitialData,
+
+    // Add Credit Card Transaction Modal
+    isAddCreditCardTransactionModalOpen,
+    openAddCreditCardTransactionModal,
+    closeAddCreditCardTransactionModal,
+    onCreditCardTransactionAdded,
+    addCreditCardTransactionInitialData,
   };
 
   return (

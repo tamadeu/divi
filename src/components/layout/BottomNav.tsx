@@ -1,5 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
-import { Home, LineChart, Menu, Plus, ReceiptText, Mic } from "lucide-react";
+import { Link, useLocation } => "react-router-dom";
+import { Home, LineChart, Menu, Plus, ReceiptText, Mic, CreditCard } from "lucide-react"; // Added CreditCard icon
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,7 +18,7 @@ interface BottomNavProps {
 
 const BottomNav = ({ onMenuClick }: BottomNavProps) => {
   const location = useLocation();
-  const { openAddTransactionModal, openAddAccountModal, openAddCategoryModal, openAddTransferModal } = useModal();
+  const { openAddTransactionModal, openAddAccountModal, openAddCategoryModal, openAddTransferModal, openAddCreditCardTransactionModal } = useModal(); // Added openAddCreditCardTransactionModal
 
   const navItems = [
     { to: "/", icon: Home, label: "Painel" },
@@ -57,6 +57,8 @@ const BottomNav = ({ onMenuClick }: BottomNavProps) => {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => openAddTransactionModal()}>Nova Transação</DropdownMenuItem>
               <DropdownMenuItem onClick={() => openAddTransferModal()}>Nova Transferência</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openAddCreditCardTransactionModal()}>Nova Compra no Cartão</DropdownMenuItem> {/* New menu item */}
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => openAddAccountModal()}>Nova Conta</DropdownMenuItem>
               <DropdownMenuItem onClick={() => openAddCategoryModal()}>Nova Categoria</DropdownMenuItem>
             </DropdownMenuContent>
