@@ -87,7 +87,7 @@ const ReportsPage = () => {
 
   return (
     <>
-      <div className="flex items-center">
+      <div className="flex items-center mb-4">
         <h1 className="text-lg font-semibold md:text-2xl">Relatórios</h1>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
