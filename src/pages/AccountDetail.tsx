@@ -230,7 +230,7 @@ const AccountDetailPage = () => {
 
   return (
     <>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 mb-4">
         <Button asChild variant="outline" size="icon">
           <Link to="/accounts">
             <ArrowLeft className="h-4 w-4" />
