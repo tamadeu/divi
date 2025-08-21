@@ -23,6 +23,8 @@ import { TrendingUp, TrendingDown, Calendar } from "lucide-react";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
+import { useModal } from "@/contexts/ModalContext"; // Import useModal
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -37,6 +39,8 @@ const SearchResultsPage = () => {
   const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+
+  const { openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Use modal functions
 
   // Gerar lista de meses para o filtro
   const generateMonthOptions = () => {
@@ -104,6 +108,7 @@ const SearchResultsPage = () => {
           total_installments,
           category:categories (name),
           transfer_id,
+          credit_card_bill_id,
           credit_card_bill:credit_card_bills (
             id,
             reference_month,
@@ -152,6 +157,7 @@ const SearchResultsPage = () => {
             total_installments,
             category:categories (name),
             transfer_id,
+            credit_card_bill_id,
             credit_card_bill:credit_card_bills (
               id,
               reference_month,
@@ -249,9 +255,10 @@ const SearchResultsPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
+    } else if (transaction.credit_card_bill_id) { // Check for credit card transaction
+      openEditCreditCardTransactionModal(transaction);
     } else {
-      setSelectedTransaction(transaction);
-      setIsEditModalOpen(true);
+      openEditTransactionModal(transaction);
     }
   };
 
@@ -389,18 +396,8 @@ const SearchResultsPage = () => {
           )}
         </CardContent>
       </Card>
-      <EditTransactionModal
-        transaction={selectedTransaction}
-        isOpen={isEditModalOpen}
-        onClose={closeEditModal}
-        onTransactionUpdated={fetchSearchResults}
-      />
-      <TransferModal
-        isOpen={isTransferModalOpen}
-        onClose={closeTransferModal}
-        onTransferCompleted={fetchSearchResults}
-        initialTransferData={selectedTransferData}
-      />
+      {/* Removed direct usage of EditTransactionModal and TransferModal here */}
+      {/* They are now managed by ModalContext in Layout.tsx */}
     </>
   );
 };

@@ -13,6 +13,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Transaction, Company, BudgetWithSpending } from "@/types/database";
 import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 
 interface SummaryData {
   total_balance: number;
@@ -26,7 +27,7 @@ const Dashboard = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openAddTransactionModal, openAddTransferModal } = useModal();
+  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Added new modal functions
   const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
@@ -35,8 +36,11 @@ const Dashboard = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleTransactionClick = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setIsEditModalOpen(true);
+    if (transaction.credit_card_bill_id) { // Check for credit card transaction
+      openEditCreditCardTransactionModal(transaction);
+    } else {
+      openEditTransactionModal(transaction);
+    }
   };
 
   const fetchDashboardData = useCallback(async (month: Date) => {
@@ -92,6 +96,7 @@ const Dashboard = () => {
         total_installments,
         category:categories (name),
         transfer_id,
+        credit_card_bill_id,
         credit_card_bill:credit_card_bills (
           id,
           reference_month,
@@ -221,12 +226,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <EditTransactionModal
-        transaction={selectedTransaction}
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onTransactionUpdated={() => fetchDashboardData(selectedMonth)}
-      />
+      {/* Removed direct usage of EditTransactionModal here */}
+      {/* It is now managed by ModalContext in Layout.tsx */}
     </>
   );
 };

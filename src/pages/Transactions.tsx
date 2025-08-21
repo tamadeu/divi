@@ -40,6 +40,7 @@ import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import SummaryCards from "@/components/SummaryCards";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 
 const ITEMS_PER_PAGE = 10;
 
@@ -51,7 +52,7 @@ const TransactionsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const { openAddTransactionModal, openAddTransferModal } = useModal();
+  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Added new modal functions
   const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
@@ -165,6 +166,7 @@ const TransactionsPage = () => {
         category:categories (name),
         account:accounts (name, type),
         transfer_id,
+        credit_card_bill_id,
         credit_card_bill:credit_card_bills (
           id,
           reference_month,
@@ -270,9 +272,10 @@ const TransactionsPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
+    } else if (transaction.credit_card_bill_id) { // Check for credit card transaction
+      openEditCreditCardTransactionModal(transaction);
     } else {
-      setSelectedTransaction(transaction);
-      setIsEditModalOpen(true);
+      openEditTransactionModal(transaction);
     }
   };
 
@@ -314,7 +317,7 @@ const TransactionsPage = () => {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
       </div>
       <Card>
@@ -498,18 +501,8 @@ const TransactionsPage = () => {
           )}
         </CardContent>
       </Card>
-      <EditTransactionModal
-        transaction={selectedTransaction}
-        isOpen={isEditModalOpen}
-        onClose={closeEditModal}
-        onTransactionUpdated={fetchTransactions}
-      />
-      <TransferModal
-        isOpen={isTransferModalOpen}
-        onClose={closeTransferModal}
-        onTransferCompleted={fetchTransactions}
-        initialTransferData={selectedTransferData}
-      />
+      {/* Removed direct usage of EditTransactionModal and TransferModal here */}
+      {/* They are now managed by ModalContext in Layout.tsx */}
       <TransactionFiltersSheet
         isOpen={isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}

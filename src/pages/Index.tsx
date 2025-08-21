@@ -15,6 +15,7 @@ import TransactionDetailsModal from "@/components/transactions/TransactionDetail
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 
 interface DashboardSummary {
   total_balance: number;
@@ -48,6 +49,7 @@ const Index = () => {
     openTransactionDetailsModal,
     closeTransactionDetailsModal,
     transactionDetailsData,
+    openEditCreditCardTransactionModal, // New
   } = useModal();
 
   const isMobile = useIsMobile();
@@ -75,6 +77,7 @@ const Index = () => {
         *,
         account:accounts(name, type),
         categories(name),
+        credit_card_bill_id,
         credit_card_bill:credit_card_bills (
           id,
           reference_month,
@@ -116,6 +119,7 @@ const Index = () => {
         *,
         account:accounts(name, type),
         categories(name),
+        credit_card_bill_id,
         credit_card_bill:credit_card_bills (
           id,
           reference_month,
@@ -223,12 +227,20 @@ const Index = () => {
   };
 
   const handleRowClick = (transaction: Transaction) => {
-    openTransactionDetailsModal(transaction);
+    if (transaction.credit_card_bill_id) {
+      openEditCreditCardTransactionModal(transaction);
+    } else {
+      openTransactionDetailsModal(transaction);
+    }
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
     closeTransactionDetailsModal(); // Fechar o modal de detalhes primeiro
-    openEditTransactionModal(transaction);
+    if (transaction.credit_card_bill_id) {
+      openEditCreditCardTransactionModal(transaction);
+    } else {
+      openEditTransactionModal(transaction);
+    }
   };
 
   return (
@@ -342,27 +354,7 @@ const Index = () => {
       </Tabs>
 
       {/* Modals */}
-      <AddTransactionModal
-        isOpen={isAddTransactionModalOpen}
-        onClose={closeAddTransactionModal}
-        onTransactionAdded={handleTransactionAdded}
-        initialData={addTransactionInitialData}
-      />
-
-      <EditTransactionModal
-        isOpen={isEditTransactionModalOpen}
-        onClose={closeEditTransactionModal}
-        onTransactionUpdated={handleTransactionUpdated}
-        transaction={editTransactionData}
-      />
-
-      <TransactionDetailsModal
-        transaction={transactionDetailsData}
-        isOpen={isTransactionDetailsModalOpen}
-        onClose={closeTransactionDetailsModal}
-        onEdit={handleEditTransaction}
-        onTransactionDeleted={handleTransactionDeleted}
-      />
+      {/* Modals are now rendered in Layout.tsx and controlled by ModalContext */}
     </div>
   );
 };

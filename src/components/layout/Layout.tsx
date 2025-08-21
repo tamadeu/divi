@@ -10,10 +10,12 @@ import NavLinks from "./NavLinks";
 import { Package2 } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
+import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Ensure this is imported
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import TransferModal from "@/components/transfers/TransferModal";
-import AddCreditCardTransactionModal from "@/components/transactions/AddCreditCardTransactionModal"; // New import
+import AddCreditCardTransactionModal from "@/components/transactions/AddCreditCardTransactionModal";
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 import UserCard from "./UserCard";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
@@ -28,6 +30,9 @@ const Layout = () => {
     isAddTransactionModalOpen,
     closeAddTransactionModal,
     addTransactionInitialData,
+    isEditTransactionModalOpen, // Ensure this is destructured
+    closeEditTransactionModal, // Ensure this is destructured
+    editTransactionData, // Ensure this is destructured
     isAddAccountModalOpen,
     closeAddAccountModal,
     isAddCategoryModalOpen,
@@ -35,9 +40,12 @@ const Layout = () => {
     isAddTransferModalOpen,
     closeAddTransferModal,
     addTransferInitialData,
-    isAddCreditCardTransactionModalOpen, // New
-    closeAddCreditCardTransactionModal, // New
-    addCreditCardTransactionInitialData, // New
+    isAddCreditCardTransactionModalOpen,
+    closeAddCreditCardTransactionModal,
+    addCreditCardTransactionInitialData,
+    isEditCreditCardTransactionModalOpen, // New
+    closeEditCreditCardTransactionModal, // New
+    editCreditCardTransactionData, // New
   } = useModal();
 
   const platformName = getPlatformName();
@@ -72,7 +80,11 @@ const Layout = () => {
     triggerRefresh();
   };
 
-  const handleCreditCardTransactionAdded = () => { // New handler
+  const handleCreditCardTransactionAdded = () => {
+    triggerRefresh();
+  };
+
+  const handleCreditCardTransactionUpdated = () => { // New handler
     triggerRefresh();
   };
 
@@ -150,6 +162,12 @@ const Layout = () => {
         onTransactionAdded={handleTransactionAdded}
         initialData={addTransactionInitialData}
       />
+      <EditTransactionModal
+        isOpen={isEditTransactionModalOpen}
+        onClose={closeEditTransactionModal}
+        onTransactionUpdated={handleTransactionAdded} // Re-use handleTransactionAdded for refresh
+        transaction={editTransactionData}
+      />
       <AddAccountModal
         isOpen={isAddAccountModalOpen}
         onClose={closeAddAccountModal}
@@ -166,11 +184,17 @@ const Layout = () => {
         onTransferCompleted={handleTransferAdded}
         initialTransferData={addTransferInitialData}
       />
-      <AddCreditCardTransactionModal // New modal
+      <AddCreditCardTransactionModal
         isOpen={isAddCreditCardTransactionModalOpen}
         onClose={closeAddCreditCardTransactionModal}
         onCreditCardTransactionAdded={handleCreditCardTransactionAdded}
         initialData={addCreditCardTransactionInitialData}
+      />
+      <EditCreditCardTransactionModal // New modal
+        isOpen={isEditCreditCardTransactionModalOpen}
+        onClose={closeEditCreditCardTransactionModal}
+        onCreditCardTransactionUpdated={handleCreditCardTransactionUpdated}
+        transaction={editCreditCardTransactionData}
       />
     </>
   );

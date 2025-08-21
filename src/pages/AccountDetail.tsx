@@ -33,6 +33,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
+import { useModal } from "@/contexts/ModalContext"; // Import useModal
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 
 const ITEMS_PER_PAGE = 5;
 
@@ -52,6 +54,8 @@ const AccountDetailPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const { openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Use modal functions
 
   const fetchAccountData = async () => {
     if (!accountId) {
@@ -98,6 +102,7 @@ const AccountDetailPage = () => {
         total_installments,
         category:categories (name),
         transfer_id,
+        credit_card_bill_id,
         credit_card_bill:credit_card_bills (
           id,
           reference_month,
@@ -187,9 +192,10 @@ const AccountDetailPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
+    } else if (transaction.credit_card_bill_id) { // Check for credit card transaction
+      openEditCreditCardTransactionModal(transaction);
     } else {
-      setSelectedTransaction(transaction);
-      setIsEditModalOpen(true);
+      openEditTransactionModal(transaction);
     }
   };
 
@@ -375,18 +381,8 @@ const AccountDetailPage = () => {
           </CardContent>
         </Card>
       </div>
-      <EditTransactionModal
-        transaction={selectedTransaction}
-        isOpen={isEditModalOpen}
-        onClose={closeEditModal}
-        onTransactionUpdated={fetchAccountData}
-      />
-      <TransferModal
-        isOpen={isTransferModalOpen}
-        onClose={closeTransferModal}
-        onTransferCompleted={fetchAccountData}
-        initialTransferData={selectedTransferData}
-      />
+      {/* Removed direct usage of EditTransactionModal and TransferModal here */}
+      {/* They are now managed by ModalContext in Layout.tsx */}
     </>
   );
 };
