@@ -168,11 +168,17 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
           installments: transaction.total_installments || 1,
         });
 
-        // Explicitly set category_id again after a short delay
+        // Explicitly set category_id and credit_card_id again after a short delay
+        // This can help if there's a race condition with Select options loading
         if (transaction.category_id) {
           setTimeout(() => {
             form.setValue('category_id', transaction.category_id!, { shouldValidate: true });
-          }, 50); // Small delay
+          }, 100); // Small delay
+        }
+        if (transaction.credit_card_id) {
+          setTimeout(() => {
+            form.setValue('credit_card_id', transaction.credit_card_id!, { shouldValidate: true });
+          }, 100); // Small delay
         }
       });
     }
