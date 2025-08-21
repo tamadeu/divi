@@ -174,12 +174,15 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
       });
 
       // Explicitly set values for Selects to ensure they update
-      if (transaction.credit_card_id) {
-        form.setValue('credit_card_id', transaction.credit_card_id, { shouldValidate: true });
-      }
-      if (transaction.category_id) {
-        form.setValue('category_id', transaction.category_id, { shouldValidate: true });
-      }
+      // Use setTimeout to give the Select component time to render its options
+      setTimeout(() => {
+        if (transaction.credit_card_id) {
+          form.setValue('credit_card_id', transaction.credit_card_id, { shouldValidate: true });
+        }
+        if (transaction.category_id) {
+          form.setValue('category_id', transaction.category_id, { shouldValidate: true });
+        }
+      }, 50); // Small delay
     }
   }, [isOpen, transaction, creditCards, categories, form]); // Depend on creditCards and categories
 
