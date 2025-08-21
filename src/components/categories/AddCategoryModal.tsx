@@ -20,36 +20,39 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Category } from "@/types/database"; // Import Category type
 
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCategoryAdded: () => void;
+  onCategoryAdded: (newCategory: Category | null) => void; // Changed to pass new Category
+  defaultType?: 'income' | 'expense'; // Added defaultType prop
 }
 
-const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded }: AddCategoryModalProps) => {
+const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: AddCategoryModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
-    type: "",
+    type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''), // Initialize with defaultType
   });
   const [loading, setLoading] = useState(false);
   const { currentWorkspace } = useWorkspace();
 
-  // Reset form when modal opens
+  // Reset form when modal opens, considering defaultType
   useEffect(() => {
     if (isOpen) {
       setFormData({
         name: "",
-        type: "",
+        type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''),
       });
     }
-  }, [isOpen]);
+  }, [isOpen, defaultType]); // Added defaultType to dependencies
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!currentWorkspace) {
       showError("Nenhum workspace selecionado");
+      onCategoryAdded(null); // Indicate failure
       return;
     }
 
@@ -59,25 +62,29 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded }: AddCategoryModal
     if (!user) {
       showError("Usuário não autenticado");
       setLoading(false);
+      onCategoryAdded(null); // Indicate failure
       return;
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("categories")
       .insert({
         user_id: user.id,
         workspace_id: currentWorkspace.id,
         name: formData.name,
         type: formData.type,
-      });
+      })
+      .select() // Select the inserted data
+      .single(); // Get a single object
 
     if (error) {
       showError("Erro ao criar categoria");
       console.error("Error creating category:", error);
+      onCategoryAdded(null); // Pass null on error
     } else {
       showSuccess("Categoria criada com sucesso!");
       onClose();
-      onCategoryAdded();
+      onCategoryAdded(data); // Pass the new category data
     }
 
     setLoading(false);
