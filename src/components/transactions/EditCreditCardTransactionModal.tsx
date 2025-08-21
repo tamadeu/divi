@@ -118,7 +118,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
   const isInstallmentPurchase = form.watch("is_installment_purchase");
 
   const fetchData = useCallback(async () => {
-    if (!currentWorkspace) return { creditCards: [], categories: [] };
+    if (!currentWorkspace) return;
 
     // Buscar cartões de crédito do workspace atual
     const { data: creditCardsData, error: creditCardsError } = await supabase
@@ -148,41 +148,40 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
     } else {
       setCategories(categoriesData || []);
     }
-
-    return { creditCards: creditCardsData || [], categories: categoriesData || [] };
   }, [currentWorkspace]);
 
+  // Effect to fetch data when modal opens
   useEffect(() => {
-    if (isOpen && transaction && currentWorkspace) {
-      fetchData().then(() => {
-        const absoluteAmount = Math.abs(transaction.amount);
-        
-        form.reset({
-          name: transaction.name,
-          amount: absoluteAmount,
-          date: new Date(transaction.date),
-          credit_card_id: transaction.credit_card_id || "",
-          category_id: transaction.category_id || "",
-          description: transaction.description || "",
-          is_installment_purchase: (transaction.total_installments || 1) > 1,
-          installments: transaction.total_installments || 1,
-        });
-
-        // Explicitly set category_id and credit_card_id again after a short delay
-        // This can help if there's a race condition with Select options loading
-        if (transaction.category_id) {
-          setTimeout(() => {
-            form.setValue('category_id', transaction.category_id!, { shouldValidate: true });
-          }, 100); // Small delay
-        }
-        if (transaction.credit_card_id) {
-          setTimeout(() => {
-            form.setValue('credit_card_id', transaction.credit_card_id!, { shouldValidate: true });
-          }, 100); // Small delay
-        }
-      });
+    if (isOpen && currentWorkspace) {
+      fetchData();
     }
-  }, [isOpen, transaction, form, fetchData, currentWorkspace]);
+  }, [isOpen, currentWorkspace, fetchData]);
+
+  // Effect to set form values once data is loaded and transaction is available
+  useEffect(() => {
+    if (isOpen && transaction && creditCards.length > 0 && categories.length > 0) {
+      const absoluteAmount = Math.abs(transaction.amount);
+      
+      form.reset({
+        name: transaction.name,
+        amount: absoluteAmount,
+        date: new Date(transaction.date),
+        credit_card_id: transaction.credit_card_id || "",
+        category_id: transaction.category_id || "",
+        description: transaction.description || "",
+        is_installment_purchase: (transaction.total_installments || 1) > 1,
+        installments: transaction.total_installments || 1,
+      });
+
+      // Explicitly set values for Selects to ensure they update
+      if (transaction.credit_card_id) {
+        form.setValue('credit_card_id', transaction.credit_card_id, { shouldValidate: true });
+      }
+      if (transaction.category_id) {
+        form.setValue('category_id', transaction.category_id, { shouldValidate: true });
+      }
+    }
+  }, [isOpen, transaction, creditCards, categories, form]); // Depend on creditCards and categories
 
   useEffect(() => {
     const fetchSuggestions = async () => {
