@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Transaction, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,8 +28,8 @@ const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
 
-  const [searchResults, setSearchResults] = useState<Transaction[]>([]);
-  const [filteredResults, setFilteredResults] = useState<Transaction[]>([]);
+  const [searchResults, setSearchResults] = useState<TransactionWithDetails[]>([]); // Use new type
+  const [filteredResults, setFilteredResults] = useState<TransactionWithDetails[]>([]); // Use new type
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -99,8 +100,22 @@ const SearchResultsPage = () => {
           status,
           description,
           category_id,
+          installment_number,
+          total_installments,
           category:categories (name),
-          transfer_id
+          transfer_id,
+          credit_card_bill:credit_card_bills (
+            id,
+            reference_month,
+            closing_date,
+            due_date,
+            status,
+            credit_card:credit_cards (
+              name,
+              brand,
+              last_four_digits
+            )
+          )
         `)
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
 
@@ -133,8 +148,22 @@ const SearchResultsPage = () => {
             status,
             description,
             category_id,
+            installment_number,
+            total_installments,
             category:categories (name),
-            transfer_id
+            transfer_id,
+            credit_card_bill:credit_card_bills (
+              id,
+              reference_month,
+              closing_date,
+              due_date,
+              status,
+              credit_card:credit_cards (
+                name,
+                brand,
+                last_four_digits
+              )
+            )
           `)
           .in("category_id", categoryIds);
 
@@ -157,9 +186,10 @@ const SearchResultsPage = () => {
       );
 
       // Formatar dados
-      const formattedData = uniqueTransactions.map((t: any) => ({
+      const formattedData: TransactionWithDetails[] = uniqueTransactions.map((t: any) => ({ // Cast to new type
         ...t,
         category: t.category?.name || "Sem categoria",
+        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
       }));
 
       setSearchResults(formattedData);
@@ -228,11 +258,13 @@ const SearchResultsPage = () => {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setTimeout(() => setSelectedTransaction(null), 300);
+    fetchSearchResults();
   };
 
   const closeTransferModal = () => {
     setIsTransferModalOpen(false);
     setTimeout(() => setSelectedTransferData(null), 300);
+    fetchSearchResults();
   };
 
   // Calcular totais baseado nos resultados filtrados
@@ -351,7 +383,7 @@ const SearchResultsPage = () => {
           ) : (
             <AllTransactionsTable
               transactions={filteredResults}
-              onEditTransaction={handleRowClick}
+              onRowClick={handleRowClick}
               companies={companies}
             />
           )}

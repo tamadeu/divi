@@ -1,103 +1,39 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ArrowUpRight } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Transaction, Company } from "@/types/database"; // Importar Company
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Transaction, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import TransactionCardList from "@/components/transactions/TransactionCardList";
-import { getCompanyLogo } from "@/utils/transaction-helpers"; // Importar a função utilitária
 
 interface RecentTransactionsProps {
-  transactions: Transaction[];
+  transactions: TransactionWithDetails[]; // Use new type
   loading: boolean;
-  onRowClick: (transaction: Transaction) => void;
-  companies: Company[]; // Adicionar prop companies
+  onRowClick?: (transaction: Transaction) => void;
+  companies: Company[];
 }
 
 const RecentTransactions = ({ transactions, loading, onRowClick, companies }: RecentTransactionsProps) => {
-  const isMobile = useIsMobile();
-
-  const statusVariant = {
-    "Concluído": "default",
-    "Pendente": "secondary",
-    "Falhou": "destructive",
-  } as const;
-
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center">
-        <div className="grid gap-2">
-          <CardTitle>Transações Recentes</CardTitle>
-          <CardDescription>
-            Suas transações mais recentes.
-          </CardDescription>
-        </div>
-        <Button asChild size="sm" className="ml-auto gap-1">
-          <Link to="/transactions">
-            Ver Todas
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
-        </Button>
+    <Card className="col-span-3">
+      <CardHeader>
+        <CardTitle>Transações Recentes</CardTitle>
+        <CardDescription>
+          Suas últimas transações.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+          <div className="space-y-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
           </div>
-        ) : isMobile ? (
-          <TransactionCardList transactions={transactions} loading={loading} onRowClick={onRowClick} companies={companies} />
+        ) : transactions.length === 0 ? (
+          <div className="flex h-32 items-center justify-center text-muted-foreground">
+            Nenhuma transação recente.
+          </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Transação</TableHead>
-                <TableHead className="hidden sm:table-cell">Status</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.id} onClick={() => onRowClick(transaction)} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell>
-                    <div className="font-medium">{transaction.name}</div>
-                    <div className="hidden text-sm text-muted-foreground md:inline">
-                      {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Badge variant={statusVariant[transaction.status]}>
-                      {transaction.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className={`text-right font-semibold ${transaction.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {transaction.amount.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <TransactionCardList transactions={transactions} onRowClick={onRowClick} companies={companies} loading={false} />
         )}
       </CardContent>
     </Card>

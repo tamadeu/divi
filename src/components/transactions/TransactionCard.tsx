@@ -1,9 +1,12 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Transaction } from "@/types/database";
-import { Building, User } from "lucide-react";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
+import { Building, User, CreditCard } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface TransactionCardProps {
-  transaction: Transaction;
+  transaction: TransactionWithDetails; // Use new type
   onRowClick?: (transaction: Transaction) => void;
   companyLogo?: string | null;
 }
@@ -12,6 +15,13 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
   const getTransactionType = () => {
     if (transaction.transfer_id) {
       return "Transferência";
+    }
+    if (transaction.credit_card_bill) {
+      const cardName = transaction.credit_card_bill.credit_card?.name || "Cartão de Crédito";
+      const installmentInfo = transaction.total_installments && transaction.installment_number
+        ? ` (${transaction.installment_number}/${transaction.total_installments})`
+        : '';
+      return `${cardName}${installmentInfo}`;
     }
     return transaction.category || "Sem categoria";
   };
@@ -22,6 +32,16 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
         <Avatar className="h-12 w-12">
           <AvatarFallback className="bg-blue-100 text-blue-600">
             <User className="h-6 w-6" />
+          </AvatarFallback>
+        </Avatar>
+      );
+    }
+
+    if (transaction.credit_card_bill) {
+      return (
+        <Avatar className="h-12 w-12">
+          <AvatarFallback className="bg-purple-100 text-purple-600">
+            <CreditCard className="h-6 w-6" />
           </AvatarFallback>
         </Avatar>
       );
@@ -97,6 +117,11 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
             currency: "BRL",
           })}
         </p>
+        {transaction.credit_card_bill && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Fatura: {format(new Date(transaction.credit_card_bill.reference_month), 'MMM/yy', { locale: ptBR })}
+          </p>
+        )}
       </div>
     </div>
   );

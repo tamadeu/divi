@@ -8,12 +8,15 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Transaction, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "./TransactionCardList";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface AllTransactionsTableProps {
-  transactions: Transaction[];
+  transactions: TransactionWithDetails[]; // Use new type
   onRowClick?: (transaction: Transaction) => void;
   companies: Company[];
 }
@@ -66,7 +69,7 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
         <TableHeader>
           <TableRow>
             <TableHead className="min-w-[150px]">Transação</TableHead>
-            <TableHead className="hidden lg:table-cell">Conta</TableHead>
+            <TableHead className="hidden lg:table-cell">Conta/Cartão</TableHead> {/* Changed header */}
             <TableHead className="hidden sm:table-cell">Categoria</TableHead>
             <TableHead className="hidden md:table-cell">Status</TableHead>
             <TableHead className="text-right min-w-[100px]">Valor</TableHead>
@@ -84,6 +87,9 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
                   <div className="font-medium">{transaction.name}</div>
                   <div className="text-sm text-muted-foreground">
                     {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                    {transaction.installment_number && transaction.total_installments && (
+                      <span className="ml-1">({transaction.installment_number}/{transaction.total_installments})</span>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground sm:hidden">
                     {transaction.category}
@@ -94,6 +100,16 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
                     <>
                       <div className="font-medium">{transaction.account.name}</div>
                       <div className="text-sm text-muted-foreground">{transaction.account.type}</div>
+                    </>
+                  ) : transaction.credit_card_bill ? (
+                    <>
+                      <div className="font-medium">{transaction.credit_card_bill.credit_card?.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {transaction.credit_card_bill.credit_card?.brand} (**** {transaction.credit_card_bill.credit_card?.last_four_digits})
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Fatura: {format(new Date(transaction.credit_card_bill.reference_month), 'MMM/yy', { locale: ptBR })}
+                      </div>
                     </>
                   ) : (
                     "N/A"

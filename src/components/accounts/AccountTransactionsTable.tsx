@@ -7,31 +7,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction, Company } from "@/types/database"; // Importar Company
+import { Transaction, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "@/components/transactions/TransactionCardList";
-
-// Redefine Account interface locally to include bank_id if not in global types
-interface AccountWithBankId {
-  id: string;
-  name: string;
-  bank: string;
-  bank_id: string | null; // Added bank_id
-  type: string;
-  balance: number;
-  is_default: boolean;
-  include_in_total: boolean;
-}
-
-// Extend Transaction to include account details if needed, or ensure it's fetched
-interface TransactionWithAccount extends Transaction {
-  accounts?: AccountWithBankId; // Assuming transactions might join with accounts
-}
+import { getCompanyLogo } from "@/utils/transaction-helpers";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface AccountTransactionsTableProps {
-  transactions: TransactionWithAccount[]; // Use the extended interface
-  onRowClick: (transaction: Transaction) => void;
-  companies: Company[]; // Adicionar prop companies
+  transactions: TransactionWithDetails[]; // Use new type
+  onRowClick?: (transaction: Transaction) => void;
+  companies: Company[];
 }
 
 const AccountTransactionsTable = ({ transactions, onRowClick, companies }: AccountTransactionsTableProps) => {
@@ -42,6 +29,12 @@ const AccountTransactionsTable = ({ transactions, onRowClick, companies }: Accou
     "Pendente": "secondary",
     "Falhou": "destructive",
   } as const;
+
+  const handleRowClick = (transaction: Transaction) => {
+    if (onRowClick && typeof onRowClick === 'function') {
+      onRowClick(transaction);
+    }
+  };
 
   // Renderizar cards no mobile
   if (isMobile) {
@@ -65,13 +58,16 @@ const AccountTransactionsTable = ({ transactions, onRowClick, companies }: Accou
             transactions.map((transaction) => (
               <TableRow
                 key={transaction.id}
-                onClick={() => onRowClick(transaction)}
-                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleRowClick(transaction)}
+                className={`${onRowClick ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'}`}
               >
                 <TableCell className="min-w-[150px]">
                   <div className="font-medium">{transaction.name}</div>
                   <div className="text-sm text-muted-foreground">
                     {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                    {transaction.installment_number && transaction.total_installments && (
+                      <span className="ml-1">({transaction.installment_number}/{transaction.total_installments})</span>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground sm:hidden">
                     {transaction.category}
@@ -105,7 +101,7 @@ const AccountTransactionsTable = ({ transactions, onRowClick, companies }: Accou
           ) : (
             <TableRow>
               <TableCell colSpan={4} className="h-24 text-center">
-                Nenhuma transação encontrada.
+                Nenhuma transação encontrada para esta conta.
               </TableCell>
             </TableRow>
           )}

@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { showError } from "@/utils/toast";
 import { Transaction, Account, Category, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import TransactionCardList from "@/components/transactions/TransactionCardList";
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
@@ -22,8 +23,8 @@ interface DashboardSummary {
 }
 
 const Index = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
+  const [allTransactions, setAllTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -73,7 +74,19 @@ const Index = () => {
       .select(`
         *,
         account:accounts(name, type),
-        categories(name)
+        categories(name),
+        credit_card_bill:credit_card_bills (
+          id,
+          reference_month,
+          closing_date,
+          due_date,
+          status,
+          credit_card:credit_cards (
+            name,
+            brand,
+            last_four_digits
+          )
+        )
       `)
       .eq("user_id", user.id)
       .order("date", { ascending: false })
@@ -84,9 +97,10 @@ const Index = () => {
       return;
     }
 
-    const formattedTransactions = data?.map(transaction => ({
+    const formattedTransactions: TransactionWithDetails[] = data?.map(transaction => ({ // Cast to new type
       ...transaction,
-      category: transaction.categories?.name || "Sem categoria"
+      category: transaction.categories?.name || "Sem categoria",
+      credit_card_bill: transaction.credit_card_bill, // Include nested credit_card_bill
     })) || [];
 
     setTransactions(formattedTransactions);
@@ -101,7 +115,19 @@ const Index = () => {
       .select(`
         *,
         account:accounts(name, type),
-        categories(name)
+        categories(name),
+        credit_card_bill:credit_card_bills (
+          id,
+          reference_month,
+          closing_date,
+          due_date,
+          status,
+          credit_card:credit_cards (
+            name,
+            brand,
+            last_four_digits
+          )
+        )
       `)
       .eq("user_id", user.id)
       .order("date", { ascending: false });
@@ -111,9 +137,10 @@ const Index = () => {
       return;
     }
 
-    const formattedTransactions = data?.map(transaction => ({
+    const formattedTransactions: TransactionWithDetails[] = data?.map(transaction => ({ // Cast to new type
       ...transaction,
-      category: transaction.categories?.name || "Sem categoria"
+      category: transaction.categories?.name || "Sem categoria",
+      credit_card_bill: transaction.credit_card_bill, // Include nested credit_card_bill
     })) || [];
 
     setAllTransactions(formattedTransactions);

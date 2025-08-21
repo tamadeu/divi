@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/pagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Account, Transaction, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import { Skeleton } from "@/components/ui/skeleton";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import TransferModal from "@/components/transfers/TransferModal";
@@ -38,7 +39,7 @@ const ITEMS_PER_PAGE = 5;
 const AccountDetailPage = () => {
   const { accountId } = useParams<{ accountId: string }>();
   const [account, setAccount] = useState<Account | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -93,8 +94,22 @@ const AccountDetailPage = () => {
         status,
         description,
         category_id,
+        installment_number,
+        total_installments,
         category:categories (name),
-        transfer_id
+        transfer_id,
+        credit_card_bill:credit_card_bills (
+          id,
+          reference_month,
+          closing_date,
+          due_date,
+          status,
+          credit_card:credit_cards (
+            name,
+            brand,
+            last_four_digits
+          )
+        )
       `)
       .eq("account_id", accountId)
       .order("date", { ascending: false });
@@ -102,9 +117,10 @@ const AccountDetailPage = () => {
     if (transactionsError) {
       console.error("Error fetching transactions:", transactionsError);
     } else {
-      const formattedData = transactionsData.map((t: any) => ({
+      const formattedData: TransactionWithDetails[] = transactionsData.map((t: any) => ({ // Cast to new type
         ...t,
         category: t.category?.name || "Sem categoria",
+        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
       }));
       setTransactions(formattedData);
     }

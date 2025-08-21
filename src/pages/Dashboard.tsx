@@ -11,6 +11,7 @@ import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Transaction, Company, BudgetWithSpending } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 
 interface SummaryData {
@@ -21,7 +22,7 @@ interface SummaryData {
 
 const Dashboard = () => {
   const [summary, setSummary] = useState<SummaryData | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
   const [companies, setCompanies] = useState<Company[]>([]);
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,8 +88,22 @@ const Dashboard = () => {
         amount,
         status,
         description,
+        installment_number,
+        total_installments,
         category:categories (name),
-        transfer_id
+        transfer_id,
+        credit_card_bill:credit_card_bills (
+          id,
+          reference_month,
+          closing_date,
+          due_date,
+          status,
+          credit_card:credit_cards (
+            name,
+            brand,
+            last_four_digits
+          )
+        )
       `)
       .eq("workspace_id", currentWorkspace.id)
       .gte("date", monthStart.toISOString())
@@ -99,9 +114,10 @@ const Dashboard = () => {
     if (transactionsError) {
       console.error("Error fetching recent transactions:", transactionsError);
     } else {
-      const formattedData = transactionsData.map((t: any) => ({
+      const formattedData: TransactionWithDetails[] = transactionsData.map((t: any) => ({ // Cast to new type
         ...t,
         category: t.category?.name || "Sem categoria",
+        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
       }));
       setTransactions(formattedData);
     }

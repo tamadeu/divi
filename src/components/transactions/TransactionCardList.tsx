@@ -1,10 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Transaction, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import TransactionCard from "./TransactionCard";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface TransactionCardListProps {
-  transactions: Transaction[];
+  transactions: TransactionWithDetails[]; // Use new type
   loading: boolean;
   onRowClick?: (transaction: Transaction) => void;
   companies: Company[];

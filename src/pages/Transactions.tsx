@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Transaction, Company } from "@/types/database";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,7 +44,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 const ITEMS_PER_PAGE = 10;
 
 const TransactionsPage = () => {
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -159,9 +160,23 @@ const TransactionsPage = () => {
         status,
         description,
         category_id,
+        installment_number,
+        total_installments,
         category:categories (name),
         account:accounts (name, type),
-        transfer_id
+        transfer_id,
+        credit_card_bill:credit_card_bills (
+          id,
+          reference_month,
+          closing_date,
+          due_date,
+          status,
+          credit_card:credit_cards (
+            name,
+            brand,
+            last_four_digits
+          )
+        )
       `)
       .eq("workspace_id", currentWorkspace.id)
       .order("date", { ascending: false });
@@ -169,10 +184,11 @@ const TransactionsPage = () => {
     if (error) {
       console.error("Error fetching transactions:", error);
     } else {
-      const formattedData = data.map((t: any) => ({
+      const formattedData: TransactionWithDetails[] = data.map((t: any) => ({ // Cast to new type
         ...t,
         category: t.category?.name || "Sem categoria",
         account: t.account,
+        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
       }));
       setAllTransactions(formattedData);
     }
