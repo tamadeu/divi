@@ -74,9 +74,22 @@ interface ParsedImportData {
 
 const LOCAL_STORAGE_KEY = "pendingImportData";
 
-// Helper function to map CSV type to database type
+// Helper function to map CSV type to database type (Portuguese)
 const mapCsvTypeToDbType = (csvType: 'income' | 'expense'): 'Receita' | 'Despesa' => {
   return csvType === 'income' ? 'Receita' : 'Despesa';
+};
+
+// Helper function to normalize any category type string to 'Receita' or 'Despesa'
+const normalizeCategoryType = (type: string): 'Receita' | 'Despesa' => {
+  const lowerType = type.toLowerCase();
+  if (lowerType === 'income' || lowerType === 'receita') {
+    return 'Receita';
+  }
+  if (lowerType === 'expense' || lowerType === 'despesa') {
+    return 'Despesa';
+  }
+  // Default to 'Despesa' or handle unknown types as needed
+  return 'Despesa'; 
 };
 
 const ConfirmImportPage = () => {
@@ -113,7 +126,12 @@ const ConfirmImportPage = () => {
               console.error("Error fetching categories for mapping:", categoriesError);
               showError("Erro ao carregar categorias para mapeamento.");
             } else {
-              setAvailableCategories(categoriesData || []);
+              // Normalize category types when fetching them
+              const normalizedCategories = (categoriesData || []).map(cat => ({
+                ...cat,
+                type: normalizeCategoryType(cat.type) // Normalize the type here
+              }));
+              setAvailableCategories(normalizedCategories);
             }
           }
         } catch (e) {
@@ -157,8 +175,8 @@ const ConfirmImportPage = () => {
 
   const handleCategoryAdded = (newCategory: Category | null) => {
     if (newCategory && categoryToCreate) {
-      // Add the new category to available categories
-      setAvailableCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
+      // Add the new category to available categories, ensuring its type is normalized
+      setAvailableCategories(prev => [...prev, { ...newCategory, type: normalizeCategoryType(newCategory.type) }].sort((a, b) => a.name.localeCompare(b.name)));
       
       // Automatically map the newly created category to the missing one
       handleCategoryMappingChange(categoryToCreate.name, categoryToCreate.type, newCategory.id);
