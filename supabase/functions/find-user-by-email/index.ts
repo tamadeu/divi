@@ -22,10 +22,21 @@ serve(async (req) => {
       });
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.');
+      return new Response(JSON.stringify({ error: 'Server configuration error: Supabase environment variables are missing. Please ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Edge Function secrets.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseServiceRoleKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -33,6 +44,15 @@ serve(async (req) => {
         },
       }
     );
+
+    // Explicitly check if admin object exists before calling its method
+    if (!supabaseAdmin.auth.admin) {
+      console.error('supabaseAdmin.auth.admin is not available. This usually means the SUPABASE_SERVICE_ROLE_KEY is not correctly configured or is invalid.');
+      return new Response(JSON.stringify({ error: 'Supabase admin client not initialized correctly. Missing admin capabilities. Please check SUPABASE_SERVICE_ROLE_KEY.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
 
     // Use the admin client to get the user by email
     const { data: user, error } = await supabaseAdmin.auth.admin.getUserByEmail(email);
