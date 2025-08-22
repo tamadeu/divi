@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider, useSession } from "@/contexts/SessionContext";
+import { ProfileProvider, useProfile } from "@/contexts/ProfileContext"; // Import ProfileProvider and useProfile
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import Layout from "@/components/layout/Layout";
@@ -36,9 +37,10 @@ import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPasswordPage from "./pages/ResetPassword";
 
 const ProtectedRoute = () => {
-  const { session, loading } = useSession();
+  const { session, loading: sessionLoading } = useSession();
+  const { loading: profileLoading } = useProfile(); // Use profile loading state
 
-  if (loading) {
+  if (sessionLoading || profileLoading) { // Wait for both session and profile to load
     return (
       <div className="flex items-center justify-center h-screen">
         <Skeleton className="w-32 h-8" />
@@ -58,9 +60,10 @@ const ProtectedRoute = () => {
 };
 
 const AdminProtectedRoute = () => {
-  const { session, loading } = useSession();
+  const { session, loading: sessionLoading } = useSession();
+  const { loading: profileLoading } = useProfile(); // Use profile loading state
 
-  if (loading) {
+  if (sessionLoading || profileLoading) { // Wait for both session and profile to load
     return (
       <div className="flex items-center justify-center h-screen">
         <Skeleton className="w-32 h-8" />
@@ -127,9 +130,11 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <SessionProvider>
-        <ModalProvider>
-          <AppRoutes />
-        </ModalProvider>
+        <ProfileProvider> {/* Wrap with ProfileProvider */}
+          <ModalProvider>
+            <AppRoutes />
+          </ModalProvider>
+        </ProfileProvider>
       </SessionProvider>
       <Toaster />
     </ThemeProvider>

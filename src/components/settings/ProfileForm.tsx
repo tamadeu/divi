@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useProfile } from "@/hooks/useProfile"; // Import useProfile
 
 const profileSchema = z.object({
   first_name: z.string().min(1, "O nome é obrigatório."),
@@ -20,7 +21,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfileForm() {
-  const [loading, setLoading] = useState(true);
+  const { profile, loading: profileLoading, refreshProfile } = useProfile(); // Use useProfile hook
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,31 +34,24 @@ export function ProfileForm() {
   });
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setEmail(user.email || "");
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", user.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching profile:", error);
-        } else if (profile) {
-          form.reset({
-            first_name: profile.first_name || "",
-            last_name: profile.last_name || "",
-          });
+    const loadProfileData = async () => {
+      if (!profileLoading && profile) {
+        setEmail(profile.email || ""); // Assuming email is part of profile or fetched separately
+        form.reset({
+          first_name: profile.first_name || "",
+          last_name: profile.last_name || "",
+        });
+      } else if (!profileLoading && !profile) {
+        // If no profile found, try to get user email
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setEmail(user.email || "");
         }
       }
-      setLoading(false);
     };
 
-    fetchProfile();
-  }, [form]);
+    loadProfileData();
+  }, [profile, profileLoading, form]);
 
   const handleSubmit = async (values: ProfileFormValues) => {
     setIsSubmitting(true);
@@ -81,11 +75,12 @@ export function ProfileForm() {
       showError("Erro ao atualizar perfil: " + error.message);
     } else {
       showSuccess("Perfil atualizado com sucesso!");
+      refreshProfile(); // Refresh the cached profile data
     }
     setIsSubmitting(false);
   };
 
-  if (loading) {
+  if (profileLoading) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
