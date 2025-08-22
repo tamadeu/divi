@@ -15,6 +15,7 @@ import { useSession } from "@/contexts/SessionContext";
 import { Account, Category } from "@/types/database";
 import { Loader2, UploadCloud, FileText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const importSchema = z.object({
   csvFile: z.any().refine((file) => file instanceof File, "Um arquivo CSV é obrigatório."),
@@ -26,9 +27,39 @@ interface TransactionImportFormProps {
   onImportComplete: () => void;
 }
 
+// Define the structure for data to be passed to the confirmation page
+interface ParsedTransaction {
+  name: string;
+  amount: number;
+  date: string;
+  type: 'income' | 'expense';
+  category_id: string;
+  account_id: string;
+  description: string | null;
+  user_id: string;
+  workspace_id: string;
+  credit_card_bill_id: null;
+  installment_number: null;
+  total_installments: null;
+  // Temporary fields for display
+  category_name?: string;
+  account_name?: string;
+}
+
+interface ParsedImportData {
+  transactions: ParsedTransaction[];
+  accountBalanceUpdates: { [key: string]: number };
+  errors: string[];
+  accountsMap: { [key: string]: Account }; // Map to get account details for display
+  categoriesMap: { [key: string]: Category }; // Map to get category details for display
+}
+
+const LOCAL_STORAGE_KEY = "pendingImportData";
+
 export function TransactionImportForm({ onImportComplete }: TransactionImportFormProps) {
   const { currentWorkspace } = useWorkspace();
   const { session } = useSession();
+  const navigate = useNavigate(); // Initialize useNavigate
   const [isLoading, setIsLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -79,9 +110,15 @@ export function TransactionImportForm({ onImportComplete }: TransactionImportFor
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const transactionsToInsert = [];
+        const transactionsToInsert: ParsedTransaction[] = [];
         const errors: string[] = [];
         const accountBalanceUpdates: { [key: string]: number } = {};
+        const accountsMap: { [key: string]: Account } = {};
+        const categoriesMap: { [key: string]: Category } = {};
+
+        // Populate maps for quick lookup and passing to confirmation page
+        accounts.forEach(acc => accountsMap[acc.id] = acc);
+        categories.forEach(cat => categoriesMap[cat.id] = cat);
 
         for (const [index, row] of results.data.entries()) {
           const rowNumber = index + 2; // +1 for 0-indexed, +1 for header row
@@ -136,52 +173,41 @@ export function TransactionImportForm({ onImportComplete }: TransactionImportFor
             credit_card_bill_id: null, // Not for credit card transactions
             installment_number: null,
             total_installments: null,
+            category_name: foundCategory.name, // For display on confirmation page
+            account_name: foundAccount.name, // For display on confirmation page
           });
 
           // Prepare account balance updates
           if (accountBalanceUpdates[foundAccount.id]) {
             accountBalanceUpdates[foundAccount.id] += finalAmount;
           } else {
+            // Initialize with current balance + first transaction amount
             accountBalanceUpdates[foundAccount.id] = foundAccount.balance + finalAmount;
           }
         }
 
-        if (transactionsToInsert.length === 0) {
+        if (transactionsToInsert.length === 0 && errors.length === 0) {
           showError("Nenhuma transação válida encontrada para importação.");
           setIsLoading(false);
           return;
         }
 
-        try {
-          const { error: insertError } = await supabase
-            .from("transactions")
-            .insert(transactionsToInsert);
-
-          if (insertError) {
-            throw insertError;
-          }
-
-          // Update account balances
-          const accountUpdatePromises = Object.entries(accountBalanceUpdates).map(([accountId, newBalance]) =>
-            supabase.from("accounts").update({ balance: newBalance }).eq("id", accountId)
-          );
-          await Promise.all(accountUpdatePromises);
-
-          showSuccess(`Importação concluída! ${transactionsToInsert.length} transações adicionadas.`);
-          if (errors.length > 0) {
-            showError(`Algumas transações tiveram erros: ${errors.join('; ')}`);
-          }
-          form.reset();
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-          onImportComplete(); // Trigger refresh in parent component
-        } catch (error: any) {
-          console.error("Error during import:", error);
-          showError("Erro ao importar transações: " + error.message);
-        } finally {
-          setIsLoading(false);
+        // Store parsed data in local storage and navigate
+        const dataToStore: ParsedImportData = {
+          transactions: transactionsToInsert,
+          accountBalanceUpdates,
+          errors,
+          accountsMap,
+          categoriesMap,
+        };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToStore));
+        
+        setIsLoading(false);
+        form.reset();
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
         }
+        navigate("/confirm-import"); // Navigate to the new confirmation page
       },
       error: (error) => {
         console.error("Error parsing CSV:", error);
@@ -232,12 +258,12 @@ export function TransactionImportForm({ onImportComplete }: TransactionImportFor
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Importando...
+              Processando...
             </>
           ) : (
             <>
               <UploadCloud className="mr-2 h-4 w-4" />
-              Importar Transações
+              Processar CSV
             </>
           )}
         </Button>

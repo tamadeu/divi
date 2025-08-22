@@ -35,6 +35,7 @@ import CategoriesPage from "./pages/Categories";
 import { Skeleton } from "./components/ui/skeleton";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPasswordPage from "./pages/ResetPassword";
+import ConfirmImportPage from "./pages/ConfirmImportPage"; // Import the new page
 
 const ProtectedRoute = () => {
   const { session, loading: sessionLoading } = useSession();
@@ -104,6 +105,7 @@ function AppRoutes() {
           <Route path="/credit-cards" element={<CreditCardsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/confirm-import" element={<ConfirmImportPage />} /> {/* New route for CSV import confirmation */}
         </Route>
 
         {/* Admin Routes */}
