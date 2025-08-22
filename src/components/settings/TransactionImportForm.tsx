@@ -264,7 +264,12 @@ export function TransactionImportForm({ onImportComplete }: TransactionImportFor
         <Alert>
           <FileText className="h-4 w-4" />
           <AlertTitle>Formato do CSV</AlertTitle>
-
+          <AlertDescription className="break-words w-full">
+            Seu arquivo CSV deve conter as seguintes colunas (na primeira linha): <br />
+            <code>date,name,amount,type,category,description</code> <br />
+            Exemplo: <code>2023-01-15,Salário,3000.00,income,Salário,Pagamento mensal</code> <br />
+            Use <code>income</code> ou <code>expense</code> para o tipo.
+          </AlertDescription>
         </Alert>
 
         <FormField
