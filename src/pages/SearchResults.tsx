@@ -25,6 +25,10 @@ import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext"; // Import useModal
 import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
+import SummaryCard from "@/components/dashboard/SummaryCard"; // Imported SummaryCard
+import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncomeExpenseSummaryCards"; // Imported new component
+import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
+import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -39,8 +43,11 @@ const SearchResultsPage = () => {
   const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [loadingSummary, setLoadingSummary] = useState(true); // New state for summary loading
 
   const { openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Use modal functions
+  const isMobile = useIsMobile(); // Use useIsMobile hook
+  const { currentWorkspace } = useWorkspace(); // Use useWorkspace hook
 
   // Gerar lista de meses para o filtro
   const generateMonthOptions = () => {
@@ -68,16 +75,19 @@ const SearchResultsPage = () => {
   const monthOptions = generateMonthOptions();
 
   const fetchSearchResults = useCallback(async () => {
-    if (!query) {
+    if (!query || !currentWorkspace) { // Add currentWorkspace check
       setSearchResults([]);
       setLoading(false);
+      setLoadingSummary(false); // Set summary loading to false as well
       return;
     }
     setLoading(true);
+    setLoadingSummary(true); // Start summary loading
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
+      setLoadingSummary(false); // Set summary loading to false as well
       return;
     }
 
@@ -122,6 +132,7 @@ const SearchResultsPage = () => {
             )
           )
         `)
+        .eq("workspace_id", currentWorkspace.id) // Filter by current workspace
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
 
       if (transactionError) {
@@ -132,6 +143,7 @@ const SearchResultsPage = () => {
       const { data: categoryData, error: categoryError } = await supabase
         .from("categories")
         .select("id")
+        .eq("workspace_id", currentWorkspace.id) // Filter by current workspace
         .ilike("name", `%${query}%`);
 
       if (categoryError) {
@@ -171,6 +183,7 @@ const SearchResultsPage = () => {
               )
             )
           `)
+          .eq("workspace_id", currentWorkspace.id) // Filter by current workspace
           .in("category_id", categoryIds);
 
         if (catTransError) {
@@ -205,7 +218,8 @@ const SearchResultsPage = () => {
     }
 
     setLoading(false);
-  }, [query]);
+    setLoadingSummary(false); // End summary loading
+  }, [query, currentWorkspace]); // Add currentWorkspace to dependencies
 
   useEffect(() => {
     fetchSearchResults();
@@ -290,6 +304,17 @@ const SearchResultsPage = () => {
     }).format(value);
   };
 
+  if (!currentWorkspace) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">Nenhum núcleo financeiro selecionado</h2>
+          <p className="text-muted-foreground">Selecione um núcleo financeiro para ver os resultados da busca.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Filtro de Mês */}
@@ -317,54 +342,35 @@ const SearchResultsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">Total de Receitas</CardTitle>
-            <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg md:text-2xl font-bold text-green-600">
-              {loading ? (
-                <Skeleton className="h-6 md:h-8 w-20 md:w-24" />
-              ) : (
-                formatCurrency(totalIncome)
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {loading ? (
-                <Skeleton className="h-3 md:h-4 w-12 md:w-16" />
-              ) : (
-                `${filteredResults.filter(t => Number(t.amount) > 0).length} transação(ões)`
-              )}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">Total de Despesas</CardTitle>
-            <TrendingDown className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg md:text-2xl font-bold text-red-600">
-              {loading ? (
-                <Skeleton className="h-6 md:h-8 w-20 md:w-24" />
-              ) : (
-                formatCurrency(totalExpenses)
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {loading ? (
-                <Skeleton className="h-3 md:h-4 w-12 md:w-16" />
-              ) : (
-                `${filteredResults.filter(t => Number(t.amount) < 0).length} transação(ões)`
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Cards de Resumo - Usando os novos componentes */}
+      {loadingSummary ? (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+      ) : (
+        isMobile ? (
+          <MobileIncomeExpenseSummaryCards
+            monthlyIncome={totalIncome}
+            monthlyExpenses={totalExpenses}
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 mb-4">
+            <SummaryCard
+              title="Renda Total"
+              value={formatCurrency(totalIncome)}
+              icon={TrendingUp}
+              variant="income"
+            />
+            <SummaryCard
+              title="Despesas Totais"
+              value={formatCurrency(totalExpenses)}
+              icon={TrendingDown}
+              variant="expense"
+            />
+          </div>
+        )
+      )}
 
       {/* Card de Resultados */}
       <Card>
