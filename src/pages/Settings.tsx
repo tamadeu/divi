@@ -36,30 +36,6 @@ const Settings = () => {
         {/* Núcleos Financeiros - usando o componente existente */}
         <WorkspaceManagement />
 
-        {/* Alterar Senha */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Alterar Senha</h2>
-            <p className="text-sm text-muted-foreground">
-              Atualize sua senha de acesso.
-            </p>
-          </div>
-          <ChangePasswordForm />
-        </div>
-
-        {/* Importar Transações CSV */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Importar Transações (CSV)</h2>
-            <p className="text-sm text-muted-foreground">
-              Importe suas transações de despesa e renda a partir de um arquivo CSV.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4">
-            <DownloadCSVTemplateButton />
-            <TransactionImportForm onImportComplete={onTransactionAdded} />
-          </div>
-        </div>
       </div>
     </div>
   );
