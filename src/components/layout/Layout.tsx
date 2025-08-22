@@ -10,12 +10,10 @@ import NavLinks from "./NavLinks";
 import { Package2 } from "lucide-react";
 import { useModal } from "@/contexts/ModalContext";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Ensure this is imported
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddCategoryModal from "@/components/categories/AddCategoryModal";
 import TransferModal from "@/components/transfers/TransferModal";
 import AddCreditCardTransactionModal from "@/components/transactions/AddCreditCardTransactionModal";
-import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 import UserCard from "./UserCard";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { usePublicPlatformSettings } from "@/hooks/usePublicPlatformSettings";
@@ -30,9 +28,6 @@ const Layout = () => {
     isAddTransactionModalOpen,
     closeAddTransactionModal,
     addTransactionInitialData,
-    isEditTransactionModalOpen, // Ensure this is destructured
-    closeEditTransactionModal, // Ensure this is destructured
-    editTransactionData, // Ensure this is destructured
     isAddAccountModalOpen,
     closeAddAccountModal,
     isAddCategoryModalOpen,
@@ -43,9 +38,6 @@ const Layout = () => {
     isAddCreditCardTransactionModalOpen,
     closeAddCreditCardTransactionModal,
     addCreditCardTransactionInitialData,
-    isEditCreditCardTransactionModalOpen, // New
-    closeEditCreditCardTransactionModal, // New
-    editCreditCardTransactionData, // New
   } = useModal();
 
   const platformName = getPlatformName();
@@ -84,9 +76,11 @@ const Layout = () => {
     triggerRefresh();
   };
 
-  const handleCreditCardTransactionUpdated = () => { // New handler
-    triggerRefresh();
-  };
+  // These handlers are no longer needed here as editing is done on a dedicated page
+  // and that page will handle its own refresh/navigation.
+  // const handleCreditCardTransactionUpdated = () => { 
+  //   triggerRefresh();
+  // };
 
   return (
     <>
@@ -162,12 +156,7 @@ const Layout = () => {
         onTransactionAdded={handleTransactionAdded}
         initialData={addTransactionInitialData}
       />
-      <EditTransactionModal
-        isOpen={isEditTransactionModalOpen}
-        onClose={closeEditTransactionModal}
-        onTransactionUpdated={handleTransactionAdded} // Re-use handleTransactionAdded for refresh
-        transaction={editTransactionData}
-      />
+      {/* EditTransactionModal and EditCreditCardTransactionModal are now handled by TransactionDetailEditPage */}
       <AddAccountModal
         isOpen={isAddAccountModalOpen}
         onClose={closeAddAccountModal}
@@ -189,12 +178,6 @@ const Layout = () => {
         onClose={closeAddCreditCardTransactionModal}
         onCreditCardTransactionAdded={handleCreditCardTransactionAdded}
         initialData={addCreditCardTransactionInitialData}
-      />
-      <EditCreditCardTransactionModal // New modal
-        isOpen={isEditCreditCardTransactionModalOpen}
-        onClose={closeEditCreditCardTransactionModal}
-        onCreditCardTransactionUpdated={handleCreditCardTransactionUpdated}
-        transaction={editCreditCardTransactionData}
       />
     </>
   );
