@@ -10,11 +10,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useSession } from "@/contexts/SessionContext"; // Import useSession
+import { useSession } from "@/contexts/SessionContext";
 import { Transaction, Company, BudgetWithSpending } from "@/types/database";
 import { TransactionWithDetails } from "@/types/transaction-details";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
+import { format } from "date-fns"; // Import format from date-fns
 
 interface SummaryData {
   total_balance: number;
@@ -30,14 +31,14 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
   const { currentWorkspace } = useWorkspace();
-  const { session } = useSession(); // Get session from context
+  const { session } = useSession();
   const isMobile = useIsMobile();
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const handleTransactionClick = (transaction: Transaction) => {
+  const handleTransactionClick = (transaction: TransactionWithDetails) => { // Updated type here
     if (transaction.credit_card_bill_id) {
       openEditCreditCardTransactionModal(transaction);
     } else {
@@ -46,21 +47,15 @@ const Dashboard = () => {
   };
 
   const fetchDashboardData = useCallback(async (month: Date) => {
-    if (!currentWorkspace || !session?.user) { // Use session.user directly
+    if (!currentWorkspace || !session?.user) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    // Removed redundant supabase.auth.getUser() call here
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   setLoading(false);
-    //   return;
-    // }
-
+    
     const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
-    const nextMonthStart = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+    // const nextMonthStart = new Date(month.getFullYear(), month.getMonth() + 1, 1); // Not needed with RPC filter
 
     // Fetch companies
     const { data: companiesData, error: companiesError } = await supabase
@@ -84,78 +79,47 @@ const Dashboard = () => {
       setSummary(summaryData[0]);
     }
 
-    // Fetch recent transactions for the selected month and workspace
-    const { data: transactionsData, error: transactionsError } = await supabase
-      .from("transactions")
-      .select(`
-        id,
-        account_id,
-        date,
-        name,
-        amount,
-        status,
-        description,
-        installment_number,
-        total_installments,
-        category:categories (name),
-        transfer_id,
-        credit_card_bill_id,
-        credit_card_bill:credit_card_bills (
-          id,
-          reference_month,
-          closing_date,
-          due_date,
-          status,
-          credit_card:credit_cards (
-            name,
-            brand,
-            last_four_digits
-          )
-        )
-      `)
-      .eq("workspace_id", currentWorkspace.id)
-      .gte("date", monthStart.toISOString())
-      .lt("date", nextMonthStart.toISOString())
-      .order("date", { ascending: false })
-      .limit(6);
+    // Fetch recent transactions for the selected month and workspace using RPC
+    const { data: transactionsData, error: transactionsError } = await supabase.rpc('get_transaction_details', {
+      p_user_id: session.user.id,
+      p_workspace_id: currentWorkspace.id,
+      p_month_filter: format(month, 'yyyy-MM'), // Filter by YYYY-MM
+      p_status_filter: 'all', // Assuming no status filter for dashboard recent transactions
+      p_category_name_filter: 'all', // Assuming no category filter
+      p_account_type_filter: 'all', // Assuming no account type filter
+    });
 
     if (transactionsError) {
       console.error("Error fetching recent transactions:", transactionsError);
+      setTransactions([]);
     } else {
-      const formattedData: TransactionWithDetails[] = transactionsData.map((t: any) => ({
-        ...t,
-        category: t.category?.name || "Sem categoria",
-        credit_card_bill: t.credit_card_bill,
-      }));
-      setTransactions(formattedData);
+      // The RPC function already returns data in the desired flattened format
+      // We just need to cast it and apply the limit
+      const limitedTransactions = (transactionsData || []).slice(0, 6) as TransactionWithDetails[];
+      setTransactions(limitedTransactions);
     }
 
     // Fetch budgets for the selected month and workspace
     const { data: budgetsData, error: budgetsError } = await supabase.rpc('get_budgets_with_spending', {
-      budget_month: monthStart.toISOString(),
+      budget_month: monthStart, // Pass Date object directly
+      workspace_id_param: currentWorkspace.id // Pass workspace_id_param
     });
 
     if (budgetsError) {
       console.error("Error fetching budgets data:", budgetsError);
       setBudgets([]);
     } else {
-      // Filter budgets by workspace (since the RPC doesn't support workspace filtering yet)
-      const workspaceBudgets = budgetsData?.filter((budget: any) => {
-        // We'll need to check if the budget belongs to the current workspace
-        // For now, we'll show all budgets until we update the RPC function
-        return true;
-      }) || [];
-      setBudgets(workspaceBudgets);
+      setBudgets(budgetsData || []);
     }
 
     setLoading(false);
-  }, [currentWorkspace, session?.user]); // Added session.user to dependencies
+  }, [currentWorkspace, session?.user]);
 
   useEffect(() => {
-    if (currentWorkspace && session?.user) { // Ensure session.user is available before fetching
+    if (currentWorkspace && session?.user) {
       fetchDashboardData(selectedMonth);
     }
-  }, [fetchDashboardData, selectedMonth, currentWorkspace, session?.user]); // Added session.user to dependencies
+  }, [fetchDashboardData, selectedMonth, currentWorkspace, session?.user]);
 
   const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number') return "R$ 0,00";
@@ -165,7 +129,7 @@ const Dashboard = () => {
     });
   };
 
-  if (!currentWorkspace || !session?.user) { // Also check session.user here
+  if (!currentWorkspace || !session?.user) {
     return (
       <div className="flex items-center justify-center h-64">
         <Skeleton className="w-32 h-8" />
