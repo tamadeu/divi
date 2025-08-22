@@ -260,7 +260,7 @@ export function TransactionImportForm({ onImportComplete }: TransactionImportFor
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleImport)} className="space-y-4 w-full">
+      <form onSubmit={form.handleSubmit(handleImport)} className="space-y-4">
         <Alert>
           <FileText className="h-4 w-4" />
           <AlertTitle>Formato do CSV</AlertTitle>
