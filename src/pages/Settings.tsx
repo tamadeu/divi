@@ -33,6 +33,8 @@ const Settings = () => {
           <ProfileForm />
         </div>
 
+        {/* Núcleos Financeiros - usando o componente existente */}
+        <WorkspaceManagement />
 
         {/* Alterar Senha */}
         <div className="space-y-4">
