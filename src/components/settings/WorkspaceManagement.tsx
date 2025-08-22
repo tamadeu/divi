@@ -84,6 +84,7 @@ export function WorkspaceManagement() {
   };
 
   const handleDelete = (workspace: WorkspaceWithRole) => {
+    console.log("WorkspaceManagement: handleDelete called for workspace:", workspace.name, "ID:", workspace.id);
     setDeletingWorkspace(workspace);
   };
 
@@ -332,6 +333,14 @@ export function WorkspaceManagement() {
           workspace={editingWorkspace}
           isOpen={!!editingWorkspace}
           onClose={() => setEditingWorkspace(null)}
+        />
+      )}
+
+      {deletingWorkspace && (
+        <DeleteWorkspaceModal
+          workspace={deletingWorkspace}
+          isOpen={!!deletingWorkspace}
+          onClose={() => setDeletingWorkspace(null)}
         />
       )}
 

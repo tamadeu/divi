@@ -25,11 +25,14 @@ interface DeleteWorkspaceModalProps {
 }
 
 const DeleteWorkspaceModal = ({ workspace, isOpen, onClose }: DeleteWorkspaceModalProps) => {
+  console.log("DeleteWorkspaceModal: Component rendered. isOpen:", isOpen, "workspace name:", workspace?.name);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmationText, setConfirmationText] = useState("");
   const { refreshWorkspaces, switchWorkspace, workspaces } = useWorkspace();
 
   const handleDelete = async () => {
+    console.log("DeleteWorkspaceModal: handleDelete called inside modal for workspace:", workspace.name);
+
     if (confirmationText !== workspace.name) {
       showError("O nome do núcleo não confere. Digite exatamente: " + workspace.name);
       return;
@@ -60,6 +63,9 @@ const DeleteWorkspaceModal = ({ workspace, isOpen, onClose }: DeleteWorkspaceMod
       const remainingWorkspaces = workspaces.filter(w => w.id !== workspace.id);
       if (remainingWorkspaces.length > 0) {
         switchWorkspace(remainingWorkspaces[0].id);
+      } else {
+        // If no other workspaces, clear current workspace
+        switchWorkspace("");
       }
       
       await refreshWorkspaces();
