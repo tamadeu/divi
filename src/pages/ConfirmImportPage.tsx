@@ -74,6 +74,11 @@ interface ParsedImportData {
 
 const LOCAL_STORAGE_KEY = "pendingImportData";
 
+// Helper function to map CSV type to database type
+const mapCsvTypeToDbType = (csvType: 'income' | 'expense'): 'Receita' | 'Despesa' => {
+  return csvType === 'income' ? 'Receita' : 'Despesa';
+};
+
 const ConfirmImportPage = () => {
   const navigate = useNavigate();
   const { currentWorkspace, refreshWorkspaces } = useWorkspace();
@@ -333,7 +338,7 @@ const ConfirmImportPage = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 {availableCategories
-                                  .filter(cat => cat.type === mc.type)
+                                  .filter(cat => cat.type === mapCsvTypeToDbType(mc.type)) // Use helper function here
                                   .map(cat => (
                                     <SelectItem key={cat.id} value={cat.id}>
                                       {cat.name}
