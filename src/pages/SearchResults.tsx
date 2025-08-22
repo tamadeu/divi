@@ -29,25 +29,24 @@ import SummaryCard from "@/components/dashboard/SummaryCard"; // Imported Summar
 import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncomeExpenseSummaryCards"; // Imported new component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
+import { useSession } from "@/contexts/SessionContext"; // Import useSession
+import { format } from "date-fns"; // Import format
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
 
-  const [searchResults, setSearchResults] = useState<TransactionWithDetails[]>([]); // Use new type
-  const [filteredResults, setFilteredResults] = useState<TransactionWithDetails[]>([]); // Use new type
+  const [allFetchedTransactions, setAllFetchedTransactions] = useState<TransactionWithDetails[]>([]); // All transactions from RPC
+  const [filteredResults, setFilteredResults] = useState<TransactionWithDetails[]>([]); // Results after client-side filtering
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>("all");
-  const [loadingSummary, setLoadingSummary] = useState(true); // New state for summary loading
-
   const { openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Use modal functions
   const isMobile = useIsMobile(); // Use useIsMobile hook
   const { currentWorkspace } = useWorkspace(); // Use useWorkspace hook
+  const { session } = useSession(); // Use session
+
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [loadingSummary, setLoadingSummary] = useState(true); // New state for summary loading
 
   // Gerar lista de meses para o filtro
   const generateMonthOptions = () => {
@@ -57,7 +56,7 @@ const SearchResultsPage = () => {
     // Adicionar os últimos 12 meses
     for (let i = 0; i < 12; i++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthKey = format(date, 'yyyy-MM'); // Use format for consistency
       const monthLabel = date.toLocaleDateString('pt-BR', { 
         month: 'long', 
         year: 'numeric' 
@@ -75,21 +74,14 @@ const SearchResultsPage = () => {
   const monthOptions = generateMonthOptions();
 
   const fetchSearchResults = useCallback(async () => {
-    if (!query || !currentWorkspace) { // Add currentWorkspace check
-      setSearchResults([]);
+    if (!query || !currentWorkspace || !session?.user) { // Add currentWorkspace and session.user check
+      setAllFetchedTransactions([]);
       setLoading(false);
       setLoadingSummary(false); // Set summary loading to false as well
       return;
     }
     setLoading(true);
     setLoadingSummary(true); // Start summary loading
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      setLoadingSummary(false); // Set summary loading to false as well
-      return;
-    }
 
     try {
       // Fetch companies first
@@ -102,154 +94,73 @@ const SearchResultsPage = () => {
         setCompanies(companiesData || []);
       }
 
-      // Busca 1: Transações por nome e descrição
-      const { data: transactionData, error: transactionError } = await supabase
-        .from("transactions")
-        .select(`
-          id,
-          account_id,
-          date,
-          name,
-          amount,
-          status,
-          description,
-          category_id,
-          installment_number,
-          total_installments,
-          category:categories (name),
-          transfer_id,
-          credit_card_bill_id,
-          credit_card_bill:credit_card_bills (
-            id,
-            reference_month,
-            closing_date,
-            due_date,
-            status,
-            credit_card:credit_cards (
-              name,
-              brand,
-              last_four_digits
-            )
-          )
-        `)
-        .eq("workspace_id", currentWorkspace.id) // Filter by current workspace
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+      // Fetch all transactions for the current workspace and user using RPC
+      const rpcArgs: {
+        p_user_id: string;
+        p_workspace_id: string;
+        p_month_filter?: string;
+      } = {
+        p_user_id: session.user.id,
+        p_workspace_id: currentWorkspace.id,
+      };
 
-      if (transactionError) {
-        console.error("Error fetching transactions:", transactionError);
+      if (selectedMonth !== "all") {
+        rpcArgs.p_month_filter = selectedMonth;
       }
 
-      // Busca 2: Categorias que correspondem à busca
-      const { data: categoryData, error: categoryError } = await supabase
-        .from("categories")
-        .select("id")
-        .eq("workspace_id", currentWorkspace.id) // Filter by current workspace
-        .ilike("name", `%${query}%`);
+      const { data: transactionsData, error: transactionsError } = await supabase.rpc('get_transaction_details', rpcArgs);
 
-      if (categoryError) {
-        console.error("Error fetching categories:", categoryError);
+      if (transactionsError) {
+        console.error("Error fetching detailed transactions:", transactionsError);
+        setAllFetchedTransactions([]);
+      } else {
+        setAllFetchedTransactions(transactionsData || []);
       }
 
-      // Busca 3: Transações das categorias encontradas
-      let categoryTransactionData = [];
-      if (categoryData && categoryData.length > 0) {
-        const categoryIds = categoryData.map(cat => cat.id);
-        const { data: catTransData, error: catTransError } = await supabase
-          .from("transactions")
-          .select(`
-            id,
-            account_id,
-            date,
-            name,
-            amount,
-            status,
-            description,
-            category_id,
-            installment_number,
-            total_installments,
-            category:categories (name),
-            transfer_id,
-            credit_card_bill_id,
-            credit_card_bill:credit_card_bills (
-              id,
-              reference_month,
-              closing_date,
-              due_date,
-              status,
-              credit_card:credit_cards (
-                name,
-                brand,
-                last_four_digits
-              )
-            )
-          `)
-          .eq("workspace_id", currentWorkspace.id) // Filter by current workspace
-          .in("category_id", categoryIds);
-
-        if (catTransError) {
-          console.error("Error fetching category transactions:", catTransError);
-        } else {
-          categoryTransactionData = catTransData || [];
-        }
-      }
-
-      // Combinar e remover duplicatas
-      const allTransactions = [
-        ...(transactionData || []),
-        ...categoryTransactionData
-      ];
-
-      // Remover duplicatas baseado no ID
-      const uniqueTransactions = allTransactions.filter((transaction, index, self) =>
-        index === self.findIndex(t => t.id === transaction.id)
-      );
-
-      // Formatar dados
-      const formattedData: TransactionWithDetails[] = uniqueTransactions.map((t: any) => ({ // Cast to new type
-        ...t,
-        category: t.category?.name || "Sem categoria",
-        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
-      }));
-
-      setSearchResults(formattedData);
     } catch (error) {
       console.error("Error in search:", error);
-      setSearchResults([]);
+      setAllFetchedTransactions([]);
     }
 
     setLoading(false);
     setLoadingSummary(false); // End summary loading
-  }, [query, currentWorkspace]); // Add currentWorkspace to dependencies
+  }, [query, currentWorkspace, session?.user, selectedMonth]); // Add selectedMonth to dependencies
 
   useEffect(() => {
     fetchSearchResults();
   }, [fetchSearchResults]);
 
-  // Filtrar resultados por mês
+  // Filtrar resultados por query e mês (client-side for query)
   useEffect(() => {
-    if (selectedMonth === "all") {
-      setFilteredResults(searchResults);
-    } else {
-      const [year, month] = selectedMonth.split("-");
-      const filtered = searchResults.filter(transaction => {
-        const transactionDate = new Date(transaction.date);
-        const transactionYear = transactionDate.getFullYear().toString();
-        const transactionMonth = String(transactionDate.getMonth() + 1).padStart(2, '0');
-        
-        return transactionYear === year && transactionMonth === month;
-      });
-      setFilteredResults(filtered);
-    }
-  }, [searchResults, selectedMonth]);
+    let results = allFetchedTransactions;
 
-  const handleRowClick = async (transaction: Transaction) => {
+    // Apply query filter client-side
+    if (query) {
+      const searchLower = query.toLowerCase();
+      results = results.filter(transaction => {
+        const nameMatch = transaction.name.toLowerCase().includes(searchLower);
+        const descriptionMatch = transaction.description?.toLowerCase().includes(searchLower);
+        const categoryMatch = transaction.category_name?.toLowerCase().includes(searchLower);
+        return nameMatch || descriptionMatch || categoryMatch;
+      });
+    }
+    
+    // Month filter is already applied by RPC, but if 'all' is selected, we use allFetchedTransactions
+    // If selectedMonth is 'all', allFetchedTransactions already contains all months.
+    // If selectedMonth is specific, allFetchedTransactions already contains only that month.
+    // So, no additional month filtering needed here.
+
+    setFilteredResults(results);
+  }, [allFetchedTransactions, query]);
+
+  const handleRowClick = async (transaction: TransactionWithDetails) => { // Updated type here
     if (transaction.transfer_id) {
       // Fetch both transactions related to this transfer_id
       const { data: transferTransactions, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('transfer_id', transaction.transfer_id)
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('user_id', session?.user?.id); // Use session.user.id
 
       if (error) {
         showError("Erro ao carregar detalhes da transferência: " + error.message);
@@ -261,8 +172,12 @@ const SearchResultsPage = () => {
         const toTransaction = transferTransactions.find(t => t.amount > 0);
 
         if (fromTransaction && toTransaction) {
-          setSelectedTransferData({ fromTransaction, toTransaction });
-          setIsTransferModalOpen(true);
+          // Need to cast to Transaction type for the modal
+          openAddTransferModal({
+            fromAccountId: fromTransaction.account_id || undefined,
+            toAccountId: toTransaction.account_id || undefined,
+            amount: Math.abs(fromTransaction.amount) || undefined,
+          });
         } else {
           showError("Não foi possível identificar as transações de origem e destino da transferência.");
         }
@@ -274,18 +189,6 @@ const SearchResultsPage = () => {
     } else {
       openEditTransactionModal(transaction);
     }
-  };
-
-  const closeEditModal = () => {
-    setIsEditModalOpen(false);
-    setTimeout(() => setSelectedTransaction(null), 300);
-    fetchSearchResults();
-  };
-
-  const closeTransferModal = () => {
-    setIsTransferModalOpen(false);
-    setTimeout(() => setSelectedTransferData(null), 300);
-    fetchSearchResults();
   };
 
   // Calcular totais baseado nos resultados filtrados
@@ -304,7 +207,7 @@ const SearchResultsPage = () => {
     }).format(value);
   };
 
-  if (!currentWorkspace) {
+  if (!currentWorkspace || !session?.user) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -402,8 +305,6 @@ const SearchResultsPage = () => {
           )}
         </CardContent>
       </Card>
-      {/* Removed direct usage of EditTransactionModal and TransferModal here */}
-      {/* They are now managed by ModalContext in Layout.tsx */}
     </>
   );
 };

@@ -42,6 +42,7 @@ import SummaryCard from "@/components/dashboard/SummaryCard"; // Imported Summar
 import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncomeExpenseSummaryCards"; // Imported new component
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
+import { useSession } from "@/contexts/SessionContext"; // Import useSession
 
 const ITEMS_PER_PAGE = 10;
 
@@ -58,12 +59,9 @@ const TransactionsPage = () => {
   const [allTransactions, setAllTransactions] = useState<TransactionWithDetails[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
   const { currentWorkspace } = useWorkspace();
+  const { session } = useSession(); // Use session
   const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,18 +79,13 @@ const TransactionsPage = () => {
   const [loadingSummary, setLoadingSummary] = useState(true);
 
   const fetchSummaryData = useCallback(async () => {
-    if (!currentWorkspace) {
+    if (!currentWorkspace || !session?.user) {
       setLoadingSummary(false);
       return;
     }
 
     setLoadingSummary(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoadingSummary(false);
-      return;
-    }
-
+    
     const rpcArgs: {
       summary_month?: string;
       filter_status?: string;
@@ -134,21 +127,16 @@ const TransactionsPage = () => {
       setMonthlyExpenses(Math.abs(summaryData.monthly_expenses || 0));
     }
     setLoadingSummary(false);
-  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, currentWorkspace]);
+  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, currentWorkspace, session?.user]);
 
-  const fetchTransactions = async () => {
-    if (!currentWorkspace) {
+  const fetchTransactions = useCallback(async () => {
+    if (!currentWorkspace || !session?.user) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
+    
     // Fetch companies
     const { data: companiesData, error: companiesError } = await supabase
       .from("companies")
@@ -159,68 +147,58 @@ const TransactionsPage = () => {
       setCompanies(companiesData || []);
     }
 
-    // Fetch transactions
-    const { data, error } = await supabase
-      .from("transactions")
-      .select(`
-        id,
-        account_id,
-        date,
-        name,
-        amount,
-        status,
-        description,
-        category_id,
-        installment_number,
-        total_installments,
-        category:categories (name),
-        account:accounts (name, type),
-        transfer_id,
-        credit_card_bill_id,
-        credit_card_bill:credit_card_bills (
-          id,
-          reference_month,
-          closing_date,
-          due_date,
-          status,
-          credit_card:credit_cards (
-            name,
-            brand,
-            last_four_digits
-          )
-        )
-      `)
-      .eq("workspace_id", currentWorkspace.id)
-      .order("date", { ascending: false });
+    // Fetch transactions using RPC
+    const rpcArgs: {
+      p_user_id: string;
+      p_workspace_id: string;
+      p_month_filter?: string;
+      p_status_filter?: string;
+      p_category_name_filter?: string;
+      p_account_type_filter?: string;
+    } = {
+      p_user_id: session.user.id,
+      p_workspace_id: currentWorkspace.id,
+    };
+
+    if (monthFilter !== "all") {
+      rpcArgs.p_month_filter = monthFilter;
+    }
+    if (statusFilter !== "all") {
+      rpcArgs.p_status_filter = statusFilter;
+    }
+    if (categoryFilter !== "all") {
+      rpcArgs.p_category_name_filter = categoryFilter;
+    }
+    if (accountTypeFilter !== "all") {
+      rpcArgs.p_account_type_filter = accountTypeFilter;
+    }
+
+    const { data, error } = await supabase.rpc('get_transaction_details', rpcArgs);
 
     if (error) {
       console.error("Error fetching transactions:", error);
+      setAllTransactions([]);
     } else {
-      const formattedData: TransactionWithDetails[] = data.map((t: any) => ({
-        ...t,
-        category: t.category?.name || "Sem categoria",
-        account: t.account,
-        credit_card_bill: t.credit_card_bill,
-      }));
-      setAllTransactions(formattedData);
+      // The RPC function already returns data in the desired flattened format
+      setAllTransactions(data || []);
     }
     setLoading(false);
-  };
+  }, [currentWorkspace, session?.user, monthFilter, statusFilter, categoryFilter, accountTypeFilter]); // Added filters to dependencies
 
   useEffect(() => {
-    if (currentWorkspace) {
+    if (currentWorkspace && session?.user) {
       fetchTransactions();
     }
-  }, [currentWorkspace]);
+  }, [currentWorkspace, session?.user, fetchTransactions]);
 
   useEffect(() => {
-    if (currentWorkspace) {
+    if (currentWorkspace && session?.user) {
       fetchSummaryData();
     }
-  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, currentWorkspace, fetchSummaryData]);
+  }, [monthFilter, statusFilter, categoryFilter, accountTypeFilter, currentWorkspace, session?.user, fetchSummaryData]);
 
   const uniqueCategories = useMemo(() => {
-    const categories = new Set(allTransactions.map((t) => t.category).filter(Boolean));
+    const categories = new Set(allTransactions.map((t) => t.category_name).filter(Boolean));
     return Array.from(categories).sort() as string[];
   }, [allTransactions]);
 
@@ -231,22 +209,11 @@ const TransactionsPage = () => {
         transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const statusMatch =
-        statusFilter === "all" || transaction.status === statusFilter;
-      const categoryMatch =
-        categoryFilter === "all" || transaction.category === categoryFilter;
-      
-      const accountTypeMatch =
-        accountTypeFilter === "all" || transaction.account?.type === accountTypeFilter;
-
-      // Novo filtro de mês
-      const monthMatch =
-        monthFilter === "all" ||
-        format(new Date(transaction.date), 'yyyy-MM') === monthFilter;
-
-      return searchMatch && statusMatch && categoryMatch && accountTypeMatch && monthMatch;
+      // Month, status, category, and account type filters are now handled by the RPC call
+      // We only need to apply the search query filter here.
+      return searchMatch;
     });
-  }, [allTransactions, searchQuery, monthFilter, statusFilter, categoryFilter, accountTypeFilter]);
+  }, [allTransactions, searchQuery]);
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
@@ -255,14 +222,14 @@ const TransactionsPage = () => {
     return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
 
-  const handleRowClick = async (transaction: Transaction) => {
+  const handleRowClick = async (transaction: TransactionWithDetails) => { // Updated type here
     if (transaction.transfer_id) {
       // Fetch both transactions related to this transfer_id
       const { data: transferTransactions, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('transfer_id', transaction.transfer_id)
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('user_id', session?.user?.id); // Use session.user.id
 
       if (error) {
         showError("Erro ao carregar detalhes da transferência: " + error.message);
@@ -274,8 +241,12 @@ const TransactionsPage = () => {
         const toTransaction = transferTransactions.find(t => t.amount > 0);
 
         if (fromTransaction && toTransaction) {
-          setSelectedTransferData({ fromTransaction, toTransaction });
-          setIsTransferModalOpen(true);
+          // Need to cast to Transaction type for the modal
+          openAddTransferModal({
+            fromAccountId: fromTransaction.account_id || undefined,
+            toAccountId: toTransaction.account_id || undefined,
+            amount: Math.abs(fromTransaction.amount) || undefined,
+          });
         } else {
           showError("Não foi possível identificar as transações de origem e destino da transferência.");
         }
@@ -289,18 +260,10 @@ const TransactionsPage = () => {
     }
   };
 
-  const closeEditModal = () => {
-    setIsEditModalOpen(false);
-    setTimeout(() => setSelectedTransaction(null), 300);
-    fetchTransactions(); // Recarrega as transações após edição/exclusão
-    fetchSummaryData(); // Recarrega o resumo também
-  };
-
-  const closeTransferModal = () => {
-    setIsTransferModalOpen(false);
-    setTimeout(() => setSelectedTransferData(null), 300);
-    fetchTransactions(); // Recarrega as transações após transferência
-    fetchSummaryData(); // Recarrega o resumo também
+  const handleApplyFilters = () => {
+    setCurrentPage(1); // Reset to first page when filters are applied
+    fetchTransactions(); // Re-fetch transactions with new filters
+    fetchSummaryData(); // Recarrega o resumo com os novos filtros
   };
 
   const handlePageChange = (page: number) => {
@@ -309,12 +272,7 @@ const TransactionsPage = () => {
     }
   };
 
-  const handleApplyFilters = () => {
-    setCurrentPage(1); // Reset to first page when filters are applied
-    fetchSummaryData(); // Recarrega o resumo com os novos filtros
-  };
-
-  if (!currentWorkspace) {
+  if (!currentWorkspace || !session?.user) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -409,6 +367,7 @@ const TransactionsPage = () => {
                     onValueChange={(value) => {
                       setMonthFilter(value);
                       setCurrentPage(1);
+                      handleApplyFilters(); // Apply filters immediately
                     }}
                   >
                     <SelectTrigger>
@@ -433,6 +392,7 @@ const TransactionsPage = () => {
                     onValueChange={(value) => {
                       setStatusFilter(value);
                       setCurrentPage(1);
+                      handleApplyFilters(); // Apply filters immediately
                     }}
                   >
                     <SelectTrigger>
@@ -450,6 +410,7 @@ const TransactionsPage = () => {
                     onValueChange={(value) => {
                       setCategoryFilter(value);
                       setCurrentPage(1);
+                      handleApplyFilters(); // Apply filters immediately
                     }}
                   >
                     <SelectTrigger>
@@ -469,6 +430,7 @@ const TransactionsPage = () => {
                     onValueChange={(value) => {
                       setAccountTypeFilter(value);
                       setCurrentPage(1);
+                      handleApplyFilters(); // Apply filters immediately
                     }}
                   >
                     <SelectTrigger>

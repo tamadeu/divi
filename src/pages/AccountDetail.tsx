@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import NotFound from "./NotFound";
 import {
@@ -35,30 +35,29 @@ import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext"; // Import useModal
 import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
+import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
+import { useSession } from "@/contexts/SessionContext"; // Import useSession
 
 const ITEMS_PER_PAGE = 5;
 
 const AccountDetailPage = () => {
   const { accountId } = useParams<{ accountId: string }>();
   const [account, setAccount] = useState<Account | null>(null);
-  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
+  const [allFetchedTransactions, setAllFetchedTransactions] = useState<TransactionWithDetails[]>([]); // All transactions from RPC
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const { openEditTransactionModal, openEditCreditCardTransactionModal, openAddTransferModal } = useModal(); // Use modal functions
+  const { currentWorkspace } = useWorkspace(); // Use useWorkspace hook
+  const { session } = useSession(); // Use session
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Use modal functions
-
-  const fetchAccountData = async () => {
-    if (!accountId) {
+  const fetchAccountData = useCallback(async () => {
+    if (!accountId || !currentWorkspace || !session?.user) {
       setLoading(false);
       return;
     }
@@ -74,6 +73,7 @@ const AccountDetailPage = () => {
       setCompanies(companiesData || []);
     }
 
+    // Fetch account details
     const { data: accountData, error: accountError } = await supabase
       .from("accounts")
       .select("*")
@@ -87,63 +87,41 @@ const AccountDetailPage = () => {
       setAccount(accountData);
     }
 
-    const { data: transactionsData, error: transactionsError } = await supabase
-      .from("transactions")
-      .select(`
-        id,
-        account_id,
-        date,
-        name,
-        amount,
-        status,
-        description,
-        category_id,
-        installment_number,
-        total_installments,
-        category:categories (name),
-        transfer_id,
-        credit_card_bill_id,
-        credit_card_bill:credit_card_bills (
-          id,
-          reference_month,
-          closing_date,
-          due_date,
-          status,
-          credit_card:credit_cards (
-            name,
-            brand,
-            last_four_digits
-          )
-        )
-      `)
-      .eq("account_id", accountId)
-      .order("date", { ascending: false });
+    // Fetch all transactions for the current user and workspace using RPC
+    const { data: transactionsData, error: transactionsError } = await supabase.rpc('get_transaction_details', {
+      p_user_id: session.user.id,
+      p_workspace_id: currentWorkspace.id,
+      p_status_filter: 'all', // Fetch all statuses, filter client-side if needed
+      p_category_name_filter: 'all', // Fetch all categories, filter client-side if needed
+      p_account_type_filter: 'all', // Fetch all account types, filter client-side if needed
+    });
 
     if (transactionsError) {
       console.error("Error fetching transactions:", transactionsError);
+      setAllFetchedTransactions([]);
     } else {
-      const formattedData: TransactionWithDetails[] = transactionsData.map((t: any) => ({ // Cast to new type
-        ...t,
-        category: t.category?.name || "Sem categoria",
-        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
-      }));
-      setTransactions(formattedData);
+      setAllFetchedTransactions(transactionsData || []);
     }
 
     setLoading(false);
-  };
+  }, [accountId, currentWorkspace, session?.user]); // Added currentWorkspace and session.user to dependencies
 
   useEffect(() => {
     fetchAccountData();
-  }, [accountId]);
+  }, [fetchAccountData]);
 
   const uniqueCategories = useMemo(() => {
-    const categories = new Set(transactions.map((t) => t.category));
-    return Array.from(categories).sort();
-  }, [transactions]);
+    const categories = new Set(allFetchedTransactions.map((t) => t.category_name).filter(Boolean));
+    return Array.from(categories).sort() as string[];
+  }, [allFetchedTransactions]);
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
+    return allFetchedTransactions.filter((transaction) => {
+      // Filter by accountId first (client-side)
+      if (transaction.account_id !== accountId) {
+        return false;
+      }
+
       const searchMatch =
         searchQuery.toLowerCase() === "" ||
         transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -152,11 +130,11 @@ const AccountDetailPage = () => {
       const statusMatch =
         statusFilter === "all" || transaction.status === statusFilter;
       const categoryMatch =
-        categoryFilter === "all" || transaction.category === categoryFilter;
+        categoryFilter === "all" || transaction.category_name === categoryFilter; // Use category_name
 
       return searchMatch && statusMatch && categoryMatch;
     });
-  }, [transactions, searchQuery, statusFilter, categoryFilter]);
+  }, [allFetchedTransactions, accountId, searchQuery, statusFilter, categoryFilter]);
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
@@ -165,14 +143,14 @@ const AccountDetailPage = () => {
     return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
 
-  const handleRowClick = async (transaction: Transaction) => {
+  const handleRowClick = async (transaction: TransactionWithDetails) => { // Updated type here
     if (transaction.transfer_id) {
       // Fetch both transactions related to this transfer_id
       const { data: transferTransactions, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('transfer_id', transaction.transfer_id)
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('user_id', session?.user?.id); // Use session.user.id
 
       if (error) {
         showError("Erro ao carregar detalhes da transferência: " + error.message);
@@ -184,8 +162,12 @@ const AccountDetailPage = () => {
         const toTransaction = transferTransactions.find(t => t.amount > 0);
 
         if (fromTransaction && toTransaction) {
-          setSelectedTransferData({ fromTransaction, toTransaction });
-          setIsTransferModalOpen(true);
+          // Need to cast to Transaction type for the modal
+          openAddTransferModal({
+            fromAccountId: fromTransaction.account_id || undefined,
+            toAccountId: toTransaction.account_id || undefined,
+            amount: Math.abs(fromTransaction.amount) || undefined,
+          });
         } else {
           showError("Não foi possível identificar as transações de origem e destino da transferência.");
         }
@@ -197,16 +179,6 @@ const AccountDetailPage = () => {
     } else {
       openEditTransactionModal(transaction);
     }
-  };
-
-  const closeEditModal = () => {
-    setIsEditModalOpen(false);
-    setTimeout(() => setSelectedTransaction(null), 300);
-  };
-
-  const closeTransferModal = () => {
-    setIsTransferModalOpen(false);
-    setTimeout(() => setSelectedTransferData(null), 300);
   };
 
   const handlePageChange = (page: number) => {
@@ -381,8 +353,6 @@ const AccountDetailPage = () => {
           </CardContent>
         </Card>
       </div>
-      {/* Removed direct usage of EditTransactionModal and TransferModal here */}
-      {/* They are now managed by ModalContext in Layout.tsx */}
     </>
   );
 };
