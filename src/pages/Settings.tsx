@@ -7,12 +7,13 @@ import { showError, showSuccess } from "@/utils/toast";
 import { WorkspaceManagement } from "@/components/settings/WorkspaceManagement";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
-import { TransactionImportForm } from "@/components/settings/TransactionImportForm"; // Import the new component
-import { useModal } from "@/contexts/ModalContext"; // Import useModal
+import { TransactionImportForm } from "@/components/settings/TransactionImportForm";
+import { DownloadCSVTemplateButton } from "@/components/settings/DownloadCSVTemplateButton"; // Import the new component
+import { useModal } from "@/contexts/ModalContext";
 
 const Settings = () => {
   const { session } = useSession();
-  const { onTransactionAdded } = useModal(); // Get onTransactionAdded from useModal
+  const { onTransactionAdded } = useModal();
 
   return (
     <div className="space-y-8">
@@ -53,7 +54,10 @@ const Settings = () => {
             Importe suas transações de despesa e renda a partir de um arquivo CSV.
           </p>
         </div>
-        <TransactionImportForm onImportComplete={onTransactionAdded} /> {/* Add the new component */}
+        <div className="flex flex-col gap-4"> {/* Added a flex container for layout */}
+          <DownloadCSVTemplateButton /> {/* Add the new button here */}
+          <TransactionImportForm onImportComplete={onTransactionAdded} />
+        </div>
       </div>
     </div>
   );
