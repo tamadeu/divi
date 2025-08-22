@@ -79,7 +79,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
     setLoading(true);
     try {
-      // Primeiro, buscar todos os workspace_users
+      // 1. Buscar todos os workspace_users (membros e admins, incluindo o proprietário se ele foi adicionado)
       const { data: workspaceUsers, error: usersError } = await supabase
         .from('workspace_users')
         .select('*')
@@ -91,57 +91,52 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
         throw usersError;
       }
 
-      // Buscar informações do proprietário do workspace
-      // Removido .single() para lidar com casos onde o perfil pode não existir
-      const { data: ownerProfiles, error: ownerError } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, avatar_url')
-        .eq('id', workspace.workspace_owner);
+      const membersWithProfiles: WorkspaceUser[] = [];
+      const fetchedUserIds = new Set<string>();
 
-      if (ownerError) {
-        console.error('Error fetching owner profile:', ownerError);
-      }
-      // Pegar o primeiro perfil encontrado (se houver) ou null
-      const ownerProfile = ownerProfiles && ownerProfiles.length > 0 ? ownerProfiles[0] : null;
+      // 2. Adicionar o proprietário do workspace primeiro (se ainda não estiver na lista de workspace_users)
+      // Isso garante que o proprietário sempre apareça e seja identificado corretamente.
+      const ownerId = workspace.workspace_owner;
+      const isOwnerInWorkspaceUsers = workspaceUsers?.some(wu => wu.user_id === ownerId && !wu.is_ghost_user);
 
+      if (ownerId && !isOwnerInWorkspaceUsers) {
+        const { data: ownerProfiles, error: ownerProfileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, avatar_url')
+          .eq('id', ownerId);
+        const ownerProfile = ownerProfiles && ownerProfiles.length > 0 ? ownerProfiles[0] : null;
 
-      // Buscar email do proprietário
-      let ownerEmail = null;
-      try {
-        const { data: ownerData, error: ownerEmailError } = await supabase.functions.invoke('get-user-email', {
-          body: { userId: workspace.workspace_owner }
-        });
-        
-        if (!ownerEmailError && ownerData?.email) {
-          ownerEmail = ownerData.email;
+        let ownerEmail = null;
+        try {
+          const { data: ownerData, error: ownerEmailError } = await supabase.functions.invoke('get-user-email', {
+            body: { userId: ownerId }
+          });
+          if (!ownerEmailError && ownerData?.email) {
+            ownerEmail = ownerData.email;
+          }
+        } catch (emailError) {
+          console.error('Error fetching owner email:', emailError);
         }
-      } catch (emailError) {
-        console.error('Error fetching owner email:', emailError);
-      }
 
-      const membersWithProfiles = [];
-
-      // Adicionar proprietário como o primeiro membro, se não estiver na lista de workspace_users
-      const ownerInWorkspaceUsers = workspaceUsers?.find(wu => wu.user_id === workspace.workspace_owner);
-      if (!ownerInWorkspaceUsers) {
         membersWithProfiles.push({
-          id: `owner-${workspace.workspace_owner}`, // Usar um ID único para o proprietário
+          id: `owner-${ownerId}`, // ID único para o proprietário
           workspace_id: workspace.id,
-          user_id: workspace.workspace_owner,
+          user_id: ownerId,
           role: 'admin', // Proprietário é sempre admin
-          joined_at: workspace.created_at,
+          joined_at: workspace.created_at, // Usar data de criação do workspace
           is_ghost_user: false,
           ghost_user_name: null,
           ghost_user_email: null,
-          profile: ownerProfile, // Usar o ownerProfile que pode ser null
+          profile: ownerProfile,
           email: ownerEmail
         });
+        fetchedUserIds.add(ownerId);
       }
-      
-      // Processar todos os workspace_users
+
+      // 3. Processar todos os workspace_users
       for (const user of workspaceUsers || []) {
-        // Se o usuário já foi adicionado como proprietário, pular
-        if (user.user_id === workspace.workspace_owner && !user.is_ghost_user) {
+        // Se o usuário já foi adicionado como proprietário (no passo 2) ou já foi processado, pular
+        if (user.user_id && fetchedUserIds.has(user.user_id)) {
           continue;
         }
 
@@ -153,8 +148,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
             email: user.ghost_user_email || null
           });
         } else {
-          // Usuário real - buscar perfil
-          // Removido .single() para lidar com casos onde o perfil pode não existir
+          // Usuário real - buscar perfil e email
           const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('first_name, last_name, avatar_url')
@@ -163,17 +157,13 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
           if (profileError) {
             console.error('Error fetching profile for user:', user.user_id, profileError);
           }
-
-          // Pegar o primeiro perfil encontrado (se houver) ou null
           const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
-          // Buscar email do usuário usando a função edge
           let userEmail = null;
           try {
             const { data: userData, error: emailError } = await supabase.functions.invoke('get-user-email', {
               body: { userId: user.user_id }
             });
-            
             if (!emailError && userData?.email) {
               userEmail = userData.email;
             }
@@ -186,6 +176,9 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
             profile: profile,
             email: userEmail
           });
+        }
+        if (user.user_id) {
+          fetchedUserIds.add(user.user_id);
         }
       }
 
