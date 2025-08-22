@@ -107,9 +107,11 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
                       <div className="text-sm text-muted-foreground">
                         {transaction.cc_brand} (**** {transaction.cc_last_four_digits}) {/* Use cc_brand and cc_last_four_digits */}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Fatura: {format(new Date(transaction.cc_bill_reference_month!), 'MMM/yy', { locale: ptBR })} {/* Use cc_bill_reference_month */}
-                      </div>
+                      {transaction.cc_bill_reference_month && ( // Add this check for null
+                        <div className="text-xs text-muted-foreground">
+                          Fatura: {format(new Date(transaction.cc_bill_reference_month), 'MMM/yy', { locale: ptBR })} {/* Use cc_bill_reference_month */}
+                        </div>
+                      )}
                     </>
                   ) : (
                     "N/A"
