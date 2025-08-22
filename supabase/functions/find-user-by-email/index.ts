@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,37 +32,32 @@ serve(async (req) => {
       });
     }
 
-    // Create a Supabase client with the service role key
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      supabaseServiceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    // Construct the direct API URL for Supabase Auth Admin to get user by email
+    const authAdminApiUrl = `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`;
 
-    // Explicitly check if admin object exists before calling its method
-    if (!supabaseAdmin.auth.admin) {
-      console.error('supabaseAdmin.auth.admin is not available. This usually means the SUPABASE_SERVICE_ROLE_KEY is not correctly configured or is invalid.');
-      return new Response(JSON.stringify({ error: 'Supabase admin client not initialized correctly. Missing admin capabilities. Please check SUPABASE_SERVICE_ROLE_KEY.' }), {
+    const response = await fetch(authAdminApiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+        'apikey': supabaseServiceRoleKey, // Include apikey header as well
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error from Supabase Auth Admin API:', errorData);
+      return new Response(JSON.stringify({ error: errorData.message || 'Failed to fetch user from Auth Admin API' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: response.status,
       });
     }
 
-    // Use the admin client to get the user by email
-    const { data: user, error } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    const data = await response.json();
 
-    if (error) {
-      console.error('Error fetching user by email:', error);
-      return new Response(JSON.stringify({ error: error.message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
-    }
+    // The admin API returns an array of users, even if only one matches by email.
+    // We expect at most one user for a unique email.
+    const user = data.users && data.users.length > 0 ? data.users[0] : null;
 
     if (!user) {
       return new Response(JSON.stringify({ user: null, message: 'User not found' }), {
@@ -72,13 +66,13 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ user: user.user }), {
+    return new Response(JSON.stringify({ user }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error) {
     console.error('Unexpected error in find-user-by-email:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
