@@ -7,13 +7,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS OPTIONS request
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { email } = await req.json();
-    
+
     if (!email) {
       return new Response(JSON.stringify({ error: 'Email is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -21,28 +22,42 @@ serve(async (req) => {
       });
     }
 
+    // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
     );
 
-    const { data, error } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    // Use the admin client to get the user by email
+    const { data: user, error } = await supabaseAdmin.auth.admin.getUserByEmail(email);
 
     if (error) {
-      console.error('Error fetching user by email:', error.message);
+      console.error('Error fetching user by email:', error);
       return new Response(JSON.stringify({ error: error.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404, // User not found or other auth error
+        status: 500,
       });
     }
 
-    return new Response(JSON.stringify({ user: data.user }), {
+    if (!user) {
+      return new Response(JSON.stringify({ user: null, message: 'User not found' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404,
+      });
+    }
+
+    return new Response(JSON.stringify({ user: user.user }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
-
   } catch (error) {
-    console.error('Unhandled error:', error.message);
+    console.error('Unexpected error in find-user-by-email:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
