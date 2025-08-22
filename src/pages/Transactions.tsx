@@ -43,6 +43,7 @@ import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncome
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
 import { useSession } from "@/contexts/SessionContext"; // Import useSession
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const ITEMS_PER_PAGE = 10;
 
@@ -59,10 +60,11 @@ const TransactionsPage = () => {
   const [allTransactions, setAllTransactions] = useState<TransactionWithDetails[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
+  const { openAddTransactionModal, openAddTransferModal } = useModal(); // Removed edit modals
   const { currentWorkspace } = useWorkspace();
   const { session } = useSession(); // Use session
   const isMobile = useIsMobile();
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const [searchQuery, setSearchQuery] = useState("");
   const [monthFilter, setMonthFilter] = useState("all");
@@ -222,14 +224,14 @@ const TransactionsPage = () => {
     return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
 
-  const handleRowClick = async (transaction: TransactionWithDetails) => { // Updated type here
+  const handleRowClick = async (transaction: TransactionWithDetails) => {
     if (transaction.transfer_id) {
       // Fetch both transactions related to this transfer_id
       const { data: transferTransactions, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('transfer_id', transaction.transfer_id)
-        .eq('user_id', session?.user?.id); // Use session.user.id
+        .eq('user_id', session?.user?.id);
 
       if (error) {
         showError("Erro ao carregar detalhes da transferência: " + error.message);
@@ -241,7 +243,6 @@ const TransactionsPage = () => {
         const toTransaction = transferTransactions.find(t => t.amount > 0);
 
         if (fromTransaction && toTransaction) {
-          // Need to cast to Transaction type for the modal
           openAddTransferModal({
             fromAccountId: fromTransaction.account_id || undefined,
             toAccountId: toTransaction.account_id || undefined,
@@ -253,10 +254,9 @@ const TransactionsPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
-    } else if (transaction.credit_card_bill_id) {
-      openEditCreditCardTransactionModal(transaction);
     } else {
-      openEditTransactionModal(transaction);
+      // Navigate to the dedicated transaction details page
+      navigate(`/transactions/${transaction.id}`);
     }
   };
 

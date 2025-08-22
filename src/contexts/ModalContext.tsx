@@ -35,11 +35,11 @@ interface ModalContextType {
   onTransactionAdded: () => void;
   addTransactionInitialData: AddTransactionData | undefined;
 
-  // Edit Transaction Modal
-  isEditTransactionModalOpen: boolean;
-  openEditTransactionModal: (transaction: Transaction) => void;
-  closeEditTransactionModal: () => void;
-  editTransactionData: Transaction | null;
+  // Transaction Details Modal (now handled by dedicated page)
+  // isEditTransactionModalOpen: boolean; // Removed
+  // openEditTransactionModal: (transaction: Transaction) => void; // Removed
+  // closeEditTransactionModal: () => void; // Removed
+  // editTransactionData: Transaction | null; // Removed
 
   // Transaction Details Modal
   isTransactionDetailsModalOpen: boolean;
@@ -73,11 +73,11 @@ interface ModalContextType {
   onCreditCardTransactionAdded: () => void;
   addCreditCardTransactionInitialData: AddCreditCardTransactionData | undefined;
 
-  // Edit Credit Card Transaction Modal (NEW)
-  isEditCreditCardTransactionModalOpen: boolean;
-  openEditCreditCardTransactionModal: (transaction: Transaction) => void;
-  closeEditCreditCardTransactionModal: () => void;
-  editCreditCardTransactionData: Transaction | null;
+  // Edit Credit Card Transaction Modal (now handled by dedicated page)
+  // isEditCreditCardTransactionModalOpen: boolean; // Removed
+  // openEditCreditCardTransactionModal: (transaction: Transaction) => void; // Removed
+  // closeEditCreditCardTransactionModal: () => void; // Removed
+  // editCreditCardTransactionData: Transaction | null; // Removed
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -99,9 +99,9 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
   const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] = useState(false);
   const [addTransactionInitialData, setAddTransactionInitialData] = useState<AddTransactionData | undefined>();
 
-  // Edit Transaction Modal State
-  const [isEditTransactionModalOpen, setIsEditTransactionModalOpen] = useState(false);
-  const [editTransactionData, setEditTransactionData] = useState<Transaction | null>(null);
+  // Edit Transaction Modal State (Removed)
+  // const [isEditTransactionModalOpen, setIsEditTransactionModalOpen] = useState(false);
+  // const [editTransactionData, setEditTransactionData] = useState<Transaction | null>(null);
 
   // Transaction Details Modal State
   const [isTransactionDetailsModalOpen, setIsTransactionDetailsModalOpen] = useState(false);
@@ -121,9 +121,9 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
   const [isAddCreditCardTransactionModalOpen, setIsAddCreditCardTransactionModalOpen] = useState(false);
   const [addCreditCardTransactionInitialData, setAddCreditCardTransactionInitialData] = useState<AddCreditCardTransactionData | undefined>();
 
-  // Edit Credit Card Transaction Modal State (NEW)
-  const [isEditCreditCardTransactionModalOpen, setIsEditCreditCardTransactionModalOpen] = useState(false);
-  const [editCreditCardTransactionData, setEditCreditCardTransactionData] = useState<Transaction | null>(null);
+  // Edit Credit Card Transaction Modal State (Removed)
+  // const [isEditCreditCardTransactionModalOpen, setIsEditCreditCardTransactionModalOpen] = useState(false);
+  // const [editCreditCardTransactionData, setEditCreditCardTransactionData] = useState<Transaction | null>(null);
 
   // Add Transaction Modal Functions
   const openAddTransactionModal = (initialData?: AddTransactionData) => {
@@ -141,16 +141,16 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
     // For now, it's just a placeholder that components can override
   };
 
-  // Edit Transaction Modal Functions
-  const openEditTransactionModal = (transaction: Transaction) => {
-    setEditTransactionData(transaction);
-    setIsEditTransactionModalOpen(true);
-  };
+  // Edit Transaction Modal Functions (Removed)
+  // const openEditTransactionModal = (transaction: Transaction) => {
+  //   setEditTransactionData(transaction);
+  //   setIsEditTransactionModalOpen(true);
+  // };
 
-  const closeEditTransactionModal = () => {
-    setIsEditTransactionModalOpen(false);
-    setEditTransactionData(null);
-  };
+  // const closeEditTransactionModal = () => {
+  //   setIsEditTransactionModalOpen(false);
+  //   setEditTransactionData(null);
+  // };
 
   // Transaction Details Modal Functions
   const openTransactionDetailsModal = (transaction: Transaction) => {
@@ -223,16 +223,16 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
     // For now, it's just a placeholder that components can override
   };
 
-  // Edit Credit Card Transaction Modal Functions (NEW)
-  const openEditCreditCardTransactionModal = (transaction: Transaction) => {
-    setEditCreditCardTransactionData(transaction);
-    setIsEditCreditCardTransactionModalOpen(true);
-  };
+  // Edit Credit Card Transaction Modal Functions (Removed)
+  // const openEditCreditCardTransactionModal = (transaction: Transaction) => {
+  //   setEditCreditCardTransactionData(transaction);
+  //   setIsEditCreditCardTransactionModalOpen(true);
+  // };
 
-  const closeEditCreditCardTransactionModal = () => {
-    setIsEditCreditCardTransactionModalOpen(false);
-    setEditCreditCardTransactionData(null);
-  };
+  // const closeEditCreditCardTransactionModal = () => {
+  //   setIsEditCreditCardTransactionModalOpen(false);
+  //   setEditCreditCardTransactionData(null);
+  // };
 
   const onCreditCardTransactionUpdated = () => {
     // Placeholder for refresh logic
@@ -245,12 +245,6 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
     closeAddTransactionModal,
     onTransactionAdded,
     addTransactionInitialData,
-
-    // Edit Transaction Modal
-    isEditTransactionModalOpen,
-    openEditTransactionModal,
-    closeEditTransactionModal,
-    editTransactionData,
 
     // Transaction Details Modal
     isTransactionDetailsModalOpen,
@@ -283,12 +277,6 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
     closeAddCreditCardTransactionModal,
     onCreditCardTransactionAdded,
     addCreditCardTransactionInitialData,
-
-    // Edit Credit Card Transaction Modal (NEW)
-    isEditCreditCardTransactionModalOpen,
-    openEditCreditCardTransactionModal,
-    closeEditCreditCardTransactionModal,
-    editCreditCardTransactionData,
   };
 
   return (
