@@ -8,14 +8,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter, // Import CardFooter
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,14 +22,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Users, User, Edit, Trash2, Shield, LogOut, Crown } from "lucide-react";
+import { Users, User, Edit, Trash2, Shield, LogOut, Crown } from "lucide-react"; // Removed MoreHorizontal
 import { WorkspaceWithRole } from "@/types/workspace";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { useSession } from "@/contexts/SessionContext";
-import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface WorkspaceCardMobileProps {
   workspace: WorkspaceWithRole;
@@ -50,7 +45,7 @@ export function WorkspaceCardMobile({
   onManageMembers,
 }: WorkspaceCardMobileProps) {
   const { session } = useSession();
-  const { refreshWorkspaces, switchWorkspace } = useWorkspace(); // Use useWorkspace hook
+  const { refreshWorkspaces, switchWorkspace } = useWorkspace();
 
   const handleLeaveWorkspace = async () => {
     if (!session?.user) return;
@@ -66,7 +61,6 @@ export function WorkspaceCardMobile({
 
       showSuccess(`Você saiu do núcleo "${workspace.name}" com sucesso!`);
       
-      // Se o workspace que saiu era o atual, mudar para outro
       const { data: remainingWorkspaces, error: fetchError } = await supabase
         .from('workspaces')
         .select('id')
@@ -78,8 +72,7 @@ export function WorkspaceCardMobile({
       if (remainingWorkspaces && remainingWorkspaces.length > 0) {
         switchWorkspace(remainingWorkspaces[0].id);
       } else {
-        // No other workspaces, clear current workspace
-        switchWorkspace(''); // Or handle as appropriate for no workspace
+        switchWorkspace('');
       }
       
       await refreshWorkspaces();
@@ -116,74 +109,7 @@ export function WorkspaceCardMobile({
           )}
           <CardTitle className="text-lg">{workspace.name}</CardTitle>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">Abrir menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {canManageMembers(workspace) && (
-              <DropdownMenuItem onClick={() => onManageMembers(workspace)}>
-                <Shield className="mr-2 h-4 w-4" />
-                Gerenciar Membros
-              </DropdownMenuItem>
-            )}
-            {canEdit(workspace) && (
-              <DropdownMenuItem onClick={() => onEdit(workspace)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </DropdownMenuItem>
-            )}
-            {canDelete(workspace) && (
-              <DropdownMenuItem 
-                onClick={() => onDelete(workspace)}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </DropdownMenuItem>
-            )}
-            {canLeaveWorkspace(workspace) && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sair do Núcleo
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Sair do Núcleo</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza que deseja sair do núcleo "{workspace.name}"?
-                      Você perderá acesso a todas as informações financeiras deste núcleo.
-                      Para voltar, será necessário ser convidado novamente.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleLeaveWorkspace}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Sair do Núcleo
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-            {!canManageMembers(workspace) && !canEdit(workspace) && !canDelete(workspace) && !canLeaveWorkspace(workspace) && (
-              <DropdownMenuItem disabled>
-                Nenhuma ação disponível
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Removed DropdownMenu here */}
       </CardHeader>
       <CardContent className="space-y-2">
         {workspace.description && (
@@ -208,6 +134,77 @@ export function WorkspaceCardMobile({
           Criado em: {format(new Date(workspace.created_at), "dd/MM/yyyy", { locale: ptBR })}
         </p>
       </CardContent>
+      <CardFooter className="flex flex-wrap gap-2 pt-4"> {/* Added CardFooter */}
+        {canManageMembers(workspace) && (
+          <Button variant="outline" size="sm" onClick={() => onManageMembers(workspace)}>
+            <Shield className="mr-2 h-4 w-4" />
+            Membros
+          </Button>
+        )}
+        {canEdit(workspace) && (
+          <Button variant="outline" size="sm" onClick={() => onEdit(workspace)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Editar
+          </Button>
+        )}
+        {canDelete(workspace) && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Núcleo</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir o núcleo "{workspace.name}"?
+                  Esta ação não pode ser desfeita e excluirá todos os dados associados.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(workspace)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+        {canLeaveWorkspace(workspace) && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive/10">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Sair do Núcleo</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja sair do núcleo "{workspace.name}"?
+                  Você perderá acesso a todas as informações financeiras deste núcleo.
+                  Para voltar, será necessário ser convidado novamente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleLeaveWorkspace}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Sair do Núcleo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </CardFooter>
     </Card>
   );
 }
