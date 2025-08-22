@@ -52,7 +52,7 @@ import { WorkspaceCardMobile } from "./WorkspaceCardMobile"; // Import the new c
 
 export function WorkspaceManagement() {
   const { session } = useSession();
-  const { workspaces, loading, refreshWorkspaces, switchWorkspace } = useWorkspace();
+  const { workspaces, loading, refreshWorkspaces, switchWorkspace, currentWorkspace } = useWorkspace();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceWithRole | null>(null);
   const [deletingWorkspace, setDeletingWorkspace] = useState<WorkspaceWithRole | null>(null);
@@ -69,6 +69,16 @@ export function WorkspaceManagement() {
 
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Efeito para atualizar managingMembersWorkspace se o workspace subjacente em `workspaces` mudar
+  useEffect(() => {
+    if (managingMembersWorkspace) {
+      const updatedWorkspace = workspaces.find(w => w.id === managingMembersWorkspace.id);
+      if (updatedWorkspace && JSON.stringify(updatedWorkspace) !== JSON.stringify(managingMembersWorkspace)) {
+        setManagingMembersWorkspace(updatedWorkspace);
+      }
+    }
+  }, [workspaces, managingMembersWorkspace]); // Depende de workspaces e managingMembersWorkspace
 
   const handleEdit = (workspace: WorkspaceWithRole) => {
     setEditingWorkspace(workspace);
@@ -97,16 +107,17 @@ export function WorkspaceManagement() {
 
       showSuccess(`Você saiu do núcleo "${workspace.name}" com sucesso!`);
       
-      // Se o workspace que saiu era o atual, mudar para outro
-      const remainingWorkspaces = workspaces.filter(w => w.id !== workspace.id);
-      if (remainingWorkspaces.length > 0) {
-        switchWorkspace(remainingWorkspaces[0].id);
-      } else {
-        // If no other workspaces, clear current workspace
-        switchWorkspace(''); // Or handle as appropriate for no workspace
+      // Se o workspace que saiu era o atual, mudar para outro ou limpar
+      if (currentWorkspace?.id === workspace.id) {
+        const remainingWorkspaces = workspaces.filter(w => w.id !== workspace.id);
+        if (remainingWorkspaces.length > 0) {
+          switchWorkspace(remainingWorkspaces[0].id);
+        } else {
+          switchWorkspace(''); // Limpar current workspace se não houver outros
+        }
       }
       
-      await refreshWorkspaces();
+      await refreshWorkspaces(); // Atualizar todos os workspaces para atualizar a lista e currentWorkspace se necessário
     } catch (error: any) {
       console.error('Error leaving workspace:', error);
       showError('Erro ao sair do núcleo: ' + error.message);
@@ -220,14 +231,13 @@ export function WorkspaceManagement() {
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={workspace.is_shared ? "default" : "secondary"}>
-                              {workspace.is_shared ? "Compartilhado" : "Pessoal"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={workspace.is_shared ? "default" : "secondary"}>
+                                {workspace.is_shared ? "Compartilhado" : "Pessoal"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
                             <Badge 
                               variant={workspace.is_owner ? "default" : "outline"}
                               className="flex items-center gap-1"
@@ -330,14 +340,6 @@ export function WorkspaceManagement() {
           workspace={editingWorkspace}
           isOpen={!!editingWorkspace}
           onClose={() => setEditingWorkspace(null)}
-        />
-      )}
-
-      {deletingWorkspace && (
-        <DeleteWorkspaceModal
-          workspace={deletingWorkspace}
-          isOpen={!!deletingWorkspace}
-          onClose={() => setDeletingWorkspace(null)}
         />
       )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Workspace, WorkspaceWithRole } from '@/types/workspace';
 import { useSession } from './SessionContext';
@@ -24,7 +24,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [workspaces, setWorkspaces] = useState<WorkspaceWithRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchWorkspaces = async () => {
+  const fetchWorkspaces = useCallback(async () => {
     if (!session?.user || sessionLoading) {
       setWorkspaces([]);
       setCurrentWorkspace(null);
@@ -102,23 +102,30 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       setWorkspaces(allWorkspaces);
 
-      // Só definir workspace atual se não houver um ou se o atual não existe mais
-      if (!currentWorkspace || !allWorkspaces.find(w => w.id === currentWorkspace.id)) {
-        const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
-        let workspaceToSelect = null;
+      // Lógica para atualizar currentWorkspace com base na lista atualizada
+      const savedWorkspaceId = localStorage.getItem('currentWorkspaceId');
+      let workspaceToSelect = null;
 
-        if (savedWorkspaceId) {
-          workspaceToSelect = allWorkspaces.find(w => w.id === savedWorkspaceId);
-        }
+      if (savedWorkspaceId) {
+        workspaceToSelect = allWorkspaces.find(w => w.id === savedWorkspaceId);
+      }
 
-        if (!workspaceToSelect && allWorkspaces.length > 0) {
-          workspaceToSelect = allWorkspaces[0];
-        }
-
-        if (workspaceToSelect) {
+      // Se o workspace previamente selecionado não estiver mais disponível ou currentWorkspace for nulo,
+      // ou se os detalhes do currentWorkspace (como o papel) mudaram, atualize-o.
+      if (workspaceToSelect) {
+        // Verifica se currentWorkspace precisa de uma atualização (ex: papel mudou)
+        if (!currentWorkspace || currentWorkspace.id !== workspaceToSelect.id || JSON.stringify(currentWorkspace) !== JSON.stringify(workspaceToSelect)) {
           setCurrentWorkspace(workspaceToSelect);
           localStorage.setItem('currentWorkspaceId', workspaceToSelect.id);
         }
+      } else if (allWorkspaces.length > 0) {
+        // Se não há workspace salvo ou ele sumiu, e há outros workspaces, escolha o primeiro
+        setCurrentWorkspace(allWorkspaces[0]);
+        localStorage.setItem('currentWorkspaceId', allWorkspaces[0].id);
+      } else {
+        // Nenhum workspace disponível
+        setCurrentWorkspace(null);
+        localStorage.removeItem('currentWorkspaceId');
       }
 
     } catch (error: any) {
@@ -127,13 +134,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user, sessionLoading, currentWorkspace]); // Adicionado currentWorkspace às dependências do useCallback
 
   const switchWorkspace = (workspaceId: string) => {
     const workspace = workspaces.find(w => w.id === workspaceId);
     if (workspace) {
       setCurrentWorkspace(workspace);
       localStorage.setItem('currentWorkspaceId', workspaceId);
+    } else {
+      // Se tentar mudar para um workspace inexistente, limpe o atual
+      setCurrentWorkspace(null);
+      localStorage.removeItem('currentWorkspaceId');
     }
   };
 
@@ -166,7 +177,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           });
       }
 
-      await fetchWorkspaces();
+      await fetchWorkspaces(); // Atualizar todos os workspaces após a criação
       return data;
     } catch (error: any) {
       console.error('Error creating workspace:', error);
@@ -190,7 +201,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
 
-      await fetchWorkspaces();
+      await fetchWorkspaces(); // Atualizar todos os workspaces após a transferência de propriedade
       return true;
     } catch (error: any) {
       console.error('Error transferring ownership:', error);
@@ -199,12 +210,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // CORRIGIDO: useEffect com dependências corretas para evitar loop infinito
   useEffect(() => {
     if (!sessionLoading && session?.user?.id) {
       fetchWorkspaces();
     }
-  }, [sessionLoading, session?.user?.id]); // Removido fetchWorkspaces das dependências
+  }, [sessionLoading, session?.user?.id, fetchWorkspaces]);
 
   const value = {
     currentWorkspace,
