@@ -7,14 +7,6 @@ import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Form,
   FormControl,
   FormField,
@@ -35,9 +27,9 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/compon
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { showError, showSuccess } from "@/utils/toast";
-import { Category, CreditCard, Transaction } from "@/types/database";
+import { Category, CreditCard } from "@/types/database";
 import { CalendarIcon, PlusCircle, Calculator as CalculatorIcon, Trash2 } from "lucide-react";
-import { format, startOfDay, addMonths } from "date-fns";
+import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import AddCategoryModal from "../categories/AddCategoryModal";
@@ -79,14 +71,14 @@ const creditCardTransactionSchema = z.object({
 
 type CreditCardTransactionFormValues = z.infer<typeof creditCardTransactionSchema>;
 
-interface EditCreditCardTransactionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface CreditCardTransactionDetailEditFormProps {
+  transaction: TransactionWithDetails; // Use TransactionWithDetails
+  onClose: () => void; // Function to navigate back
   onCreditCardTransactionUpdated: () => void;
-  transaction: TransactionWithDetails | null; // Use TransactionWithDetails
+  onCreditCardTransactionDeleted: () => void;
 }
 
-const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransactionUpdated, transaction }: EditCreditCardTransactionModalProps) => {
+const CreditCardTransactionDetailEditForm = ({ transaction, onClose, onCreditCardTransactionUpdated, onCreditCardTransactionDeleted }: CreditCardTransactionDetailEditFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -153,17 +145,17 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
     return { creditCards: creditCardsData || [], categories: categoriesData || [] };
   }, [currentWorkspace]);
 
-  // Effect to fetch data when modal opens
+  // Effect to fetch data when component mounts or currentWorkspace changes
   useEffect(() => {
-    if (isOpen && currentWorkspace) {
+    if (currentWorkspace) {
       fetchData();
     }
-  }, [isOpen, currentWorkspace, fetchData]);
+  }, [currentWorkspace, fetchData]);
 
   // Effect to set form values once data is loaded and transaction is available
   useEffect(() => {
-    if (isOpen && transaction && creditCards.length > 0 && categories.length > 0) {
-      console.log("EditCreditCardTransactionModal: Initializing form with transaction data.");
+    if (transaction && creditCards.length > 0 && categories.length > 0) {
+      console.log("CreditCardTransactionDetailEditForm: Initializing form with transaction data.");
       console.log("Transaction category_id:", transaction.category_id);
       console.log("Available categories:", categories.map(c => ({ id: c.id, name: c.name })));
 
@@ -179,15 +171,12 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
       form.setValue("description", transaction.description || "", { shouldValidate: true });
       form.setValue("is_installment_purchase", isInstallment, { shouldValidate: true });
       form.setValue("installments", installmentsCount, { shouldValidate: true });
-      
-      // The dependency array ensures this effect runs only when categories are ready.
-      // No need for setTimeout if categories are already loaded and form.setValue is used directly.
     }
-  }, [isOpen, transaction, creditCards, categories, form]);
+  }, [transaction, creditCards, categories, form]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (!isOpen || !currentWorkspace) return;
+      if (!currentWorkspace) return;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -214,7 +203,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
     };
 
     fetchSuggestions();
-  }, [isOpen, currentWorkspace]);
+  }, [currentWorkspace]);
 
   const filteredNameSuggestions = useMemo(() => {
     if (!nameValue) return [];
@@ -394,9 +383,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
         }
       }
 
-      showSuccess("Transação(ões) de cartão de crédito atualizada(s) com sucesso!");
       onCreditCardTransactionUpdated();
-      onClose();
     } catch (error: any) {
       console.error("Erro ao processar transação de cartão de crédito:", error);
       showError("Erro inesperado ao atualizar transação de cartão de crédito.");
@@ -439,10 +426,8 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
         return;
       }
 
-      showSuccess("Transação(ões) de cartão de crédito excluída(s) com sucesso!");
-      onCreditCardTransactionUpdated();
+      onCreditCardTransactionDeleted();
       setShowDeleteDialog(false);
-      onClose();
     } catch (error) {
       showError("Erro inesperado ao excluir transação de cartão de crédito.");
     } finally {
@@ -450,40 +435,22 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
     }
   };
 
-  if (!transaction || !currentWorkspace) {
+  if (!currentWorkspace) {
     return null;
   }
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent 
-          className={cn(
-            "sm:max-w-lg",
-            isMobile ? "h-[95vh] max-h-[95vh] w-[95vw] max-w-[95vw] p-0 flex flex-col" : "max-h-[90vh]"
-          )}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
-          <DialogHeader className={cn("px-6 py-4 border-b flex-shrink-0")}>
-            <DialogTitle>Editar Compra no Cartão</DialogTitle>
-            <DialogDescription>
-              Modifique os detalhes da sua transação de cartão de crédito.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className={cn(
-            "flex-1 overflow-y-auto px-6 py-4",
-            !isMobile && "max-h-[60vh]"
-          )}>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome</FormLabel>
-                      <Popover open={isNamePopoverOpen && filteredNameSuggestions.length > 0} onOpenChange={setIsNamePopoverOpen}>
+      <div className="p-4 bg-card rounded-lg shadow-sm">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome</FormLabel>
+                  <Popover open={isNamePopoverOpen && filteredNameSuggestions.length > 0} onOpenChange={setIsNamePopoverOpen}>
                         <PopoverAnchor asChild>
                           <FormControl>
                             <Input
@@ -525,234 +492,232 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
                           </Command>
                         </PopoverContent>
                       </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor Total</FormLabel>
-                      <FormControl>
-                        {isMobile ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="text"
-                              value={amountValue > 0 ? amountValue.toString() : ""}
-                              placeholder="0.00"
-                              readOnly
-                              className="cursor-pointer"
-                              onClick={() => setShowCalculator(true)}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setShowCalculator(true)}
-                            >
-                              <CalculatorIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                        )}
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Data da Compra</FormLabel>
-                      <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP", { locale: ptBR })
-                              ) : (
-                                <span>Escolha uma data</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={(date) => {
-                              field.onChange(date);
-                              setIsCalendarOpen(false);
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="credit_card_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cartão de Crédito</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um cartão" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {creditCards.map(card => <SelectItem key={card.id} value={card.id}>{card.name} ({card.last_four_digits})</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="category_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor Total</FormLabel>
+                  <FormControl>
+                    {isMobile ? (
                       <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma categoria" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="is_installment_purchase"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Compra Parcelada?</FormLabel>
-                        <FormDescription>
-                          Marque se esta compra será dividida em parcelas.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+                        <Input
+                          type="text"
+                          value={amountValue > 0 ? amountValue.toString() : ""}
+                          placeholder="0.00"
+                          readOnly
+                          className="cursor-pointer"
+                          onClick={() => setShowCalculator(true)}
                         />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {isInstallmentPurchase && (
-                  <FormField
-                    control={form.control}
-                    name="installments"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Parcelas</FormLabel>
-                        <FormControl>
-                          <Input type="number" min="1" placeholder="Ex: 3" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setShowCalculator(true)}
+                        >
+                          <CalculatorIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
                     )}
-                  />
-                )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações (Opcional)</FormLabel>
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data da Compra</FormLabel>
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <Textarea placeholder="Adicione uma nota..." {...field} />
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP", { locale: ptBR })
+                          ) : (
+                            <span>Escolha uma data</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </form>
-            </Form>
-          </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setIsCalendarOpen(false);
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <DialogFooter className={cn(
-            "px-6 py-4 border-t flex-shrink-0",
-            isMobile ? "flex-col gap-2 sm:flex-col" : "flex-row justify-between"
-          )}>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isSubmitting || isDeleting}
-              className={cn(isMobile && "w-full order-3", !isMobile && "mr-auto")}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Excluir
-            </Button>
-            <div className={cn(isMobile && "w-full flex flex-col gap-2 sm:flex-col", !isMobile && "flex gap-2")}>
-              <Button 
-                type="submit" 
+            <FormField
+              control={form.control}
+              name="credit_card_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cartão de Crédito</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cartão" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {creditCards.map(card => <SelectItem key={card.id} value={card.id}>{card.name} ({card.last_four_digits})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="is_installment_purchase"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Compra Parcelada?</FormLabel>
+                    <FormDescription>
+                      Marque se esta compra será dividida em parcelas.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {isInstallmentPurchase && (
+              <FormField
+                control={form.control}
+                name="installments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Parcelas</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="1" placeholder="Ex: 3" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Adicione uma nota..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className={cn(
+              "flex flex-col gap-2",
+              !isMobile && "flex-row justify-between"
+            )}>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
                 disabled={isSubmitting || isDeleting}
-                onClick={form.handleSubmit(handleSubmit)}
-                className={cn(isMobile && "w-full order-1")}
+                className={cn(isMobile && "w-full order-3", !isMobile && "mr-auto")}
               >
-                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
               </Button>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={onClose}
-                className={cn(isMobile && "w-full order-2")}
-              >
-                Cancelar
-              </Button>
+              <div className={cn(isMobile && "w-full flex flex-col gap-2 sm:flex-col", !isMobile && "flex gap-2")}>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || isDeleting}
+                  onClick={form.handleSubmit(handleSubmit)}
+                  className={cn(isMobile && "w-full order-1")}
+                >
+                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={onClose}
+                  className={cn(isMobile && "w-full order-2")}
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </form>
+        </Form>
+      </div>
 
       {/* Modal da Calculadora */}
-      <Dialog open={showCalculator} onOpenChange={setShowCalculator}>
-        <DialogContent className="p-0 w-[95vw] max-w-sm">
+      <AlertDialog open={showCalculator} onOpenChange={setShowCalculator}>
+        <AlertDialogContent className="p-0 w-[95vw] max-w-sm">
           <Calculator
             value={amountValue > 0 ? amountValue.toString() : "0"}
             onChange={handleCalculatorValue}
             onClose={() => setShowCalculator(false)}
           />
-        </DialogContent>
-      </Dialog>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -797,4 +762,4 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
   );
 };
 
-export default EditCreditCardTransactionModal;
+export default CreditCardTransactionDetailEditForm;

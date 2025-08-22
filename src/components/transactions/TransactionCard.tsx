@@ -4,14 +4,17 @@ import { TransactionWithDetails } from "@/types/transaction-details"; // Import 
 import { Building, User, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 interface TransactionCardProps {
   transaction: TransactionWithDetails; // Use new type
-  onRowClick?: (transaction: TransactionWithDetails) => void; // Update type for onRowClick
+  // onRowClick?: (transaction: TransactionWithDetails) => void; // No longer needed, will navigate
   companyLogo?: string | null;
 }
 
-const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCardProps) => {
+const TransactionCard = ({ transaction, companyLogo }: TransactionCardProps) => {
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const getTransactionType = () => {
     if (transaction.transfer_id) {
       return "Transferência";
@@ -68,21 +71,14 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
   };
 
   const handleClick = () => {
-    console.log("TransactionCard clicked - onRowClick:", typeof onRowClick);
-    if (onRowClick && typeof onRowClick === 'function') {
-      console.log("Calling onRowClick with transaction:", transaction.id);
-      onRowClick(transaction);
-    } else {
-      console.log("onRowClick not available or not a function");
-    }
+    console.log("TransactionCard clicked - navigating to:", `/transactions/${transaction.id}`);
+    navigate(`/transactions/${transaction.id}`);
   };
 
   return (
     <div
       onClick={handleClick}
-      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm transition-shadow ${
-        onRowClick ? 'cursor-pointer hover:shadow-md active:bg-muted/50' : 'cursor-default'
-      }`}
+      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border shadow-sm transition-shadow cursor-pointer hover:shadow-md active:bg-muted/50`}
       style={{
         WebkitTapHighlightColor: 'transparent',
         touchAction: 'manipulation',

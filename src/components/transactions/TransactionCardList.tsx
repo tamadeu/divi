@@ -6,16 +6,14 @@ import { getCompanyLogo } from "@/utils/transaction-helpers";
 
 interface TransactionCardListProps {
   transactions: TransactionWithDetails[]; // Use new type
+  // onRowClick?: (transaction: TransactionWithDetails) => void; // No longer needed
   loading: boolean;
-  onRowClick?: (transaction: TransactionWithDetails) => void; // Update type for onRowClick
   companies: Company[];
 }
 
-const TransactionCardList = ({ transactions, loading, onRowClick, companies }: TransactionCardListProps) => {
+const TransactionCardList = ({ transactions, loading, companies }: TransactionCardListProps) => {
   console.log("TransactionCardList rendered:", {
     transactionsCount: transactions.length,
-    onRowClickExists: !!onRowClick,
-    onRowClickType: typeof onRowClick,
     loading
   });
 
@@ -44,14 +42,12 @@ const TransactionCardList = ({ transactions, loading, onRowClick, companies }: T
         console.log(`Rendering TransactionCard ${index}:`, {
           transactionId: transaction.id,
           transactionName: transaction.name,
-          onRowClickPassed: !!onRowClick
         });
         
         return (
           <TransactionCard
             key={transaction.id}
             transaction={transaction}
-            onRowClick={onRowClick}
             companyLogo={getCompanyLogo(transaction.name, companies)}
           />
         );

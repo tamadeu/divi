@@ -13,9 +13,10 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useSession } from "@/contexts/SessionContext";
 import { Transaction, Company, BudgetWithSpending } from "@/types/database";
 import { TransactionWithDetails } from "@/types/transaction-details";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
+// import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Removed
+// import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // Removed
 import { format } from "date-fns"; // Import format from date-fns
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 interface SummaryData {
   total_balance: number;
@@ -29,21 +30,15 @@ const Dashboard = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
+  const { openAddTransactionModal, openAddTransferModal } = useModal(); // Removed edit modals
   const { currentWorkspace } = useWorkspace();
   const { session } = useSession();
   const isMobile = useIsMobile();
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const navigate = useNavigate(); // Initialize useNavigate
 
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  const handleTransactionClick = (transaction: TransactionWithDetails) => { // Updated type here
-    if (transaction.credit_card_bill_id) {
-      openEditCreditCardTransactionModal(transaction);
-    } else {
-      openEditTransactionModal(transaction);
-    }
+  const handleTransactionClick = (transaction: TransactionWithDetails) => {
+    navigate(`/transactions/${transaction.id}`); // Navigate to the new page
   };
 
   const fetchDashboardData = useCallback(async (month: Date) => {

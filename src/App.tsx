@@ -36,6 +36,7 @@ import { Skeleton } from "./components/ui/skeleton";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPasswordPage from "./pages/ResetPassword";
 import ConfirmImportPage from "./pages/ConfirmImportPage"; // Import the new page
+import TransactionDetailEditPage from "./pages/TransactionDetailEditPage"; // Import the new page
 
 const ProtectedRoute = () => {
   const { session, loading: sessionLoading } = useSession();
@@ -99,6 +100,7 @@ function AppRoutes() {
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/accounts/:accountId" element={<AccountDetailPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/transactions/:transactionId" element={<TransactionDetailEditPage />} /> {/* New route */}
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/budgets" element={<BudgetsPage />} />

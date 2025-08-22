@@ -32,7 +32,7 @@ import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
 import { useIsMobile } from "@/hooks/use-mobile";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+// import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Removed
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet";
@@ -41,8 +41,9 @@ import { ptBR } from "date-fns/locale";
 import SummaryCard from "@/components/dashboard/SummaryCard"; // Imported SummaryCard
 import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncomeExpenseSummaryCards"; // Imported new component
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
+// import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // Removed
 import { useSession } from "@/contexts/SessionContext"; // Import useSession
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const ITEMS_PER_PAGE = 10;
 
@@ -59,10 +60,11 @@ const TransactionsPage = () => {
   const [allTransactions, setAllTransactions] = useState<TransactionWithDetails[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
+  const { openAddTransactionModal, openAddTransferModal } = useModal(); // Removed edit modals
   const { currentWorkspace } = useWorkspace();
   const { session } = useSession(); // Use session
   const isMobile = useIsMobile();
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const [searchQuery, setSearchQuery] = useState("");
   const [monthFilter, setMonthFilter] = useState("all");
@@ -253,10 +255,8 @@ const TransactionsPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
-    } else if (transaction.credit_card_bill_id) {
-      openEditCreditCardTransactionModal(transaction);
     } else {
-      openEditTransactionModal(transaction);
+      navigate(`/transactions/${transaction.id}`); // Navigate to the new page
     }
   };
 
@@ -449,7 +449,6 @@ const TransactionsPage = () => {
               )}
               <AllTransactionsTable
                 transactions={paginatedTransactions}
-                onRowClick={handleRowClick}
                 companies={companies}
               />
               {totalPages > 1 && (

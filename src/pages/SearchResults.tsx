@@ -20,17 +20,18 @@ import AllTransactionsTable from "@/components/transactions/AllTransactionsTable
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Calendar } from "lucide-react";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+// import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Removed
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext"; // Import useModal
-import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
+// import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // Removed
 import SummaryCard from "@/components/dashboard/SummaryCard"; // Imported SummaryCard
 import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncomeExpenseSummaryCards"; // Imported new component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
 import { useSession } from "@/contexts/SessionContext"; // Import useSession
 import { format } from "date-fns"; // Import format
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -40,10 +41,11 @@ const SearchResultsPage = () => {
   const [filteredResults, setFilteredResults] = useState<TransactionWithDetails[]>([]); // Results after client-side filtering
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Use modal functions
+  const { openAddTransferModal } = useModal(); // Removed edit modals
   const isMobile = useIsMobile(); // Use useIsMobile hook
   const { currentWorkspace } = useWorkspace(); // Use useWorkspace hook
   const { session } = useSession(); // Use session
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [loadingSummary, setLoadingSummary] = useState(true); // New state for summary loading
@@ -184,10 +186,8 @@ const SearchResultsPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
-    } else if (transaction.credit_card_bill_id) { // Check for credit card transaction
-      openEditCreditCardTransactionModal(transaction);
     } else {
-      openEditTransactionModal(transaction);
+      navigate(`/transactions/${transaction.id}`); // Navigate to the new page
     }
   };
 
@@ -299,7 +299,6 @@ const SearchResultsPage = () => {
           ) : (
             <AllTransactionsTable
               transactions={filteredResults}
-              onRowClick={handleRowClick}
               companies={companies}
             />
           )}

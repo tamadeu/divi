@@ -30,13 +30,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Account, Transaction, Company } from "@/types/database";
 import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import { Skeleton } from "@/components/ui/skeleton";
-import EditTransactionModal from "@/components/transactions/EditTransactionModal";
+// import EditTransactionModal from "@/components/transactions/EditTransactionModal"; // Removed
 import TransferModal from "@/components/transfers/TransferModal";
 import { showError } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext"; // Import useModal
-import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
+// import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // Removed
 import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
 import { useSession } from "@/contexts/SessionContext"; // Import useSession
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const ITEMS_PER_PAGE = 5;
 
@@ -47,9 +48,10 @@ const AccountDetailPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { openEditTransactionModal, openEditCreditCardTransactionModal, openAddTransferModal } = useModal(); // Use modal functions
+  const { openAddTransferModal } = useModal(); // Removed edit modals
   const { currentWorkspace } = useWorkspace(); // Use useWorkspace hook
   const { session } = useSession(); // Use session
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -174,10 +176,8 @@ const AccountDetailPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
-    } else if (transaction.credit_card_bill_id) { // Check for credit card transaction
-      openEditCreditCardTransactionModal(transaction);
     } else {
-      openEditTransactionModal(transaction);
+      navigate(`/transactions/${transaction.id}`); // Navigate to the new page
     }
   };
 
@@ -306,7 +306,6 @@ const AccountDetailPage = () => {
             </div>
             <AccountTransactionsTable
               transactions={paginatedTransactions}
-              onRowClick={handleRowClick}
               companies={companies}
             />
             {totalPages > 1 && (

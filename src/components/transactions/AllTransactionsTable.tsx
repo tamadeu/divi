@@ -14,21 +14,21 @@ import TransactionCardList from "./TransactionCardList";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 interface AllTransactionsTableProps {
   transactions: TransactionWithDetails[]; // Use new type
-  onRowClick?: (transaction: TransactionWithDetails) => void; // Update type for onRowClick
+  // onRowClick?: (transaction: TransactionWithDetails) => void; // No longer needed, will navigate
   companies: Company[];
 }
 
-const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransactionsTableProps) => {
+const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableProps) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate(); // Initialize useNavigate
   
   console.log("AllTransactionsTable rendered:", {
     isMobile,
     transactionsCount: transactions.length,
-    onRowClickExists: !!onRowClick,
-    onRowClickType: typeof onRowClick
   });
   
   const statusVariant = {
@@ -38,27 +38,14 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
   } as const;
 
   const handleRowClick = (transaction: TransactionWithDetails) => { // Update type for handleRowClick
-    console.log("AllTransactionsTable handleRowClick:", {
-      transactionId: transaction.id,
-      onRowClickExists: !!onRowClick,
-      onRowClickType: typeof onRowClick
-    });
-
-    try {
-      if (onRowClick && typeof onRowClick === 'function') {
-        onRowClick(transaction);
-      } else {
-        console.warn("onRowClick is not a function or is undefined:", onRowClick);
-      }
-    } catch (error) {
-      console.error("Error calling onRowClick:", error);
-    }
+    console.log("AllTransactionsTable handleRowClick - navigating to:", `/transactions/${transaction.id}`);
+    navigate(`/transactions/${transaction.id}`);
   };
 
   // Renderizar cards no mobile
   if (isMobile) {
     console.log("Rendering mobile view with TransactionCardList");
-    return <TransactionCardList transactions={transactions} onRowClick={onRowClick} companies={companies} loading={false} />;
+    return <TransactionCardList transactions={transactions} companies={companies} loading={false} />;
   }
 
   // Renderizar tabela no desktop
@@ -81,7 +68,7 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
               <TableRow
                 key={transaction.id}
                 onClick={() => handleRowClick(transaction)}
-                className={`${onRowClick ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'}`}
+                className={`cursor-pointer hover:bg-muted/50`}
               >
                 <TableCell className="min-w-[150px]">
                   <div className="font-medium">{transaction.name}</div>
