@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 
 interface TransactionCardProps {
   transaction: TransactionWithDetails; // Use new type
-  onRowClick?: (transaction: Transaction) => void;
+  onRowClick?: (transaction: TransactionWithDetails) => void; // Update type for onRowClick
   companyLogo?: string | null;
 }
 
@@ -16,14 +16,14 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
     if (transaction.transfer_id) {
       return "Transferência";
     }
-    if (transaction.credit_card_bill) {
-      const cardName = transaction.credit_card_bill.credit_card?.name || "Cartão de Crédito";
+    if (transaction.credit_card_bill_id) { // Check for credit_card_bill_id
+      const cardName = transaction.cc_name || "Cartão de Crédito"; // Use cc_name
       const installmentInfo = transaction.total_installments && transaction.installment_number
         ? ` (${transaction.installment_number}/${transaction.total_installments})`
         : '';
       return `${cardName}${installmentInfo}`;
     }
-    return transaction.category || "Sem categoria";
+    return transaction.category_name || "Sem categoria"; // Use category_name
   };
 
   const getAvatarContent = () => {
@@ -37,7 +37,7 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
       );
     }
 
-    if (transaction.credit_card_bill) {
+    if (transaction.credit_card_bill_id) { // Check for credit_card_bill_id
       return (
         <Avatar className="h-12 w-12">
           <AvatarFallback className="bg-purple-100 text-purple-600">
@@ -117,9 +117,9 @@ const TransactionCard = ({ transaction, onRowClick, companyLogo }: TransactionCa
             currency: "BRL",
           })}
         </p>
-        {transaction.credit_card_bill && (
+        {transaction.credit_card_bill_id && transaction.cc_bill_reference_month && ( // Check for credit_card_bill_id and reference month
           <p className="text-xs text-muted-foreground mt-1">
-            Fatura: {format(new Date(transaction.credit_card_bill.reference_month), 'MMM/yy', { locale: ptBR })}
+            Fatura: {format(new Date(transaction.cc_bill_reference_month), 'MMM/yy', { locale: ptBR })}
           </p>
         )}
       </div>

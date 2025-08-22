@@ -56,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import the new type
 
 const creditCardTransactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -82,7 +83,7 @@ interface EditCreditCardTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreditCardTransactionUpdated: () => void;
-  transaction: Transaction | null; // The transaction being edited
+  transaction: TransactionWithDetails | null; // Use TransactionWithDetails
 }
 
 const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransactionUpdated, transaction }: EditCreditCardTransactionModalProps) => {
@@ -96,7 +97,6 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
   const [showCalculator, setShowCalculator] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [transactionCreditCardId, setTransactionCreditCardId] = useState<string | null>(null); // New state for credit card ID
   const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
@@ -121,7 +121,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
   const fetchData = useCallback(async () => {
     if (!currentWorkspace) return;
 
-    // Buscar cartões de crédito do workspace atual
+    // Fetch all credit cards for the current workspace
     const { data: creditCardsData, error: creditCardsError } = await supabase
       .from("credit_cards")
       .select("*")
@@ -135,12 +135,12 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
       setCreditCards(creditCardsData || []);
     }
 
-    // Buscar categorias de despesa do workspace atual
+    // Fetch all expense categories for the current workspace
     const { data: categoriesData, error: categoriesError } = await supabase
       .from("categories")
       .select("*")
       .eq("workspace_id", currentWorkspace.id)
-      .eq("type", "expense") // Cartão de crédito é sempre despesa
+      .eq("type", "expense") // Credit card transactions are always expenses
       .order("name", { ascending: true });
     
     if (categoriesError) {
@@ -149,27 +149,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
     } else {
       setCategories(categoriesData || []);
     }
-
-    // Fetch the credit_card_id from the associated credit_card_bill
-    if (transaction?.credit_card_bill_id) {
-      const { data: billData, error: billError } = await supabase
-        .from("credit_card_bills")
-        .select("credit_card_id")
-        .eq("id", transaction.credit_card_bill_id)
-        .single();
-
-      if (billError) {
-        console.error("Error fetching credit card bill for transaction:", billError);
-        showError("Erro ao carregar detalhes da fatura do cartão.");
-        setTransactionCreditCardId(null);
-      } else if (billData) {
-        setTransactionCreditCardId(billData.credit_card_id);
-      }
-    } else {
-      setTransactionCreditCardId(null);
-    }
-
-  }, [currentWorkspace, transaction]); // Added transaction to dependencies
+  }, [currentWorkspace]);
 
   // Effect to fetch data when modal opens
   useEffect(() => {
@@ -180,15 +160,14 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
 
   // Effect to set form values once data is loaded and transaction is available
   useEffect(() => {
-    // Only reset form if transaction, creditCards, categories, and transactionCreditCardId are all available
-    if (isOpen && transaction && creditCards.length > 0 && categories.length > 0 && transactionCreditCardId !== null) {
+    if (isOpen && transaction && creditCards.length > 0 && categories.length > 0) {
       const absoluteAmount = Math.abs(transaction.amount);
       
       form.reset({
         name: transaction.name,
         amount: absoluteAmount,
         date: new Date(transaction.date),
-        credit_card_id: transactionCreditCardId || "", // Use the fetched credit card ID
+        credit_card_id: transaction.cc_id || "", // Use cc_id from TransactionWithDetails
         category_id: transaction.category_id || "",
         description: transaction.description || "",
         is_installment_purchase: (transaction.total_installments || 1) > 1,
@@ -203,7 +182,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
         }, 50); // Small delay
       }
     }
-  }, [isOpen, transaction, creditCards, categories, transactionCreditCardId, form]); // Depend on transactionCreditCardId
+  }, [isOpen, transaction, creditCards, categories, form]); // Removed transactionCreditCardId from dependencies
 
   useEffect(() => {
     const fetchSuggestions = async () => {

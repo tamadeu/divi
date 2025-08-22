@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Transaction, Company } from "@/types/database";
+import { Company } from "@/types/database";
 import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "./TransactionCardList";
@@ -17,7 +17,7 @@ import { ptBR } from "date-fns/locale";
 
 interface AllTransactionsTableProps {
   transactions: TransactionWithDetails[]; // Use new type
-  onRowClick?: (transaction: Transaction) => void;
+  onRowClick?: (transaction: TransactionWithDetails) => void; // Update type for onRowClick
   companies: Company[];
 }
 
@@ -37,7 +37,7 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
     "Falhou": "destructive",
   } as const;
 
-  const handleRowClick = (transaction: Transaction) => {
+  const handleRowClick = (transaction: TransactionWithDetails) => { // Update type for handleRowClick
     console.log("AllTransactionsTable handleRowClick:", {
       transactionId: transaction.id,
       onRowClickExists: !!onRowClick,
@@ -92,30 +92,30 @@ const AllTransactionsTable = ({ transactions, onRowClick, companies }: AllTransa
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground sm:hidden">
-                    {transaction.category}
+                    {transaction.category_name} {/* Use category_name */}
                   </div>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  {transaction.account ? (
+                  {transaction.account_id ? ( // Check for account_id
                     <>
-                      <div className="font-medium">{transaction.account.name}</div>
-                      <div className="text-sm text-muted-foreground">{transaction.account.type}</div>
+                      <div className="font-medium">{transaction.account_name}</div> {/* Use account_name */}
+                      <div className="text-sm text-muted-foreground">{transaction.account_type}</div> {/* Use account_type */}
                     </>
-                  ) : transaction.credit_card_bill ? (
+                  ) : transaction.credit_card_bill_id ? ( // Check for credit_card_bill_id
                     <>
-                      <div className="font-medium">{transaction.credit_card_bill.credit_card?.name}</div>
+                      <div className="font-medium">{transaction.cc_name}</div> {/* Use cc_name */}
                       <div className="text-sm text-muted-foreground">
-                        {transaction.credit_card_bill.credit_card?.brand} (**** {transaction.credit_card_bill.credit_card?.last_four_digits})
+                        {transaction.cc_brand} (**** {transaction.cc_last_four_digits}) {/* Use cc_brand and cc_last_four_digits */}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Fatura: {format(new Date(transaction.credit_card_bill.reference_month), 'MMM/yy', { locale: ptBR })}
+                        Fatura: {format(new Date(transaction.cc_bill_reference_month!), 'MMM/yy', { locale: ptBR })} {/* Use cc_bill_reference_month */}
                       </div>
                     </>
                   ) : (
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">{transaction.category}</TableCell>
+                <TableCell className="hidden sm:table-cell">{transaction.category_name}</TableCell> {/* Use category_name */}
                 <TableCell className="hidden md:table-cell">
                   <Badge variant={statusVariant[transaction.status]}>
                     {transaction.status}

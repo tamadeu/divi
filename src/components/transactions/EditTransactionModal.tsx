@@ -56,6 +56,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { TransactionWithDetails } from "@/types/transaction-details"; // Import the new type
 
 const transactionSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -74,7 +75,7 @@ interface EditTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTransactionUpdated: () => void;
-  transaction: Transaction | null;
+  transaction: TransactionWithDetails | null; // Use TransactionWithDetails
 }
 
 const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transaction }: EditTransactionModalProps) => {
@@ -135,7 +136,7 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
   }, [categories, transactionType]);
 
   const fetchData = useCallback(async () => {
-    if (!currentWorkspace) return { accounts: [], categories: [] };
+    if (!currentWorkspace) return;
 
     // Buscar contas do workspace atual
     const { data: accountsData } = await supabase
@@ -152,8 +153,6 @@ const EditTransactionModal = ({ isOpen, onClose, onTransactionUpdated, transacti
       .eq("workspace_id", currentWorkspace.id)
       .order("name", { ascending: true });
     setCategories(categoriesData || []);
-
-    return { accounts: accountsData || [], categories: categoriesData || [] };
   }, [currentWorkspace]);
 
   useEffect(() => {
