@@ -27,25 +27,26 @@ interface AddCategoryModalProps {
   onClose: () => void;
   onCategoryAdded: (newCategory: Category | null) => void; // Changed to pass new Category
   defaultType?: 'income' | 'expense'; // Added defaultType prop
+  defaultName?: string; // New prop for default name
 }
 
-const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: AddCategoryModalProps) => {
+const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defaultName }: AddCategoryModalProps) => {
   const [formData, setFormData] = useState({
-    name: "",
+    name: defaultName || "", // Initialize with defaultName
     type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''), // Initialize with defaultType
   });
   const [loading, setLoading] = useState(false);
   const { currentWorkspace } = useWorkspace();
 
-  // Reset form when modal opens, considering defaultType
+  // Reset form when modal opens, considering defaultType and defaultName
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        name: "",
+        name: defaultName || "",
         type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''),
       });
     }
-  }, [isOpen, defaultType]); // Added defaultType to dependencies
+  }, [isOpen, defaultType, defaultName]); // Added defaultName to dependencies
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +123,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType }: Add
               <Select
                 value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value })}
+                disabled={!!defaultType} // Disable type selection if defaultType is provided
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />

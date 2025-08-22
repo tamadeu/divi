@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, CheckCircle, XCircle, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertTriangle, ArrowLeft, PlusCircle } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useSession } from "@/contexts/SessionContext";
@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AddCategoryModal from "@/components/categories/AddCategoryModal"; // Import AddCategoryModal
 
 interface ParsedTransaction {
   name: string;
@@ -81,6 +82,10 @@ const ConfirmImportPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+
+  // State for AddCategoryModal
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [categoryToCreate, setCategoryToCreate] = useState<{ name: string; type: 'income' | 'expense' } | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -138,6 +143,24 @@ const ConfirmImportPage = () => {
         };
       });
     }
+  };
+
+  const handleOpenAddCategoryModal = (name: string, type: 'income' | 'expense') => {
+    setCategoryToCreate({ name, type });
+    setIsAddCategoryModalOpen(true);
+  };
+
+  const handleCategoryAdded = (newCategory: Category | null) => {
+    if (newCategory && categoryToCreate) {
+      // Add the new category to available categories
+      setAvailableCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
+      
+      // Automatically map the newly created category to the missing one
+      handleCategoryMappingChange(categoryToCreate.name, categoryToCreate.type, newCategory.id);
+      showSuccess(`Categoria "${newCategory.name}" criada e mapeada com sucesso!`);
+    }
+    setCategoryToCreate(null);
+    setIsAddCategoryModalOpen(false);
   };
 
   // Safely calculate allCategoriesMapped
@@ -240,191 +263,211 @@ const ConfirmImportPage = () => {
   const { transactions, errors, accountsMap, categoriesMap, selectedAccountName, uniqueMissingCategories } = parsedData;
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={handleCancel}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Confirmar Importação de Transações</h1>
-          <p className="text-muted-foreground">
-            Revise as transações que serão importadas para a conta: <span className="font-semibold text-primary">{selectedAccountName}</span>
-          </p>
+    <>
+      <div className="space-y-6 p-4 md:p-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={handleCancel}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Confirmar Importação de Transações</h1>
+            <p className="text-muted-foreground">
+              Revise as transações que serão importadas para a conta: <span className="font-semibold text-primary">{selectedAccountName}</span>
+            </p>
+          </div>
         </div>
-      </div>
 
-      {errors.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Erros de Parsing Encontrados</AlertTitle>
-          <AlertDescription>
-            Algumas linhas do seu CSV não puderam ser processadas. Por favor, revise-as:
-            <ul className="list-disc list-inside mt-2">
-              {errors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+        {errors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erros de Parsing Encontrados</AlertTitle>
+            <AlertDescription>
+              Algumas linhas do seu CSV não puderam ser processadas. Por favor, revise-as:
+              <ul className="list-disc list-inside mt-2">
+                {errors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {uniqueMissingCategories.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-5 w-5" />
-              Categorias Não Encontradas
-            </CardTitle>
-            <CardDescription>
-              As seguintes categorias do seu CSV não foram encontradas no seu núcleo financeiro. Por favor, mapeie-as para categorias existentes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Categoria do CSV</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Mapear para</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {uniqueMissingCategories.map((mc, index) => (
-                    <TableRow key={`${mc.name}-${mc.type}-${index}`}>
-                      <TableCell className="font-medium">{mc.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={mc.type === 'income' ? 'default' : 'destructive'}>
-                          {mc.type === 'income' ? 'Renda' : 'Despesa'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={mc.mappedToId || ""}
-                          onValueChange={(value) => handleCategoryMappingChange(mc.name, mc.type, value)}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Selecione uma categoria" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableCategories
-                              .filter(cat => cat.type === mc.type)
-                              .map(cat => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+        {uniqueMissingCategories.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-600">
+                <AlertTriangle className="h-5 w-5" />
+                Categorias Não Encontradas
+              </CardTitle>
+              <CardDescription>
+                As seguintes categorias do seu CSV não foram encontradas no seu núcleo financeiro. Por favor, mapeie-as para categorias existentes ou crie novas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Categoria do CSV</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead className="min-w-[250px]">Mapear para / Criar</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {transactions.length === 0 && errors.length === 0 ? (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertTitle>Nenhuma transação válida para importar</AlertTitle>
-          <AlertDescription>
-            O arquivo CSV foi processado, mas nenhuma transação válida foi encontrada para importação.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Transações a Serem Importadas ({transactions.length})</CardTitle>
-            <CardDescription>
-              Verifique os detalhes de cada transação antes de confirmar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Descrição</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((transaction, index) => {
-                    const isCategoryMissing = transaction.category_id === null;
-                    const mappedCategory = isCategoryMissing
-                      ? uniqueMissingCategories.find(mc => mc.name === transaction.original_category_name && mc.type === transaction.original_category_type)
-                      : null;
-                    const displayCategoryName = isCategoryMissing
-                      ? (mappedCategory?.mappedToId ? availableCategories.find(c => c.id === mappedCategory.mappedToId)?.name : transaction.original_category_name)
-                      : (categoriesMap[transaction.category_id!]?.name || 'Desconhecida');
-
-                    return (
-                      <TableRow key={index} className={isCategoryMissing && !mappedCategory?.mappedToId ? "bg-amber-50/20" : ""}>
-                        <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
-                        <TableCell>{transaction.name}</TableCell>
-                        <TableCell
-                          className={`font-semibold ${
-                            transaction.amount > 0 ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {transaction.amount.toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })}
-                        </TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {uniqueMissingCategories.map((mc, index) => (
+                      <TableRow key={`${mc.name}-${mc.type}-${index}`}>
+                        <TableCell className="font-medium">{mc.name}</TableCell>
                         <TableCell>
-                          <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>
-                            {transaction.type === 'income' ? 'Renda' : 'Despesa'}
+                          <Badge variant={mc.type === 'income' ? 'default' : 'destructive'}>
+                            {mc.type === 'income' ? 'Renda' : 'Despesa'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {isCategoryMissing && !mappedCategory?.mappedToId ? (
-                            <span className="text-amber-500 font-medium">
-                              {displayCategoryName} (Mapear!)
-                            </span>
-                          ) : (
-                            displayCategoryName
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                          {transaction.description || '-'}
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={mc.mappedToId || ""}
+                              onValueChange={(value) => handleCategoryMappingChange(mc.name, mc.type, value)}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Selecione uma categoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableCategories
+                                  .filter(cat => cat.type === mc.type)
+                                  .map(cat => (
+                                    <SelectItem key={cat.id} value={cat.id}>
+                                      {cat.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              onClick={() => handleOpenAddCategoryModal(mc.name, mc.type)}
+                              title="Criar nova categoria"
+                            >
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      <div className="flex justify-end gap-2 mt-6">
-        <Button variant="outline" onClick={handleCancel} disabled={isImporting}>
-          Cancelar
-        </Button>
-        <Button onClick={handleConfirmImport} disabled={isImporting || transactions.length === 0 || !allCategoriesMapped}>
-          {isImporting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Importando...
-            </>
-          ) : (
-            <>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Confirmar Importação
-            </>
-          )}
-        </Button>
+        {transactions.length === 0 && errors.length === 0 ? (
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Nenhuma transação válida para importar</AlertTitle>
+            <AlertDescription>
+              O arquivo CSV foi processado, mas nenhuma transação válida foi encontrada para importação.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Transações a Serem Importadas ({transactions.length})</CardTitle>
+              <CardDescription>
+                Verifique os detalhes de cada transação antes de confirmar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Descrição</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((transaction, index) => {
+                      const isCategoryMissing = transaction.category_id === null;
+                      const mappedCategory = isCategoryMissing
+                        ? uniqueMissingCategories.find(mc => mc.name === transaction.original_category_name && mc.type === transaction.original_category_type)
+                        : null;
+                      const displayCategoryName = isCategoryMissing
+                        ? (mappedCategory?.mappedToId ? availableCategories.find(c => c.id === mappedCategory.mappedToId)?.name : transaction.original_category_name)
+                        : (categoriesMap[transaction.category_id!]?.name || 'Desconhecida');
+
+                      return (
+                        <TableRow key={index} className={isCategoryMissing && !mappedCategory?.mappedToId ? "bg-amber-50/20" : ""}>
+                          <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                          <TableCell>{transaction.name}</TableCell>
+                          <TableCell
+                            className={`font-semibold ${
+                              transaction.amount > 0 ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {transaction.amount.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>
+                              {transaction.type === 'income' ? 'Renda' : 'Despesa'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {isCategoryMissing && !mappedCategory?.mappedToId ? (
+                              <span className="text-amber-500 font-medium">
+                                {displayCategoryName} (Mapear!)
+                              </span>
+                            ) : (
+                              displayCategoryName
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                            {transaction.description || '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="outline" onClick={handleCancel} disabled={isImporting}>
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirmImport} disabled={isImporting || transactions.length === 0 || !allCategoriesMapped}>
+            {isImporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Importando...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Confirmar Importação
+              </>
+            )}
+          </Button>
+        </div>
       </div>
-    </div>
+
+      <AddCategoryModal
+        isOpen={isAddCategoryModalOpen}
+        onClose={() => setIsAddCategoryModalOpen(false)}
+        onCategoryAdded={handleCategoryAdded}
+        defaultName={categoryToCreate?.name}
+        defaultType={categoryToCreate?.type}
+      />
+    </>
   );
 };
 
