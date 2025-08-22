@@ -37,7 +37,6 @@ import { useModal } from "@/contexts/ModalContext"; // Import useModal
 import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
 import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
 import { useSession } from "@/contexts/SessionContext"; // Import useSession
-import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const ITEMS_PER_PAGE = 5;
 
@@ -48,10 +47,9 @@ const AccountDetailPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { openAddTransferModal } = useModal(); // Removed edit modals
+  const { openEditTransactionModal, openEditCreditCardTransactionModal, openAddTransferModal } = useModal(); // Use modal functions
   const { currentWorkspace } = useWorkspace(); // Use useWorkspace hook
   const { session } = useSession(); // Use session
-  const navigate = useNavigate(); // Initialize useNavigate
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -145,14 +143,14 @@ const AccountDetailPage = () => {
     return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
 
-  const handleRowClick = async (transaction: TransactionWithDetails) => {
+  const handleRowClick = async (transaction: TransactionWithDetails) => { // Updated type here
     if (transaction.transfer_id) {
       // Fetch both transactions related to this transfer_id
       const { data: transferTransactions, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('transfer_id', transaction.transfer_id)
-        .eq('user_id', session?.user?.id);
+        .eq('user_id', session?.user?.id); // Use session.user.id
 
       if (error) {
         showError("Erro ao carregar detalhes da transferência: " + error.message);
@@ -164,6 +162,7 @@ const AccountDetailPage = () => {
         const toTransaction = transferTransactions.find(t => t.amount > 0);
 
         if (fromTransaction && toTransaction) {
+          // Need to cast to Transaction type for the modal
           openAddTransferModal({
             fromAccountId: fromTransaction.account_id || undefined,
             toAccountId: toTransaction.account_id || undefined,
@@ -175,9 +174,10 @@ const AccountDetailPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
+    } else if (transaction.credit_card_bill_id) { // Check for credit card transaction
+      openEditCreditCardTransactionModal(transaction);
     } else {
-      // Navigate to the dedicated transaction details page
-      navigate(`/transactions/${transaction.id}`);
+      openEditTransactionModal(transaction);
     }
   };
 
