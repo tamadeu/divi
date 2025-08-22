@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { showError, showSuccess } from "@/utils/toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useProfile } from "@/hooks/useProfile"; // Import useProfile
+import { useProfile } from "@/hooks/useProfile";
+import { useSession } from "@/contexts/SessionContext"; // Import useSession
 
 const profileSchema = z.object({
   first_name: z.string().min(1, "O nome é obrigatório."),
@@ -21,8 +22,8 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfileForm() {
-  const { profile, loading: profileLoading, refreshProfile } = useProfile(); // Use useProfile hook
-  const [email, setEmail] = useState("");
+  const { profile, loading: profileLoading, refreshProfile } = useProfile();
+  const { session } = useSession(); // Get session from context
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ProfileFormValues>({
@@ -34,29 +35,21 @@ export function ProfileForm() {
   });
 
   useEffect(() => {
-    const loadProfileData = async () => {
-      if (!profileLoading && profile) {
-        setEmail(profile.email || ""); // Assuming email is part of profile or fetched separately
-        form.reset({
-          first_name: profile.first_name || "",
-          last_name: profile.last_name || "",
-        });
-      } else if (!profileLoading && !profile) {
-        // If no profile found, try to get user email
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setEmail(user.email || "");
-        }
-      }
-    };
-
-    loadProfileData();
+    if (!profileLoading) {
+      form.reset({
+        first_name: profile?.first_name || "",
+        last_name: profile?.last_name || "",
+      });
+    }
   }, [profile, profileLoading, form]);
+
+  // O email deve ser derivado da sessão, não buscado separadamente
+  const userEmail = session?.user?.email || "";
 
   const handleSubmit = async (values: ProfileFormValues) => {
     setIsSubmitting(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Não é necessário chamar getUser() aqui, session.user já está disponível
+    if (!session?.user) {
       showError("Usuário não encontrado.");
       setIsSubmitting(false);
       return;
@@ -69,13 +62,13 @@ export function ProfileForm() {
         last_name: values.last_name,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", user.id);
+      .eq("id", session.user.id); // Use session.user.id diretamente
 
     if (error) {
       showError("Erro ao atualizar perfil: " + error.message);
     } else {
       showSuccess("Perfil atualizado com sucesso!");
-      refreshProfile(); // Refresh the cached profile data
+      refreshProfile();
     }
     setIsSubmitting(false);
   };
@@ -126,7 +119,7 @@ export function ProfileForm() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" value={email} readOnly disabled />
+          <Input id="email" type="email" value={userEmail} readOnly disabled />
         </div>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Salvando..." : "Salvar Alterações"}
