@@ -220,7 +220,7 @@ const Dashboard = () => {
           </div>
         )
       )}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-5 mt-4">
         <div className="lg:col-span-3">
           <RecentTransactions transactions={transactions} loading={loading} onRowClick={handleTransactionClick} companies={companies} />
         </div>
