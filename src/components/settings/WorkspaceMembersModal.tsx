@@ -79,117 +79,25 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
     setLoading(true);
     try {
-      // 1. Buscar todos os workspace_users (membros e admins, incluindo o proprietário se ele foi adicionado)
-      const { data: workspaceUsers, error: usersError } = await supabase
-        .from('workspace_users')
-        .select('*')
-        .eq('workspace_id', workspace.id)
-        .order('joined_at', { ascending: true });
+      // Chamar a nova função RPC para obter todos os detalhes dos membros
+      const { data, error } = await supabase
+        .rpc('get_workspace_members_with_details', { p_workspace_id: workspace.id });
 
-      if (usersError) {
-        console.error('Error fetching workspace users:', usersError);
-        throw usersError;
+      if (error) {
+        console.error('Error fetching workspace members with details:', error);
+        throw error;
       }
 
-      const membersWithProfiles: WorkspaceUser[] = [];
-      const fetchedUserIds = new Set<string>();
+      // O tipo retornado pela RPC já é compatível com WorkspaceUser[]
+      setMembers(data || []);
 
-      // 2. Adicionar o proprietário do workspace primeiro (se ainda não estiver na lista de workspace_users)
-      // Isso garante que o proprietário sempre apareça e seja identificado corretamente.
-      const ownerId = workspace.workspace_owner;
-      const isOwnerInWorkspaceUsers = workspaceUsers?.some(wu => wu.user_id === ownerId && !wu.is_ghost_user);
-
-      if (ownerId && !isOwnerInWorkspaceUsers) {
-        const { data: ownerProfiles, error: ownerProfileError } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, avatar_url')
-          .eq('id', ownerId);
-        const ownerProfile = ownerProfiles && ownerProfiles.length > 0 ? ownerProfiles[0] : null;
-
-        let ownerEmail = null;
-        try {
-          const { data: ownerData, error: ownerEmailError } = await supabase.functions.invoke('get-user-email', {
-            body: { userId: ownerId }
-          });
-          if (!ownerEmailError && ownerData?.email) {
-            ownerEmail = ownerData.email;
-          }
-        } catch (emailError) {
-          console.error('Error fetching owner email:', emailError);
-        }
-
-        membersWithProfiles.push({
-          id: `owner-${ownerId}`, // ID único para o proprietário
-          workspace_id: workspace.id,
-          user_id: ownerId,
-          role: 'admin', // Proprietário é sempre admin
-          joined_at: workspace.created_at, // Usar data de criação do workspace
-          is_ghost_user: false,
-          ghost_user_name: null,
-          ghost_user_email: null,
-          profile: ownerProfile,
-          email: ownerEmail
-        });
-        fetchedUserIds.add(ownerId);
-      }
-
-      // 3. Processar todos os workspace_users
-      for (const user of workspaceUsers || []) {
-        // Se o usuário já foi adicionado como proprietário (no passo 2) ou já foi processado, pular
-        if (user.user_id && fetchedUserIds.has(user.user_id)) {
-          continue;
-        }
-
-        if (user.is_ghost_user || !user.user_id) {
-          // Usuário fantasma - adicionar diretamente
-          membersWithProfiles.push({
-            ...user,
-            profile: null,
-            email: user.ghost_user_email || null
-          });
-        } else {
-          // Usuário real - buscar perfil e email
-          const { data: profiles, error: profileError } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, avatar_url')
-            .eq('id', user.user_id);
-
-          if (profileError) {
-            console.error('Error fetching profile for user:', user.user_id, profileError);
-          }
-          const profile = profiles && profiles.length > 0 ? profiles[0] : null;
-
-          let userEmail = null;
-          try {
-            const { data: userData, error: emailError } = await supabase.functions.invoke('get-user-email', {
-              body: { userId: user.user_id }
-            });
-            if (!emailError && userData?.email) {
-              userEmail = userData.email;
-            }
-          } catch (emailError) {
-            console.error('Error fetching user email:', emailError);
-          }
-
-          membersWithProfiles.push({
-            ...user,
-            profile: profile,
-            email: userEmail
-          });
-        }
-        if (user.user_id) {
-          fetchedUserIds.add(user.user_id);
-        }
-      }
-
-      setMembers(membersWithProfiles);
     } catch (error: any) {
       console.error('Error fetching members:', error);
       showError('Erro ao carregar membros do núcleo');
     } finally {
       setLoading(false);
     }
-  }, [workspace.id, workspace.workspace_owner, workspace.created_at, session?.user?.id, showError]);
+  }, [workspace.id, showError]);
 
   useEffect(() => {
     if (isOpen && workspace.id) {
@@ -242,8 +150,8 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
       return member.ghost_user_name || 'Usuário Fantasma';
     }
     
-    if (member.profile?.first_name || member.profile?.last_name) {
-      return `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim();
+    if (member.first_name || member.last_name) { // Usar first_name/last_name diretamente do objeto member
+      return `${member.first_name || ''} ${member.last_name || ''}`.trim();
     }
     
     if (member.email) {
@@ -270,13 +178,14 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
     return member.user_id === session?.user?.id;
   };
 
-  const isWorkspaceOwner = (member: WorkspaceUser) => {
-    return member.user_id === workspace.workspace_owner;
-  };
+  // isWorkspaceOwner agora vem diretamente do resultado da RPC
+  // const isWorkspaceOwner = (member: WorkspaceUser) => {
+  //   return member.user_id === workspace.workspace_owner;
+  // };
 
   const canRemoveMember = (member: WorkspaceUser) => {
     // Proprietário não pode ser removido
-    if (isWorkspaceOwner(member)) return false;
+    if (member.is_owner) return false; // Usar a flag is_owner da RPC
     
     // Só owner e admins podem remover membros
     return workspace.is_owner || workspace.user_role === 'admin';
@@ -284,9 +193,10 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
   const canChangeRole = (member: WorkspaceUser) => {
     // Proprietário não pode ter papel alterado
-    if (isWorkspaceOwner(member)) return false;
+    if (member.is_owner) return false; // Usar a flag is_owner da RPC
     
-    // Usuário não pode alterar seu próprio papel se for o proprietário
+    // Usuário não pode alterar seu próprio papel se for o proprietário do workspace (o que não deveria acontecer se is_owner for true)
+    // Ou se for o usuário atual e o workspace.is_owner for true (o que significa que ele é o owner e não pode rebaixar a si mesmo)
     if (isCurrentUser(member) && workspace.is_owner) return false;
     
     // Só owner e admins podem alterar papéis
@@ -297,12 +207,12 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
   const canTransferOwnership = workspace.is_owner;
 
   const getMemberRole = (member: WorkspaceUser) => {
-    if (isWorkspaceOwner(member)) return 'Proprietário';
+    if (member.is_owner) return 'Proprietário'; // Usar a flag is_owner da RPC
     return member.role === 'admin' ? 'Administrador' : 'Usuário';
   };
 
   const getMemberBadgeVariant = (member: WorkspaceUser) => {
-    if (isWorkspaceOwner(member)) return 'default';
+    if (member.is_owner) return 'default'; // Usar a flag is_owner da RPC
     return member.role === 'admin' ? 'default' : 'outline';
   };
 
@@ -405,7 +315,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarImage src={member.profile?.avatar_url} />
+                                  <AvatarImage src={member.avatar_url || undefined} /> {/* Usar avatar_url diretamente */}
                                   <AvatarFallback>
                                     {getMemberInitials(member)}
                                   </AvatarFallback>
@@ -430,7 +340,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                {(member.role === 'admin' || isWorkspaceOwner(member)) && (
+                                {(member.role === 'admin' || member.is_owner) && ( // Usar is_owner da RPC
                                   <Crown className="h-3 w-3 text-yellow-500" />
                                 )}
                                 <Badge variant={getMemberBadgeVariant(member)}>
