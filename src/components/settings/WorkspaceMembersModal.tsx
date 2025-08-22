@@ -364,7 +364,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
                 )}
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border w-full overflow-x-auto"> {/* Adicionado w-full e overflow-x-auto aqui */}
                 <Table>
                   <TableHeader>
                     <TableRow>
