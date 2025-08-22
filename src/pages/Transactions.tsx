@@ -330,6 +330,37 @@ const TransactionsPage = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
       </div>
+
+      {/* Conditional rendering for summary cards - MOVED OUTSIDE THE MAIN CARD */}
+      {loadingSummary ? (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+      ) : (
+        isMobile ? (
+          <MobileIncomeExpenseSummaryCards
+            monthlyIncome={monthlyIncome}
+            monthlyExpenses={monthlyExpenses}
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 mb-4">
+            <SummaryCard
+              title="Renda Mensal"
+              value={formatCurrency(monthlyIncome)}
+              icon={TrendingUp}
+              variant="income"
+            />
+            <SummaryCard
+              title="Despesas Mensais"
+              value={formatCurrency(Math.abs(monthlyExpenses))}
+              icon={TrendingDown}
+              variant="expense"
+            />
+          </div>
+        )
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Todas as Transações</CardTitle>
@@ -338,35 +369,6 @@ const TransactionsPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Conditional rendering for summary cards */}
-          {loadingSummary ? (
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <Skeleton className="h-20" />
-              <Skeleton className="h-20" />
-            </div>
-          ) : (
-            isMobile ? (
-              <MobileIncomeExpenseSummaryCards
-                monthlyIncome={monthlyIncome}
-                monthlyExpenses={monthlyExpenses}
-              />
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 mb-4">
-                <SummaryCard
-                  title="Renda Mensal"
-                  value={formatCurrency(monthlyIncome)}
-                  icon={TrendingUp}
-                  variant="income"
-                />
-                <SummaryCard
-                  title="Despesas Mensais"
-                  value={formatCurrency(Math.abs(monthlyExpenses))}
-                  icon={TrendingDown}
-                  variant="expense"
-                />
-              </div>
-            )
-          )}
           {loading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
