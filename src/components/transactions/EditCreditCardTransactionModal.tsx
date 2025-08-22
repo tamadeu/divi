@@ -96,6 +96,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
   const [showCalculator, setShowCalculator] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [transactionCreditCardId, setTransactionCreditCardId] = useState<string | null>(null); // New state for credit card ID
   const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
@@ -148,7 +149,27 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
     } else {
       setCategories(categoriesData || []);
     }
-  }, [currentWorkspace]);
+
+    // Fetch the credit_card_id from the associated credit_card_bill
+    if (transaction?.credit_card_bill_id) {
+      const { data: billData, error: billError } = await supabase
+        .from("credit_card_bills")
+        .select("credit_card_id")
+        .eq("id", transaction.credit_card_bill_id)
+        .single();
+
+      if (billError) {
+        console.error("Error fetching credit card bill for transaction:", billError);
+        showError("Erro ao carregar detalhes da fatura do cartão.");
+        setTransactionCreditCardId(null);
+      } else if (billData) {
+        setTransactionCreditCardId(billData.credit_card_id);
+      }
+    } else {
+      setTransactionCreditCardId(null);
+    }
+
+  }, [currentWorkspace, transaction]); // Added transaction to dependencies
 
   // Effect to fetch data when modal opens
   useEffect(() => {
@@ -159,32 +180,24 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
 
   // Effect to set form values once data is loaded and transaction is available
   useEffect(() => {
-    if (isOpen && transaction && creditCards.length > 0 && categories.length > 0) {
+    // Only reset form if transaction, creditCards, categories, and transactionCreditCardId are all available
+    if (isOpen && transaction && creditCards.length > 0 && categories.length > 0 && transactionCreditCardId !== null) {
       const absoluteAmount = Math.abs(transaction.amount);
       
       form.reset({
         name: transaction.name,
         amount: absoluteAmount,
         date: new Date(transaction.date),
-        credit_card_id: transaction.credit_card_id || "",
+        credit_card_id: transactionCreditCardId || "", // Use the fetched credit card ID
         category_id: transaction.category_id || "",
         description: transaction.description || "",
         is_installment_purchase: (transaction.total_installments || 1) > 1,
         installments: transaction.total_installments || 1,
       });
 
-      // Explicitly set values for Selects to ensure they update
-      // Use setTimeout to give the Select component time to render its options
-      setTimeout(() => {
-        if (transaction.credit_card_id) {
-          form.setValue('credit_card_id', transaction.credit_card_id, { shouldValidate: true });
-        }
-        if (transaction.category_id) {
-          form.setValue('category_id', transaction.category_id, { shouldValidate: true });
-        }
-      }, 50); // Small delay
+      // Removed setTimeout as dependencies should ensure data is ready
     }
-  }, [isOpen, transaction, creditCards, categories, form]); // Depend on creditCards and categories
+  }, [isOpen, transaction, creditCards, categories, transactionCreditCardId, form]); // Depend on transactionCreditCardId
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -323,6 +336,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
 
       // If it was an installment purchase and now it's not, or vice-versa, or installments changed
       // Or if credit card changed, we need to delete old installments and create new ones.
+      // Also, if the credit_card_bill_id changed, we need to recreate.
       if (
         transaction.credit_card_bill_id !== newCreditCardBillId ||
         (transaction.total_installments || 1) !== totalInstallments ||
@@ -368,6 +382,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
 
       } else {
         // If it's a single transaction or installment details didn't change significantly, just update the current one
+        // This path is for updating a single transaction that is part of a non-installment or unchanged installment series
         const { error: transactionError } = await supabase
           .from("transactions")
           .update({
@@ -377,8 +392,11 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
             credit_card_bill_id: newCreditCardBillId,
             category_id: values.category_id,
             description: values.description,
-            installment_number: 1, // For single transactions
-            total_installments: 1, // For single transactions
+            // installment_number and total_installments should only be updated if it's a single transaction
+            // For installment series, these values are managed by the recreation logic above.
+            // If it's a single transaction, they should be 1.
+            installment_number: totalInstallments === 1 ? 1 : transaction.installment_number, // Keep original installment number if part of series
+            total_installments: totalInstallments === 1 ? 1 : transaction.total_installments, // Keep original total installments if part of series
             status: "Pendente", // Always pending for credit card transactions
           })
           .eq("id", transaction.id);
@@ -643,8 +661,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
                         </Select>
                         <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
                           <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        </Button>                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
