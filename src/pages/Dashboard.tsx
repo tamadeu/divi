@@ -1,5 +1,6 @@
 import SummaryCard from "@/components/dashboard/SummaryCard";
-import MobileSummaryCards from "@/components/dashboard/MobileSummaryCards";
+import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncomeExpenseSummaryCards";
+import MobileAccountCardsSlider from "@/components/dashboard/MobileAccountCardsSlider";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import BudgetSummaryTable from "@/components/dashboard/BudgetSummaryTable";
 import MonthPicker from "@/components/budgets/MonthPicker";
@@ -10,8 +11,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useSession } from "@/contexts/SessionContext"; // Import useSession
-import { Transaction, Company, BudgetWithSpending } from "@/types/database";
+import { useSession } from "@/contexts/SessionContext";
+import { Transaction, Company, BudgetWithSpending, Account } from "@/types/database";
 import { TransactionWithDetails } from "@/types/transaction-details";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
 import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
@@ -27,10 +28,11 @@ const Dashboard = () => {
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
   const { currentWorkspace } = useWorkspace();
-  const { session } = useSession(); // Get session from context
+  const { session } = useSession();
   const isMobile = useIsMobile();
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
@@ -46,18 +48,12 @@ const Dashboard = () => {
   };
 
   const fetchDashboardData = useCallback(async (month: Date) => {
-    if (!currentWorkspace || !session?.user) { // Use session.user directly
+    if (!currentWorkspace || !session?.user) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    // Removed redundant supabase.auth.getUser() call here
-    // const { data: { user } } = await supabase.auth.getUser();
-    // if (!user) {
-    //   setLoading(false);
-    //   return;
-    // }
 
     const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
     const nextMonthStart = new Date(month.getFullYear(), month.getMonth() + 1, 1);
@@ -70,6 +66,21 @@ const Dashboard = () => {
       console.error("Error fetching companies:", companiesError);
     } else {
       setCompanies(companiesData || []);
+    }
+
+    // Fetch accounts for the slider
+    const { data: accountsData, error: accountsError } = await supabase
+      .from("accounts")
+      .select("id, name, bank, bank_id, type, balance, is_default, include_in_total, workspace_id, user_id, created_at")
+      .eq("workspace_id", currentWorkspace.id)
+      .order("is_default", { ascending: false })
+      .order("name", { ascending: true });
+    
+    if (accountsError) {
+      console.error("Error fetching accounts:", accountsError);
+      setAccounts([]);
+    } else {
+      setAccounts(accountsData || []);
     }
 
     // Fetch summary for the selected month and workspace
@@ -133,29 +144,24 @@ const Dashboard = () => {
     // Fetch budgets for the selected month and workspace
     const { data: budgetsData, error: budgetsError } = await supabase.rpc('get_budgets_with_spending', {
       budget_month: monthStart.toISOString(),
+      workspace_id_param: currentWorkspace.id
     });
 
     if (budgetsError) {
       console.error("Error fetching budgets data:", budgetsError);
       setBudgets([]);
     } else {
-      // Filter budgets by workspace (since the RPC doesn't support workspace filtering yet)
-      const workspaceBudgets = budgetsData?.filter((budget: any) => {
-        // We'll need to check if the budget belongs to the current workspace
-        // For now, we'll show all budgets until we update the RPC function
-        return true;
-      }) || [];
-      setBudgets(workspaceBudgets);
+      setBudgets(budgetsData || []);
     }
 
     setLoading(false);
-  }, [currentWorkspace, session?.user]); // Added session.user to dependencies
+  }, [currentWorkspace, session?.user]);
 
   useEffect(() => {
-    if (currentWorkspace && session?.user) { // Ensure session.user is available before fetching
+    if (currentWorkspace && session?.user) {
       fetchDashboardData(selectedMonth);
     }
-  }, [fetchDashboardData, selectedMonth, currentWorkspace, session?.user]); // Added session.user to dependencies
+  }, [fetchDashboardData, selectedMonth, currentWorkspace, session?.user]);
 
   const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number') return "R$ 0,00";
@@ -165,7 +171,7 @@ const Dashboard = () => {
     });
   };
 
-  if (!currentWorkspace || !session?.user) { // Also check session.user here
+  if (!currentWorkspace || !session?.user) {
     return (
       <div className="flex items-center justify-center h-64">
         <Skeleton className="w-32 h-8" />
@@ -191,34 +197,38 @@ const Dashboard = () => {
           <Skeleton className="h-24 hidden lg:block" />
         </div>
       ) : (
-        isMobile ? (
-          <MobileSummaryCards
-            totalBalance={summary?.total_balance || 0}
-            monthlyIncome={summary?.monthly_income || 0}
-            monthlyExpenses={summary?.monthly_expenses || 0}
-          />
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
-            <SummaryCard
-              title="Saldo Total"
-              value={formatCurrency(summary?.total_balance)}
-              icon={DollarSign}
-              variant="default"
-            />
-            <SummaryCard
-              title="Renda Mensal"
-              value={formatCurrency(summary?.monthly_income)}
-              icon={TrendingUp}
-              variant="income"
-            />
-            <SummaryCard
-              title="Despesas Mensais"
-              value={formatCurrency(Math.abs(summary?.monthly_expenses || 0))}
-              icon={TrendingDown}
-              variant="expense"
-            />
-          </div>
-        )
+        <>
+          {isMobile ? (
+            <>
+              <MobileAccountCardsSlider accounts={accounts} />
+              <MobileIncomeExpenseSummaryCards
+                monthlyIncome={summary?.monthly_income || 0}
+                monthlyExpenses={summary?.monthly_expenses || 0}
+              />
+            </>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
+              <SummaryCard
+                title="Saldo Total"
+                value={formatCurrency(summary?.total_balance)}
+                icon={DollarSign}
+                variant="default"
+              />
+              <SummaryCard
+                title="Renda Mensal"
+                value={formatCurrency(summary?.monthly_income)}
+                icon={TrendingUp}
+                variant="income"
+              />
+              <SummaryCard
+                title="Despesas Mensais"
+                value={formatCurrency(Math.abs(summary?.monthly_expenses || 0))}
+                icon={TrendingDown}
+                variant="expense"
+              />
+            </div>
+          )}
+        </>
       )}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-5 mt-4">
         <div className="lg:col-span-3">

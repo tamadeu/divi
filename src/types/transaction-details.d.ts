@@ -1,25 +1,9 @@
-import { Transaction, Category, Account, CreditCard, CreditCardBill } from './database';
+import { Transaction, CreditCardBill, CreditCard } from "./database";
 
-// Define types for nested credit card and bill details
-export interface CreditCardDetails {
-  id: string;
-  name: string;
-  brand: string;
-  last_four_digits: string;
-}
-
-export interface CreditCardBillDetails {
-  id: string;
-  reference_month: string;
-  closing_date: string;
-  due_date: string;
-  status: string;
-  credit_card: CreditCardDetails;
-}
-
-// Extend the base Transaction type with detailed nested objects
+// Extend the base Transaction type with details from joined tables
 export interface TransactionWithDetails extends Transaction {
-  category?: { name: string } | null;
-  account?: { name: string; type: string } | null;
-  credit_card_bill?: CreditCardBillDetails | null;
+  category: string; // Category name
+  credit_card_bill?: (CreditCardBill & {
+    credit_card?: Pick<CreditCard, 'name' | 'brand' | 'last_four_digits'>;
+  }) | null;
 }
