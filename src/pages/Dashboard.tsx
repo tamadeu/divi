@@ -10,10 +10,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useSession } from "@/contexts/SessionContext"; // Import useSession
 import { Transaction, Company, BudgetWithSpending } from "@/types/database";
-import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
+import { TransactionWithDetails } from "@/types/transaction-details";
 import EditTransactionModal from "@/components/transactions/EditTransactionModal";
-import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
 
 interface SummaryData {
   total_balance: number;
@@ -23,12 +24,13 @@ interface SummaryData {
 
 const Dashboard = () => {
   const [summary, setSummary] = useState<SummaryData | null>(null);
-  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
+  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [budgets, setBudgets] = useState<BudgetWithSpending[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Added new modal functions
+  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
   const { currentWorkspace } = useWorkspace();
+  const { session } = useSession(); // Get session from context
   const isMobile = useIsMobile();
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
@@ -36,7 +38,7 @@ const Dashboard = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleTransactionClick = (transaction: Transaction) => {
-    if (transaction.credit_card_bill_id) { // Check for credit card transaction
+    if (transaction.credit_card_bill_id) {
       openEditCreditCardTransactionModal(transaction);
     } else {
       openEditTransactionModal(transaction);
@@ -44,17 +46,18 @@ const Dashboard = () => {
   };
 
   const fetchDashboardData = useCallback(async (month: Date) => {
-    if (!currentWorkspace) {
+    if (!currentWorkspace || !session?.user) { // Use session.user directly
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    // Removed redundant supabase.auth.getUser() call here
+    // const { data: { user } } = await supabase.auth.getUser();
+    // if (!user) {
+    //   setLoading(false);
+    //   return;
+    // }
 
     const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
     const nextMonthStart = new Date(month.getFullYear(), month.getMonth() + 1, 1);
@@ -119,10 +122,10 @@ const Dashboard = () => {
     if (transactionsError) {
       console.error("Error fetching recent transactions:", transactionsError);
     } else {
-      const formattedData: TransactionWithDetails[] = transactionsData.map((t: any) => ({ // Cast to new type
+      const formattedData: TransactionWithDetails[] = transactionsData.map((t: any) => ({
         ...t,
         category: t.category?.name || "Sem categoria",
-        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
+        credit_card_bill: t.credit_card_bill,
       }));
       setTransactions(formattedData);
     }
@@ -146,13 +149,13 @@ const Dashboard = () => {
     }
 
     setLoading(false);
-  }, [currentWorkspace]);
+  }, [currentWorkspace, session?.user]); // Added session.user to dependencies
 
   useEffect(() => {
-    if (currentWorkspace) {
+    if (currentWorkspace && session?.user) { // Ensure session.user is available before fetching
       fetchDashboardData(selectedMonth);
     }
-  }, [fetchDashboardData, selectedMonth, currentWorkspace]);
+  }, [fetchDashboardData, selectedMonth, currentWorkspace, session?.user]); // Added session.user to dependencies
 
   const formatCurrency = (value: number | undefined) => {
     if (typeof value !== 'number') return "R$ 0,00";
@@ -162,7 +165,7 @@ const Dashboard = () => {
     });
   };
 
-  if (!currentWorkspace) {
+  if (!currentWorkspace || !session?.user) { // Also check session.user here
     return (
       <div className="flex items-center justify-center h-64">
         <Skeleton className="w-32 h-8" />
@@ -177,7 +180,7 @@ const Dashboard = () => {
         <MonthPicker selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
       </div>
       {loading ? (
-        <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4"> {/* Added mb-4 here */}
+        <div className="space-y-3 md:space-y-0 md:grid md:gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
           <Skeleton className="h-24" />
           <Skeleton className="h-24 md:hidden" />
           <div className="grid grid-cols-2 gap-3 md:hidden">
@@ -195,7 +198,7 @@ const Dashboard = () => {
             monthlyExpenses={summary?.monthly_expenses || 0}
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4"> {/* Added mb-4 here */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
             <SummaryCard
               title="Saldo Total"
               value={formatCurrency(summary?.total_balance)}
@@ -225,9 +228,6 @@ const Dashboard = () => {
           <BudgetSummaryTable budgets={budgets} loading={loading} />
         </div>
       </div>
-
-      {/* Removed direct usage of EditTransactionModal here */}
-      {/* It is now managed by ModalContext in Layout.tsx */}
     </>
   );
 };
