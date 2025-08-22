@@ -161,125 +161,127 @@ export function WorkspaceManagement() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead className="w-[70px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workspaces.map((workspace) => (
-                  <TableRow key={workspace.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {workspace.is_shared ? (
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <User className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <div>
-                          <div className="font-medium">{workspace.name}</div>
-                          {workspace.description && (
-                            <div className="text-sm text-muted-foreground">
-                              {workspace.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={workspace.is_shared ? "default" : "secondary"}>
-                        {workspace.is_shared ? "Compartilhado" : "Pessoal"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={workspace.is_owner ? "default" : "outline"}
-                      >
-                        {workspace.is_owner ? "Proprietário" : 
-                         workspace.user_role === 'admin' ? "Administrador" : "Usuário"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(workspace.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canManageMembers(workspace) && (
-                            <DropdownMenuItem onClick={() => handleManageMembers(workspace)}>
-                              <Shield className="mr-2 h-4 w-4" />
-                              Gerenciar Membros
-                            </DropdownMenuItem>
-                          )}
-                          {canEdit(workspace) && (
-                            <DropdownMenuItem onClick={() => handleEdit(workspace)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                          )}
-                          {canDelete(workspace) && (
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(workspace)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          )}
-                          {canLeaveWorkspace(workspace) && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onSelect={(e) => e.preventDefault()}
-                                >
-                                  <LogOut className="mr-2 h-4 w-4" />
-                                  Sair do Núcleo
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Sair do Núcleo</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja sair do núcleo "{workspace.name}"?
-                                    Você perderá acesso a todas as informações financeiras deste núcleo.
-                                    Para voltar, será necessário ser convidado novamente.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleLeaveWorkspace(workspace)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                  >
-                                    Sair do Núcleo
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                          {!canManageMembers(workspace) && !canEdit(workspace) && !canDelete(workspace) && !canLeaveWorkspace(workspace) && (
-                            <DropdownMenuItem disabled>
-                              Nenhuma ação disponível
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            <div className="rounded-md border overflow-x-auto"> {/* Adicionado overflow-x-auto aqui */}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Papel</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead className="w-[70px]">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {workspaces.map((workspace) => (
+                    <TableRow key={workspace.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {workspace.is_shared ? (
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <div>
+                            <div className="font-medium">{workspace.name}</div>
+                            {workspace.description && (
+                              <div className="text-sm text-muted-foreground">
+                                {workspace.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={workspace.is_shared ? "default" : "secondary"}>
+                          {workspace.is_shared ? "Compartilhado" : "Pessoal"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={workspace.is_owner ? "default" : "outline"}
+                        >
+                          {workspace.is_owner ? "Proprietário" : 
+                           workspace.user_role === 'admin' ? "Administrador" : "Usuário"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(workspace.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canManageMembers(workspace) && (
+                              <DropdownMenuItem onClick={() => handleManageMembers(workspace)}>
+                                <Shield className="mr-2 h-4 w-4" />
+                                Gerenciar Membros
+                              </DropdownMenuItem>
+                            )}
+                            {canEdit(workspace) && (
+                              <DropdownMenuItem onClick={() => handleEdit(workspace)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete(workspace) && (
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(workspace)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            )}
+                            {canLeaveWorkspace(workspace) && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Sair do Núcleo
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Sair do Núcleo</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja sair do núcleo "{workspace.name}"?
+                                      Você perderá acesso a todas as informações financeiras deste núcleo.
+                                      Para voltar, será necessário ser convidado novamente.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleLeaveWorkspace(workspace)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Sair do Núcleo
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                            {!canManageMembers(workspace) && !canEdit(workspace) && !canDelete(workspace) && !canLeaveWorkspace(workspace) && (
+                              <DropdownMenuItem disabled>
+                                Nenhuma ação disponível
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
