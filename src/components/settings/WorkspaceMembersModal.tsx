@@ -61,7 +61,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTransferOwnership, setShowTransferOwnership] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false); // New state for mobile detection
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -238,6 +238,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
     }
   };
 
+  // Helper functions for member display and permissions
   const getMemberName = (member: WorkspaceUser) => {
     if (member.is_ghost_user) {
       return member.ghost_user_name || 'Usuário Fantasma';
@@ -247,7 +248,6 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
       return `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim();
     }
     
-    // Se não tem perfil, usar parte do email ou ID
     if (member.email) {
       return member.email.split('@')[0];
     }
@@ -274,6 +274,25 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
   const isWorkspaceOwner = (member: WorkspaceUser) => {
     return member.user_id === workspace.workspace_owner;
+  };
+
+  const canRemoveMember = (member: WorkspaceUser) => {
+    // Proprietário não pode ser removido
+    if (isWorkspaceOwner(member)) return false;
+    
+    // Só owner e admins podem remover membros
+    return workspace.is_owner || workspace.user_role === 'admin';
+  };
+
+  const canChangeRole = (member: WorkspaceUser) => {
+    // Proprietário não pode ter papel alterado
+    if (isWorkspaceOwner(member)) return false;
+    
+    // Usuário não pode alterar seu próprio papel se for o proprietário
+    if (isCurrentUser(member) && workspace.is_owner) return false;
+    
+    // Só owner e admins podem alterar papéis
+    return workspace.is_owner || workspace.user_role === 'admin';
   };
 
   const canManageMembers = workspace.is_owner || workspace.user_role === 'admin';
