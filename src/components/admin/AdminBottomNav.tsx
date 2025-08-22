@@ -13,6 +13,7 @@ const AdminBottomNav = ({ onMenuClick }: AdminBottomNavProps) => {
     { to: "/admin", icon: BarChart3, label: "Dashboard" },
     { to: "/admin/users", icon: Users, label: "Usuários" },
     { to: "/admin/plans", icon: Package, label: "Planos" },
+    { to: "/admin/settings", icon: Building2, label: "Configurações" },
   ];
 
   return (
