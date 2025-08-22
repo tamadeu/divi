@@ -119,7 +119,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
   const isInstallmentPurchase = form.watch("is_installment_purchase");
 
   const fetchData = useCallback(async () => {
-    if (!currentWorkspace) return;
+    if (!currentWorkspace) return { creditCards: [], categories: [] };
 
     // Fetch all credit cards for the current workspace
     const { data: creditCardsData, error: creditCardsError } = await supabase
@@ -140,7 +140,7 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
       .from("categories")
       .select("*")
       .eq("workspace_id", currentWorkspace.id)
-      .eq("type", "expense") // Credit card transactions are always expenses
+      .eq("type", "expense") // Cartão de crédito é sempre despesa
       .order("name", { ascending: true });
     
     if (categoriesError) {
@@ -149,6 +149,8 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
     } else {
       setCategories(categoriesData || []);
     }
+
+    return { creditCards: creditCardsData || [], categories: categoriesData || [] };
   }, [currentWorkspace]);
 
   // Effect to fetch data when modal opens
@@ -161,28 +163,27 @@ const EditCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransacti
   // Effect to set form values once data is loaded and transaction is available
   useEffect(() => {
     if (isOpen && transaction && creditCards.length > 0 && categories.length > 0) {
-      const absoluteAmount = Math.abs(transaction.amount);
-      
-      form.reset({
-        name: transaction.name,
-        amount: absoluteAmount,
-        date: new Date(transaction.date),
-        credit_card_id: transaction.cc_id || "", // Use cc_id from TransactionWithDetails
-        category_id: transaction.category_id || "",
-        description: transaction.description || "",
-        is_installment_purchase: (transaction.total_installments || 1) > 1,
-        installments: transaction.total_installments || 1,
-      });
+      console.log("EditCreditCardTransactionModal: Initializing form with transaction data.");
+      console.log("Transaction category_id:", transaction.category_id);
+      console.log("Available categories:", categories.map(c => ({ id: c.id, name: c.name })));
 
-      // Explicitly set category_id again after a short delay
-      // This can help if there's a race condition with Select options loading
-      if (transaction.category_id) {
-        setTimeout(() => {
-          form.setValue('category_id', transaction.category_id!, { shouldValidate: true });
-        }, 50); // Small delay
-      }
+      const absoluteAmount = Math.abs(transaction.amount);
+      const isInstallment = (transaction.total_installments || 1) > 1;
+      const installmentsCount = transaction.total_installments || 1;
+
+      form.setValue("name", transaction.name, { shouldValidate: true });
+      form.setValue("amount", absoluteAmount, { shouldValidate: true });
+      form.setValue("date", new Date(transaction.date), { shouldValidate: true });
+      form.setValue("credit_card_id", transaction.cc_id || "", { shouldValidate: true });
+      form.setValue("category_id", transaction.category_id || "", { shouldValidate: true });
+      form.setValue("description", transaction.description || "", { shouldValidate: true });
+      form.setValue("is_installment_purchase", isInstallment, { shouldValidate: true });
+      form.setValue("installments", installmentsCount, { shouldValidate: true });
+      
+      // The dependency array ensures this effect runs only when categories are ready.
+      // No need for setTimeout if categories are already loaded and form.setValue is used directly.
     }
-  }, [isOpen, transaction, creditCards, categories, form]); // Removed transactionCreditCardId from dependencies
+  }, [isOpen, transaction, creditCards, categories, form]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
