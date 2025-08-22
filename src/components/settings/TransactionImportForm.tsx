@@ -260,11 +260,11 @@ export function TransactionImportForm({ onImportComplete }: TransactionImportFor
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleImport)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleImport)} className="space-y-4 w-full">
         <Alert>
           <FileText className="h-4 w-4" />
           <AlertTitle>Formato do CSV</AlertTitle>
-          <AlertDescription>
+          <AlertDescription className="break-words">
             Seu arquivo CSV deve conter as seguintes colunas (na primeira linha): <br />
             <code>date,name,amount,type,category,description</code> <br />
             Exemplo: <code>2023-01-15,Salário,3000.00,income,Salário,Pagamento mensal</code> <br />
