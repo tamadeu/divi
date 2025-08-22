@@ -317,7 +317,7 @@ const TransactionsPage = () => {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <h1 className="text-lg font-semibold md:text-2xl">Transações</h1>
       </div>
       <Card>
