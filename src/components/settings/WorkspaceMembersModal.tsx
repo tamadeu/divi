@@ -92,15 +92,18 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
       }
 
       // Buscar informações do proprietário do workspace
-      const { data: ownerProfile, error: ownerError } = await supabase
+      // Removido .single() para lidar com casos onde o perfil pode não existir
+      const { data: ownerProfiles, error: ownerError } = await supabase
         .from('profiles')
         .select('first_name, last_name, avatar_url')
-        .eq('id', workspace.workspace_owner)
-        .single();
+        .eq('id', workspace.workspace_owner);
 
       if (ownerError) {
         console.error('Error fetching owner profile:', ownerError);
       }
+      // Pegar o primeiro perfil encontrado (se houver) ou null
+      const ownerProfile = ownerProfiles && ownerProfiles.length > 0 ? ownerProfiles[0] : null;
+
 
       // Buscar email do proprietário
       let ownerEmail = null;
@@ -130,7 +133,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
           is_ghost_user: false,
           ghost_user_name: null,
           ghost_user_email: null,
-          profile: ownerProfile,
+          profile: ownerProfile, // Usar o ownerProfile que pode ser null
           email: ownerEmail
         });
       }
@@ -151,6 +154,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
           });
         } else {
           // Usuário real - buscar perfil
+          // Removido .single() para lidar com casos onde o perfil pode não existir
           const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('first_name, last_name, avatar_url')
@@ -160,6 +164,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
             console.error('Error fetching profile for user:', user.user_id, profileError);
           }
 
+          // Pegar o primeiro perfil encontrado (se houver) ou null
           const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
           // Buscar email do usuário usando a função edge
