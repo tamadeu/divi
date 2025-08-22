@@ -128,19 +128,23 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
   };
 
   const handleChangeRole = async (memberId: string, newRole: 'admin' | 'user') => {
+    console.log(`Attempting to change role for memberId: ${memberId} to ${newRole}`); // Debug log
     try {
       const { error } = await supabase
         .from('workspace_users')
         .update({ role: newRole })
         .eq('id', memberId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error changing member role:', error); // More specific error log
+        throw error;
+      }
 
       showSuccess('Papel do membro atualizado com sucesso!');
       await fetchMembers();
     } catch (error: any) {
       console.error('Error changing member role:', error);
-      showError('Erro ao alterar papel do membro');
+      showError('Erro ao alterar papel do membro: ' + error.message); // Show error message
     }
   };
 
