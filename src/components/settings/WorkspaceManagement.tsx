@@ -133,6 +133,10 @@ export function WorkspaceManagement() {
     return workspace.is_shared && (workspace.is_owner || workspace.user_role === "admin");
   };
 
+  const canViewMembers = (workspace: WorkspaceWithRole) => {
+    return workspace.is_shared && !canManageMembers(workspace);
+  };
+
   const canLeaveWorkspace = (workspace: WorkspaceWithRole) => {
     return workspace.is_shared && !workspace.is_owner;
   };
@@ -257,6 +261,12 @@ export function WorkspaceManagement() {
                                   Gerenciar Membros
                                 </DropdownMenuItem>
                               )}
+                              {canViewMembers(workspace) && (
+                                <DropdownMenuItem onClick={() => handleManageMembers(workspace)}>
+                                  <Users className="mr-2 h-4 w-4" />
+                                  Ver Membros
+                                </DropdownMenuItem>
+                              )}
                               {canEdit(workspace) && (
                                 <DropdownMenuItem onClick={() => handleEdit(workspace)}>
                                   <Edit className="mr-2 h-4 w-4" />
@@ -296,7 +306,7 @@ export function WorkspaceManagement() {
                                   </AlertDialogContent>
                                 </AlertDialog>
                               )}
-                              {!canManageMembers(workspace) && !canEdit(workspace) && !canDelete(workspace) && !canLeaveWorkspace(workspace) && (
+                              {!canManageMembers(workspace) && !canViewMembers(workspace) && !canEdit(workspace) && !canDelete(workspace) && !canLeaveWorkspace(workspace) && (
                                 <DropdownMenuItem disabled>Nenhuma ação disponível</DropdownMenuItem>
                               )}
                             </DropdownMenuContent>

@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter, // Import CardFooter
+  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Users, User, Edit, Trash2, Shield, LogOut, Crown } from "lucide-react"; // Removed MoreHorizontal
+import { Users, User, Edit, Trash2, Shield, LogOut, Crown } from "lucide-react";
 import { WorkspaceWithRole } from "@/types/workspace";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -94,6 +94,10 @@ export function WorkspaceCardMobile({
     return ws.is_shared && (ws.is_owner || ws.user_role === 'admin');
   };
 
+  const canViewMembers = (ws: WorkspaceWithRole) => {
+    return ws.is_shared && !canManageMembers(ws);
+  };
+
   const canLeaveWorkspace = (ws: WorkspaceWithRole) => {
     return ws.is_shared && !ws.is_owner;
   };
@@ -109,7 +113,6 @@ export function WorkspaceCardMobile({
           )}
           <CardTitle className="text-lg">{workspace.name}</CardTitle>
         </div>
-        {/* Removed DropdownMenu here */}
       </CardHeader>
       <CardContent className="space-y-2">
         {workspace.description && (
@@ -134,11 +137,17 @@ export function WorkspaceCardMobile({
           Criado em: {format(new Date(workspace.created_at), "dd/MM/yyyy", { locale: ptBR })}
         </p>
       </CardContent>
-      <CardFooter className="flex flex-wrap gap-2 pt-4"> {/* Added CardFooter */}
+      <CardFooter className="flex flex-wrap gap-2 pt-4">
         {canManageMembers(workspace) && (
           <Button variant="outline" size="sm" onClick={() => onManageMembers(workspace)}>
             <Shield className="mr-2 h-4 w-4" />
-            Membros
+            Gerenciar Membros
+          </Button>
+        )}
+        {canViewMembers(workspace) && (
+          <Button variant="outline" size="sm" onClick={() => onManageMembers(workspace)}>
+            <Users className="mr-2 h-4 w-4" />
+            Ver Membros
           </Button>
         )}
         {canEdit(workspace) && (
@@ -180,7 +189,7 @@ export function WorkspaceCardMobile({
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive/10">
                 <LogOut className="mr-2 h-4 w-4" />
-                Sair
+                Sair do Núcleo
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
