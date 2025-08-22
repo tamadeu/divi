@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react"; // Import useCallback
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { WorkspaceMemberCardMobile } from "./WorkspaceMemberCardMobile"; // Import the new component
 
 interface WorkspaceMembersModalProps {
   workspace: WorkspaceWithRole;
@@ -60,14 +61,24 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTransferOwnership, setShowTransferOwnership] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false); // New state for mobile detection
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // Tailwind's 'md' breakpoint is 768px
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const fetchMembers = useCallback(async () => {
     if (!workspace.id) return;
 
     setLoading(true);
     try {
-      console.log('Fetching members for workspace:', workspace.id);
-      
       // Primeiro, buscar todos os workspace_users
       const { data: workspaceUsers, error: usersError } = await supabase
         .from('workspace_users')
@@ -79,8 +90,6 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
         console.error('Error fetching workspace users:', usersError);
         throw usersError;
       }
-
-      console.log('Found workspace users:', workspaceUsers);
 
       // Buscar informações do proprietário do workspace
       const { data: ownerProfile, error: ownerError } = await supabase
@@ -107,18 +116,16 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
         console.error('Error fetching owner email:', emailError);
       }
 
-      // Criar entrada para o proprietário (se não estiver na lista de workspace_users)
-      const ownerInWorkspaceUsers = workspaceUsers?.find(wu => wu.user_id === workspace.workspace_owner);
-      
       const membersWithProfiles = [];
 
-      // Adicionar proprietário se não estiver na lista de workspace_users
+      // Adicionar proprietário como o primeiro membro, se não estiver na lista de workspace_users
+      const ownerInWorkspaceUsers = workspaceUsers?.find(wu => wu.user_id === workspace.workspace_owner);
       if (!ownerInWorkspaceUsers) {
         membersWithProfiles.push({
-          id: `owner-${workspace.workspace_owner}`,
+          id: `owner-${workspace.workspace_owner}`, // Usar um ID único para o proprietário
           workspace_id: workspace.id,
           user_id: workspace.workspace_owner,
-          role: 'admin',
+          role: 'admin', // Proprietário é sempre admin
           joined_at: workspace.created_at,
           is_ghost_user: false,
           ghost_user_name: null,
@@ -130,6 +137,11 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
       
       // Processar todos os workspace_users
       for (const user of workspaceUsers || []) {
+        // Se o usuário já foi adicionado como proprietário, pular
+        if (user.user_id === workspace.workspace_owner && !user.is_ghost_user) {
+          continue;
+        }
+
         if (user.is_ghost_user || !user.user_id) {
           // Usuário fantasma - adicionar diretamente
           membersWithProfiles.push({
@@ -148,7 +160,6 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
             console.error('Error fetching profile for user:', user.user_id, profileError);
           }
 
-          // Pegar o primeiro perfil encontrado (se houver)
           const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
           // Buscar email do usuário usando a função edge
@@ -173,7 +184,6 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
         }
       }
 
-      console.log('Final members list:', membersWithProfiles);
       setMembers(membersWithProfiles);
     } catch (error: any) {
       console.error('Error fetching members:', error);
@@ -181,13 +191,13 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
     } finally {
       setLoading(false);
     }
-  }, [workspace.id, session?.user?.id, showError]); // Adicionar dependências para useCallback
+  }, [workspace.id, workspace.workspace_owner, workspace.created_at, session?.user?.id, showError]);
 
   useEffect(() => {
     if (isOpen && workspace.id) {
       fetchMembers();
     }
-  }, [isOpen, workspace.id, fetchMembers]); // Adicionar fetchMembers às dependências do useEffect
+  }, [isOpen, workspace.id, fetchMembers]);
 
   const handleRemoveMember = async (memberId: string) => {
     setRemovingMemberId(memberId);
@@ -266,25 +276,6 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
     return member.user_id === workspace.workspace_owner;
   };
 
-  const canRemoveMember = (member: WorkspaceUser) => {
-    // Proprietário não pode ser removido
-    if (isWorkspaceOwner(member)) return false;
-    
-    // Só owner e admins podem remover membros
-    return workspace.is_owner || workspace.user_role === 'admin';
-  };
-
-  const canChangeRole = (member: WorkspaceUser) => {
-    // Proprietário não pode ter papel alterado
-    if (isWorkspaceOwner(member)) return false;
-    
-    // Usuário não pode alterar seu próprio papel se for o proprietário
-    if (isCurrentUser(member) && workspace.is_owner) return false;
-    
-    // Só owner e admins podem alterar papéis
-    return workspace.is_owner || workspace.user_role === 'admin';
-  };
-
   const canManageMembers = workspace.is_owner || workspace.user_role === 'admin';
   const canTransferOwnership = workspace.is_owner;
 
@@ -314,7 +305,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
           <div className="py-4">
             {canManageMembers && (
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                 <p className="text-sm text-muted-foreground">
                   {members.length} {members.length === 1 ? 'membro' : 'membros'}
                 </p>
@@ -323,12 +314,13 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
                     <Button 
                       variant="outline" 
                       onClick={() => setShowTransferOwnership(true)}
+                      size="sm"
                     >
                       <ArrowRightLeft className="mr-2 h-4 w-4" />
                       Transferir Propriedade
                     </Button>
                   )}
-                  <Button onClick={() => setShowAddMember(true)}>
+                  <Button onClick={() => setShowAddMember(true)} size="sm">
                     <Plus className="mr-2 h-4 w-4" />
                     Adicionar Membro
                   </Button>
@@ -364,135 +356,152 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
                 )}
               </div>
             ) : (
-              <div className="rounded-md border w-full overflow-x-auto"> {/* Adicionado w-full e overflow-x-auto aqui */}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Membro</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Papel</TableHead>
-                      <TableHead>Adicionado em</TableHead>
-                      {canManageMembers && <TableHead className="text-right">Ações</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <>
+                {isMobile ? (
+                  <div className="space-y-4">
                     {members.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={member.profile?.avatar_url} />
-                              <AvatarFallback>
-                                {getMemberInitials(member)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">
-                                {getMemberName(member)}
-                                {isCurrentUser(member) && (
-                                  <span className="ml-2 text-xs text-muted-foreground">(Você)</span>
+                      <WorkspaceMemberCardMobile
+                        key={member.id}
+                        member={member}
+                        workspace={workspace}
+                        onRemoveMember={handleRemoveMember}
+                        onChangeRole={handleChangeRole}
+                        removingMemberId={removingMemberId}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-md border w-full overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Membro</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Papel</TableHead>
+                          <TableHead>Adicionado em</TableHead>
+                          {canManageMembers && <TableHead className="text-right">Ações</TableHead>}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {members.map((member) => (
+                          <TableRow key={member.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={member.profile?.avatar_url} />
+                                  <AvatarFallback>
+                                    {getMemberInitials(member)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium">
+                                    {getMemberName(member)}
+                                    {isCurrentUser(member) && (
+                                      <span className="ml-2 text-xs text-muted-foreground">(Você)</span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {getMemberEmail(member)}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={member.is_ghost_user ? "secondary" : "default"}>
+                                {member.is_ghost_user ? "Fictício" : "Real"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {(member.role === 'admin' || isWorkspaceOwner(member)) && (
+                                  <Crown className="h-3 w-3 text-yellow-500" />
                                 )}
+                                <Badge variant={getMemberBadgeVariant(member)}>
+                                  {getMemberRole(member)}
+                                </Badge>
                               </div>
-                              <div className="text-sm text-muted-foreground">
-                                {getMemberEmail(member)}
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={member.is_ghost_user ? "secondary" : "default"}>
-                            {member.is_ghost_user ? "Fictício" : "Real"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {(member.role === 'admin' || isWorkspaceOwner(member)) && (
-                              <Crown className="h-3 w-3 text-yellow-500" />
-                            )}
-                            <Badge variant={getMemberBadgeVariant(member)}>
-                              {getMemberRole(member)}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(member.joined_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        {canManageMembers && (
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {canChangeRole(member) && (
-                                  <>
-                                    {member.role === 'user' ? (
-                                      <DropdownMenuItem
-                                        onClick={() => handleChangeRole(member.id, 'admin')}
-                                      >
-                                        <Crown className="mr-2 h-4 w-4" />
-                                        Promover a Admin
-                                      </DropdownMenuItem>
-                                    ) : (
-                                      <DropdownMenuItem
-                                        onClick={() => handleChangeRole(member.id, 'user')}
-                                      >
-                                        <User className="mr-2 h-4 w-4" />
-                                        Rebaixar a Usuário
+                            </TableCell>
+                            <TableCell>
+                              {new Date(member.joined_at).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            {canManageMembers && (
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {canChangeRole(member) && (
+                                      <>
+                                        {member.role === 'user' ? (
+                                          <DropdownMenuItem
+                                            onClick={() => handleChangeRole(member.id, 'admin')}
+                                          >
+                                            <Crown className="mr-2 h-4 w-4" />
+                                            Promover a Admin
+                                          </DropdownMenuItem>
+                                        ) : (
+                                          <DropdownMenuItem
+                                            onClick={() => handleChangeRole(member.id, 'user')}
+                                          >
+                                            <User className="mr-2 h-4 w-4" />
+                                            Rebaixar a Usuário
+                                          </DropdownMenuItem>
+                                        )}
+                                      </>
+                                    )}
+                                    
+                                    {canRemoveMember(member) && (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <DropdownMenuItem
+                                            className="text-destructive"
+                                            onSelect={(e) => e.preventDefault()}
+                                          >
+                                            <UserX className="mr-2 h-4 w-4" />
+                                            Remover Membro
+                                          </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Remover Membro</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Tem certeza que deseja remover "{getMemberName(member)}" deste núcleo?
+                                              Esta ação não pode ser desfeita.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => handleRemoveMember(member.id)}
+                                              className="bg-red-600 hover:bg-red-700"
+                                              disabled={removingMemberId === member.id}
+                                            >
+                                              {removingMemberId === member.id ? "Removendo..." : "Remover"}
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
+
+                                    {!canChangeRole(member) && !canRemoveMember(member) && (
+                                      <DropdownMenuItem disabled>
+                                        Nenhuma ação disponível
                                       </DropdownMenuItem>
                                     )}
-                                  </>
-                                )}
-                                
-                                {canRemoveMember(member) && (
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onSelect={(e) => e.preventDefault()}
-                                      >
-                                        <UserX className="mr-2 h-4 w-4" />
-                                        Remover Membro
-                                      </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Remover Membro</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Tem certeza que deseja remover "{getMemberName(member)}" deste núcleo?
-                                          Esta ação não pode ser desfeita.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handleRemoveMember(member.id)}
-                                          className="bg-red-600 hover:bg-red-700"
-                                          disabled={removingMemberId === member.id}
-                                        >
-                                          {removingMemberId === member.id ? "Removendo..." : "Remover"}
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                )}
-
-                                {!canChangeRole(member) && !canRemoveMember(member) && (
-                                  <DropdownMenuItem disabled>
-                                    Nenhuma ação disponível
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </DialogContent>
