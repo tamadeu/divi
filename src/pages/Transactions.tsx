@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Transaction, Company } from "@/types/database";
-import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
+import { TransactionWithDetails } from "@/types/transaction-details";
 import AllTransactionsTable from "@/components/transactions/AllTransactionsTable";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,7 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ArrowRightLeft, Filter } from "lucide-react";
+import { PlusCircle, ArrowRightLeft, Filter, TrendingUp, TrendingDown } from "lucide-react"; // Added TrendingUp, TrendingDown
 import { useModal } from "@/contexts/ModalContext";
 import VoiceTransactionButton from "@/components/transactions/VoiceTransactionButton";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
@@ -38,21 +38,31 @@ import { showError } from "@/utils/toast";
 import TransactionFiltersSheet from "@/components/transactions/TransactionFiltersSheet";
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import SummaryCards from "@/components/SummaryCards";
+import SummaryCard from "@/components/dashboard/SummaryCard"; // Imported SummaryCard
+import MobileIncomeExpenseSummaryCards from "@/components/dashboard/MobileIncomeExpenseSummaryCards"; // Imported new component
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal"; // New import
+import EditCreditCardTransactionModal from "@/components/transactions/EditCreditCardTransactionModal";
 
 const ITEMS_PER_PAGE = 10;
 
+// Helper function for currency formatting
+const formatCurrency = (value: number | undefined) => {
+  if (typeof value !== 'number') return "R$ 0,00";
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+};
+
 const TransactionsPage = () => {
-  const [allTransactions, setAllTransactions] = useState<TransactionWithDetails[]>([]); // Use new type
+  const [allTransactions, setAllTransactions] = useState<TransactionWithDetails[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransferData, setSelectedTransferData] = useState<{ fromTransaction: Transaction, toTransaction: Transaction } | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal(); // Added new modal functions
+  const { openAddTransactionModal, openAddTransferModal, openEditTransactionModal, openEditCreditCardTransactionModal } = useModal();
   const { currentWorkspace } = useWorkspace();
   const isMobile = useIsMobile();
 
@@ -186,11 +196,11 @@ const TransactionsPage = () => {
     if (error) {
       console.error("Error fetching transactions:", error);
     } else {
-      const formattedData: TransactionWithDetails[] = data.map((t: any) => ({ // Cast to new type
+      const formattedData: TransactionWithDetails[] = data.map((t: any) => ({
         ...t,
         category: t.category?.name || "Sem categoria",
         account: t.account,
-        credit_card_bill: t.credit_card_bill, // Include nested credit_card_bill
+        credit_card_bill: t.credit_card_bill,
       }));
       setAllTransactions(formattedData);
     }
@@ -272,7 +282,7 @@ const TransactionsPage = () => {
       } else {
         showError("Não foi possível encontrar as duas transações para esta transferência.");
       }
-    } else if (transaction.credit_card_bill_id) { // Check for credit card transaction
+    } else if (transaction.credit_card_bill_id) {
       openEditCreditCardTransactionModal(transaction);
     } else {
       openEditTransactionModal(transaction);
@@ -328,13 +338,35 @@ const TransactionsPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SummaryCards 
-            totalBalance={totalBalance}
-            monthlyIncome={monthlyIncome}
-            monthlyExpenses={monthlyExpenses}
-            loading={loadingSummary}
-            showTotalBalance={false} // Não exibir o card de Saldo Total
-          />
+          {/* Conditional rendering for summary cards */}
+          {loadingSummary ? (
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+            </div>
+          ) : (
+            isMobile ? (
+              <MobileIncomeExpenseSummaryCards
+                monthlyIncome={monthlyIncome}
+                monthlyExpenses={monthlyExpenses}
+              />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 mb-4">
+                <SummaryCard
+                  title="Renda Mensal"
+                  value={formatCurrency(monthlyIncome)}
+                  icon={TrendingUp}
+                  variant="income"
+                />
+                <SummaryCard
+                  title="Despesas Mensais"
+                  value={formatCurrency(Math.abs(monthlyExpenses))}
+                  icon={TrendingDown}
+                  variant="expense"
+                />
+              </div>
+            )
+          )}
           {loading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
@@ -501,8 +533,6 @@ const TransactionsPage = () => {
           )}
         </CardContent>
       </Card>
-      {/* Removed direct usage of EditTransactionModal and TransferModal here */}
-      {/* They are now managed by ModalContext in Layout.tsx */}
       <TransactionFiltersSheet
         isOpen={isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}
