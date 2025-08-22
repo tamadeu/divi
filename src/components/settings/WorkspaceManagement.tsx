@@ -160,7 +160,7 @@ export function WorkspaceManagement() {
   }
 
   return (
-    <>
+    <div> {/* Substituído <> por <div> */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -188,7 +188,7 @@ export function WorkspaceManagement() {
               </Button>
             </div>
           ) : (
-            <>
+            <div> {/* Substituído <> por <div> */}
               {isMobile ? (
                 <div className="space-y-4">
                   {workspaces.map((workspace) => (
@@ -325,7 +325,7 @@ export function WorkspaceManagement() {
                   </Table>
                 </div>
               )}
-            </>
+            </div> {/* Substituído </> por </div> */}
           )}
         </CardContent>
       </Card>
@@ -350,6 +350,6 @@ export function WorkspaceManagement() {
           onClose={() => setManagingMembersWorkspace(null)}
         />
       )}
-    </>
+    </div> {/* Substituído </> por </div> */}
   );
 }
