@@ -261,7 +261,6 @@ export function TransactionImportForm({ onImportComplete }: TransactionImportFor
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleImport)} className="space-y-4 w-full">
-
         <FormField
           control={form.control}
           name="selectedAccountId"
