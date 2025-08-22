@@ -13,8 +13,6 @@ const AdminBottomNav = ({ onMenuClick }: AdminBottomNavProps) => {
     { to: "/admin", icon: BarChart3, label: "Dashboard" },
     { to: "/admin/users", icon: Users, label: "Usuários" },
     { to: "/admin/plans", icon: Package, label: "Planos" },
-    { to: "/admin/banks", icon: Building2, label: "Bancos" },
-    { to: "/admin/companies", icon: Building, label: "Empresas" }, // Added Companies to bottom nav
   ];
 
   return (
