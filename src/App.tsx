@@ -5,7 +5,7 @@ import { ModalProvider } from "@/contexts/ModalContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout";
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import Accounts from "@/pages/Accounts";
