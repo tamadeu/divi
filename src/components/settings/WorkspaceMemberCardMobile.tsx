@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -53,8 +52,9 @@ export function WorkspaceMemberCardMobile({
     if (m.is_ghost_user) {
       return m.ghost_user_name || 'Usuário Fantasma';
     }
-    if (m.profile?.first_name || m.profile?.last_name) {
-      return `${m.profile.first_name || ''} ${m.profile.last_name || ''}`.trim();
+    // Usar first_name/last_name diretamente do objeto member
+    if (m.first_name || m.last_name) {
+      return `${m.first_name || ''} ${m.last_name || ''}`.trim();
     }
     if (m.email) {
       return m.email.split('@')[0];
@@ -78,28 +78,29 @@ export function WorkspaceMemberCardMobile({
     return m.user_id === session?.user?.id;
   };
 
-  const isWorkspaceOwner = (m: WorkspaceUser) => {
-    return m.user_id === workspace.workspace_owner;
-  };
+  // Usar a flag is_owner que vem diretamente da RPC
+  // const isWorkspaceOwner = (m: WorkspaceUser) => {
+  //   return m.user_id === workspace.workspace_owner;
+  // };
 
   const canRemoveMember = (m: WorkspaceUser) => {
-    if (isWorkspaceOwner(m)) return false; // Proprietário não pode ser removido
+    if (m.is_owner) return false; // Proprietário não pode ser removido
     return workspace.is_owner || workspace.user_role === 'admin'; // Só owner e admins podem remover
   };
 
   const canChangeRole = (m: WorkspaceUser) => {
-    if (isWorkspaceOwner(m)) return false; // Proprietário não pode ter papel alterado
+    if (m.is_owner) return false; // Proprietário não pode ter papel alterado
     if (isCurrentUser(m) && workspace.is_owner) return false; // Owner não pode alterar seu próprio papel
     return workspace.is_owner || workspace.user_role === 'admin'; // Só owner e admins podem alterar papéis
   };
 
   const getMemberRole = (m: WorkspaceUser) => {
-    if (isWorkspaceOwner(m)) return 'Proprietário';
+    if (m.is_owner) return 'Proprietário';
     return m.role === 'admin' ? 'Administrador' : 'Usuário';
   };
 
   const getMemberBadgeVariant = (m: WorkspaceUser) => {
-    if (isWorkspaceOwner(m)) return 'default';
+    if (m.is_owner) return 'default';
     return m.role === 'admin' ? 'default' : 'outline';
   };
 
@@ -110,7 +111,7 @@ export function WorkspaceMemberCardMobile({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={member.profile?.avatar_url} />
+            <AvatarImage src={member.avatar_url || undefined} /> {/* Usar avatar_url diretamente */}
             <AvatarFallback>
               {getMemberInitials(member)}
             </AvatarFallback>
@@ -198,7 +199,7 @@ export function WorkspaceMemberCardMobile({
             {member.is_ghost_user ? "Fictício" : "Real"}
           </Badge>
           <Badge variant={getMemberBadgeVariant(member)} className="flex items-center gap-1">
-            {(member.role === 'admin' || isWorkspaceOwner(member)) && (
+            {(member.role === 'admin' || member.is_owner) && (
               <Crown className="h-3 w-3 text-yellow-500" />
             )}
             {getMemberRole(member)}
