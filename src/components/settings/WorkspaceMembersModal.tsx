@@ -142,6 +142,7 @@ const WorkspaceMembersModal = ({ workspace, isOpen, onClose }: WorkspaceMembersM
 
       showSuccess('Papel do membro atualizado com sucesso!');
       await fetchMembers();
+      await refreshWorkspaces(); // Adicionado: Atualiza o contexto do workspace para refletir as novas permissões
     } catch (error: any) {
       console.error('Error changing member role:', error);
       showError('Erro ao alterar papel do membro: ' + error.message); // Show error message
