@@ -161,7 +161,7 @@ export function WorkspaceManagement() {
               </Button>
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto"> {/* Adicionado overflow-x-auto aqui */}
+            <div className="rounded-md border w-full overflow-x-auto"> {/* Adicionado w-full aqui */}
               <Table>
                 <TableHeader>
                   <TableRow>
