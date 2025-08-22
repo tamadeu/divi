@@ -5,13 +5,14 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "@/contexts/SessionContext";
 import { showError, showSuccess } from "@/utils/toast";
 import { WorkspaceManagement } from "@/components/settings/WorkspaceManagement";
-import { ProfileForm } from "@/components/settings/ProfileForm"; // Import ProfileForm
-import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm"; // Import ChangePasswordForm
+import { ProfileForm } from "@/components/settings/ProfileForm";
+import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
+import { TransactionImportForm } from "@/components/settings/TransactionImportForm"; // Import the new component
+import { useModal } from "@/contexts/ModalContext"; // Import useModal
 
 const Settings = () => {
   const { session } = useSession();
-  // Removed direct profile state and update logic, now handled by ProfileForm
-  // Removed direct password state and update logic, now handled by ChangePasswordForm
+  const { onTransactionAdded } = useModal(); // Get onTransactionAdded from useModal
 
   return (
     <div className="space-y-8">
@@ -27,7 +28,7 @@ const Settings = () => {
             Atualize suas informações pessoais.
           </p>
         </div>
-        <ProfileForm /> {/* Use the ProfileForm component */}
+        <ProfileForm />
       </div>
 
       {/* Núcleos Financeiros - usando o componente existente */}
@@ -41,7 +42,18 @@ const Settings = () => {
             Atualize sua senha de acesso.
           </p>
         </div>
-        <ChangePasswordForm /> {/* Use the ChangePasswordForm component */}
+        <ChangePasswordForm />
+      </div>
+
+      {/* Importar Transações CSV */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Importar Transações (CSV)</h2>
+          <p className="text-sm text-muted-foreground">
+            Importe suas transações de despesa e renda a partir de um arquivo CSV.
+          </p>
+        </div>
+        <TransactionImportForm onImportComplete={onTransactionAdded} /> {/* Add the new component */}
       </div>
     </div>
   );
