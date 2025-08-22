@@ -8,7 +8,7 @@ import { WorkspaceManagement } from "@/components/settings/WorkspaceManagement";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { TransactionImportForm } from "@/components/settings/TransactionImportForm";
-import { DownloadCSVTemplateButton } from "@/components/settings/DownloadCSVTemplateButton"; // Import the new component
+import { DownloadCSVTemplateButton } from "@/components/settings/DownloadCSVTemplateButton";
 import { useModal } from "@/contexts/ModalContext";
 
 const Settings = () => {
@@ -16,47 +16,49 @@ const Settings = () => {
   const { onTransactionAdded } = useModal();
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Configurações</h1>
-      </div>
-
-      {/* Perfil */}
-      <div className="space-y-4">
+    <div className="container mx-auto px-4 py-8 max-w-3xl"> {/* Added responsive container classes */}
+      <div className="space-y-8">
         <div>
-          <h2 className="text-lg font-semibold">Perfil</h2>
-          <p className="text-sm text-muted-foreground">
-            Atualize suas informações pessoais.
-          </p>
+          <h1 className="text-2xl font-bold">Configurações</h1>
         </div>
-        <ProfileForm />
-      </div>
 
-      {/* Núcleos Financeiros - usando o componente existente */}
-      <WorkspaceManagement />
-
-      {/* Alterar Senha */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Alterar Senha</h2>
-          <p className="text-sm text-muted-foreground">
-            Atualize sua senha de acesso.
-          </p>
+        {/* Perfil */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Perfil</h2>
+            <p className="text-sm text-muted-foreground">
+              Atualize suas informações pessoais.
+            </p>
+          </div>
+          <ProfileForm />
         </div>
-        <ChangePasswordForm />
-      </div>
 
-      {/* Importar Transações CSV */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Importar Transações (CSV)</h2>
-          <p className="text-sm text-muted-foreground">
-            Importe suas transações de despesa e renda a partir de um arquivo CSV.
-          </p>
+        {/* Núcleos Financeiros - usando o componente existente */}
+        <WorkspaceManagement />
+
+        {/* Alterar Senha */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Alterar Senha</h2>
+            <p className="text-sm text-muted-foreground">
+              Atualize sua senha de acesso.
+            </p>
+          </div>
+          <ChangePasswordForm />
         </div>
-        <div className="flex flex-col gap-4"> {/* Added a flex container for layout */}
-          <DownloadCSVTemplateButton /> {/* Add the new button here */}
-          <TransactionImportForm onImportComplete={onTransactionAdded} />
+
+        {/* Importar Transações CSV */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Importar Transações (CSV)</h2>
+            <p className="text-sm text-muted-foreground">
+              Importe suas transações de despesa e renda a partir de um arquivo CSV.
+            </p>
+          </div>
+          <div className="flex flex-col gap-4">
+            <DownloadCSVTemplateButton />
+            <TransactionImportForm onImportComplete={onTransactionAdded} />
+          </div>
         </div>
       </div>
     </div>
