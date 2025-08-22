@@ -140,7 +140,10 @@ const ConfirmImportPage = () => {
     }
   };
 
-  const allCategoriesMapped = parsedData?.uniqueMissingCategories.every(mc => mc.mappedToId !== null) ?? true;
+  // Safely calculate allCategoriesMapped
+  const allCategoriesMapped = parsedData && parsedData.uniqueMissingCategories
+    ? parsedData.uniqueMissingCategories.every(mc => mc.mappedToId !== null)
+    : true;
 
   const handleConfirmImport = async () => {
     if (!parsedData || !currentWorkspace || !session?.user || !allCategoriesMapped) {
