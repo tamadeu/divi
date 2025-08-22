@@ -36,6 +36,16 @@ const Settings = () => {
         {/* Núcleos Financeiros - usando o componente existente */}
         <WorkspaceManagement />
 
+        {/* Alterar Senha */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Alterar Senha</h2>
+            <p className="text-sm text-muted-foreground">
+              Atualize sua senha de acesso.
+            </p>
+          </div>
+          <ChangePasswordForm />
+        </div>
       </div>
     </div>
   );
