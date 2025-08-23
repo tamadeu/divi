@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,19 +29,43 @@ import { useModal } from "@/contexts/ModalContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import EditCategoryModal from "@/components/categories/EditCategoryModal";
 import { Category } from "@/types/database"; // Import Category type
+import { useSession } from "@/contexts/SessionContext"; // Import useSession
 
 interface CategoryWithParentName extends Category {
   parent_name?: string | null;
 }
 
+// Definir categorias sugeridas
+const SUGGESTED_CATEGORIES = [
+  // Despesas
+  { name: "Alimentação", type: "expense" },
+  { name: "Transporte", type: "expense" },
+  { name: "Moradia", type: "expense" },
+  { name: "Educação", type: "expense" },
+  { name: "Saúde", type: "expense" },
+  { name: "Lazer", type: "expense" },
+  { name: "Contas de Consumo", type: "expense" },
+  { name: "Compras", type: "expense" },
+  { name: "Investimentos", type: "expense" }, // Pode ser despesa se for aporte
+  { name: "Outras Despesas", type: "expense" },
+  // Receitas
+  { name: "Salário", type: "income" },
+  { name: "Freelance", type: "income" },
+  { name: "Rendimentos", type: "income" },
+  { name: "Presentes", type: "income" },
+  { name: "Outras Receitas", type: "income" },
+];
+
 const Categories = () => {
   const [categories, setCategories] = useState<CategoryWithParentName[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreatingSuggested, setIsCreatingSuggested] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("expense");
   const { openAddCategoryModal } = useModal();
   const { currentWorkspace } = useWorkspace();
+  const { session } = useSession(); // Use session to get user ID
 
   useEffect(() => {
     if (currentWorkspace) {
@@ -94,6 +118,39 @@ const Categories = () => {
     fetchCategories();
     setIsEditModalOpen(false);
     setEditingCategory(null);
+  };
+
+  const handleCreateSuggestedCategories = async () => {
+    if (!currentWorkspace || !session?.user) {
+      showError("Nenhum núcleo financeiro selecionado ou usuário não autenticado.");
+      return;
+    }
+
+    setIsCreatingSuggested(true);
+    try {
+      const categoriesToInsert = SUGGESTED_CATEGORIES.map(cat => ({
+        user_id: session.user.id,
+        workspace_id: currentWorkspace.id,
+        name: cat.name,
+        type: cat.type,
+      }));
+
+      const { error } = await supabase
+        .from("categories")
+        .insert(categoriesToInsert);
+
+      if (error) {
+        throw error;
+      }
+
+      showSuccess("Categorias sugeridas criadas com sucesso!");
+      fetchCategories(); // Refresh the list
+    } catch (error: any) {
+      console.error("Error creating suggested categories:", error);
+      showError("Erro ao criar categorias sugeridas: " + error.message);
+    } finally {
+      setIsCreatingSuggested(false);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -339,12 +396,22 @@ const Categories = () => {
             <div className="text-center space-y-2">
               <h3 className="text-lg font-semibold">Nenhuma categoria encontrada</h3>
               <p className="text-muted-foreground">
-                Comece criando sua primeira categoria.
+                Comece criando sua primeira categoria ou use nossas sugestões.
               </p>
-              <Button onClick={() => openAddCategoryModal()} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Primeira Categoria
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                <Button onClick={() => openAddCategoryModal()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar Primeira Categoria
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleCreateSuggestedCategories} 
+                  disabled={isCreatingSuggested}
+                >
+                  <Lightbulb className="mr-2 h-4 w-4" />
+                  {isCreatingSuggested ? "Criando..." : "Criar Categorias Sugeridas"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
