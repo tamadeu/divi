@@ -8,28 +8,22 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Company } from "@/types/database";
-import { TransactionWithDetails } from "@/types/transaction-details"; // Import new type
+import { TransactionWithDetails } from "@/types/transaction-details";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TransactionCardList from "./TransactionCardList";
 import { getCompanyLogo } from "@/utils/transaction-helpers";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 
 interface AllTransactionsTableProps {
-  transactions: TransactionWithDetails[]; // Use new type
-  // onRowClick?: (transaction: TransactionWithDetails) => void; // No longer needed, will navigate
+  transactions: TransactionWithDetails[];
   companies: Company[];
 }
 
 const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableProps) => {
   const isMobile = useIsMobile();
-  const navigate = useNavigate(); // Initialize useNavigate
-  
-  console.log("AllTransactionsTable rendered:", {
-    isMobile,
-    transactionsCount: transactions.length,
-  });
+  const navigate = useNavigate();
   
   const statusVariant = {
     "Concluído": "default",
@@ -37,33 +31,27 @@ const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableP
     "Falhou": "destructive",
   } as const;
 
-  const handleRowClick = (transaction: TransactionWithDetails) => { // Update type for handleRowClick
-    console.log("AllTransactionsTable handleRowClick - navigating to:", `/transactions/${transaction.id}`);
+  const handleRowClick = (transaction: TransactionWithDetails) => {
     navigate(`/transactions/${transaction.id}`);
   };
 
   // Renderizar cards no mobile
   if (isMobile) {
-    console.log("Rendering mobile view with TransactionCardList");
     return <TransactionCardList transactions={transactions} companies={companies} loading={false} />;
   }
 
   // Renderizar tabela no desktop
-  console.log("Rendering desktop view with Table");
   return (
     <div className="rounded-md border overflow-x-auto">
       <Table>
-        <TableHeader>
-          <TableRow>
+        <TableHeader><TableRow>
             <TableHead className="min-w-[150px]">Transação</TableHead>
-            <TableHead className="hidden lg:table-cell">Conta/Cartão</TableHead> {/* Changed header */}
+            <TableHead className="hidden lg:table-cell">Conta/Cartão</TableHead>
             <TableHead className="hidden sm:table-cell">Categoria</TableHead>
             <TableHead className="hidden md:table-cell">Status</TableHead>
             <TableHead className="text-right min-w-[100px]">Valor</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {transactions.length > 0 ? (
+          </TableRow></TableHeader>
+        <TableBody>{transactions.length > 0 ? (
             transactions.map((transaction) => (
               <TableRow
                 key={transaction.id}
@@ -79,24 +67,24 @@ const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableP
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground sm:hidden">
-                    {transaction.category_name} {/* Use category_name */}
+                    {transaction.category_name}
                   </div>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  {transaction.account_id ? ( // Check for account_id
+                  {transaction.account_id ? (
                     <>
-                      <div className="font-medium">{transaction.account_name}</div> {/* Use account_name */}
-                      <div className="text-sm text-muted-foreground">{transaction.account_type}</div> {/* Use account_type */}
+                      <div className="font-medium">{transaction.account_name}</div>
+                      <div className="text-sm text-muted-foreground">{transaction.account_type}</div>
                     </>
-                  ) : transaction.credit_card_bill_id ? ( // Check for credit_card_bill_id
+                  ) : transaction.credit_card_bill_id ? (
                     <>
-                      <div className="font-medium">{transaction.cc_name}</div> {/* Use cc_name */}
+                      <div className="font-medium">{transaction.cc_name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {transaction.cc_brand} (**** {transaction.cc_last_four_digits}) {/* Use cc_brand and cc_last_four_digits */}
+                        {transaction.cc_brand} (**** {transaction.cc_last_four_digits})
                       </div>
-                      {transaction.cc_bill_reference_month && ( // Add this check for null
+                      {transaction.cc_bill_reference_month && (
                         <div className="text-xs text-muted-foreground">
-                          Fatura: {format(new Date(transaction.cc_bill_reference_month), 'MMM/yy', { locale: ptBR })} {/* Use cc_bill_reference_month */}
+                          Fatura: {format(new Date(transaction.cc_bill_reference_month), 'MMM/yy', { locale: ptBR })}
                         </div>
                       )}
                     </>
@@ -104,7 +92,7 @@ const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableP
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">{transaction.category_name}</TableCell> {/* Use category_name */}
+                <TableCell className="hidden sm:table-cell">{transaction.category_name}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   <Badge variant={statusVariant[transaction.status]}>
                     {transaction.status}
@@ -135,8 +123,7 @@ const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableP
                 Nenhuma transação encontrada.
               </TableCell>
             </TableRow>
-          )}
-        </TableBody>
+          )}</TableBody>
       </Table>
     </div>
   );
