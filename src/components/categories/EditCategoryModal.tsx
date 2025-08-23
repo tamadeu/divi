@@ -33,7 +33,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
   const [formData, setFormData] = useState({
     name: "",
     type: "",
-    parent_category_id: "" // New state for parent category
+    parent_category_id: "none" // Use "none" as default for no parent
   });
   const [loading, setLoading] = useState(false);
   const [parentCategories, setParentCategories] = useState<Category[]>([]); // State for parent categories
@@ -56,7 +56,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
       setFormData({
         name: category.name,
         type: mapCategoryTypeForDisplay(category.type), // Map type for the Select component
-        parent_category_id: category.parent_category_id || "" // Set initial parent
+        parent_category_id: category.parent_category_id || "none" // Set initial parent, convert null to "none"
       });
     }
   }, [category]); // Depend on 'category' to re-initialize when a new category is selected
@@ -102,7 +102,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
       .update({
         name: formData.name,
         type: typeToSave,
-        parent_category_id: formData.parent_category_id || null, // Update parent_category_id
+        parent_category_id: formData.parent_category_id === "none" ? null : formData.parent_category_id, // Convert "none" to null
       })
       .eq("id", category.id);
 
@@ -148,7 +148,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
               <Label htmlFor="type">Tipo</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value, parent_category_id: "" })} // Reset parent when type changes
+                onValueChange={(value) => setFormData({ ...formData, type: value, parent_category_id: "none" })} // Reset parent to "none" when type changes
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
@@ -165,15 +165,15 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
             <div className="grid gap-2">
               <Label htmlFor="parent-category">Categoria Pai (Opcional)</Label>
               <Select
-                value={formData.parent_category_id || ""}
-                onValueChange={(value) => setFormData({ ...formData, parent_category_id: value || null })}
+                value={formData.parent_category_id} // Use the string "none"
+                onValueChange={(value) => setFormData({ ...formData, parent_category_id: value })}
                 disabled={!formData.type} // Disable if no type is selected
               >
                 <SelectTrigger id="parent-category">
                   <SelectValue placeholder="Nenhuma" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem> {/* Changed value to "none" */}
                   {parentCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}

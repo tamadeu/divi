@@ -34,7 +34,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
   const [formData, setFormData] = useState({
     name: defaultName || "", // Initialize with defaultName
     type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''), // Initialize with defaultType
-    parent_category_id: "" // New state for parent category
+    parent_category_id: "none" // Use "none" as default for no parent
   });
   const [loading, setLoading] = useState(false);
   const [parentCategories, setParentCategories] = useState<Category[]>([]); // State for parent categories
@@ -74,7 +74,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
       setFormData({
         name: defaultName || "",
         type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''),
-        parent_category_id: ""
+        parent_category_id: "none" // Reset to "none"
       });
     }
   }, [isOpen, defaultType, defaultName]); // Added defaultName to dependencies
@@ -105,7 +105,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
         workspace_id: currentWorkspace.id,
         name: formData.name,
         type: formData.type === 'Receita' ? 'income' : 'expense', // Store as 'income' or 'expense' in DB
-        parent_category_id: formData.parent_category_id || null, // Include parent_category_id
+        parent_category_id: formData.parent_category_id === "none" ? null : formData.parent_category_id, // Convert "none" to null
       })
       .select() // Select the inserted data
       .single(); // Get a single object
@@ -154,7 +154,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
               <Label htmlFor="type">Tipo</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value, parent_category_id: "" })} // Reset parent when type changes
+                onValueChange={(value) => setFormData({ ...formData, type: value, parent_category_id: "none" })} // Reset parent to "none" when type changes
                 disabled={!!defaultType} // Disable type selection if defaultType is provided
               >
                 <SelectTrigger>
@@ -172,15 +172,15 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
             <div className="grid gap-2">
               <Label htmlFor="parent-category">Categoria Pai (Opcional)</Label>
               <Select
-                value={formData.parent_category_id || ""}
-                onValueChange={(value) => setFormData({ ...formData, parent_category_id: value || null })}
+                value={formData.parent_category_id} // Use the string "none"
+                onValueChange={(value) => setFormData({ ...formData, parent_category_id: value })}
                 disabled={!formData.type} // Disable if no type is selected
               >
                 <SelectTrigger id="parent-category">
                   <SelectValue placeholder="Nenhuma" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem> {/* Changed value to "none" */}
                   {parentCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
