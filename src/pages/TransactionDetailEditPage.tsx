@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { TransactionWithDetails } from "@/types/transaction-details";
-import { showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast"; // Adicionado showSuccess e showError
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
