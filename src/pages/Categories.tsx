@@ -129,17 +129,31 @@ const Categories = () => {
       return false;
     });
 
-    // Sort to display parent categories first, then subcategories indented
-    const sortedCategories = [...filtered].sort((a, b) => {
-      if (a.parent_category_id === b.parent_category_id) {
-        return a.name.localeCompare(b.name);
+    const topLevelCategories = filtered.filter(cat => !cat.parent_category_id);
+    const subCategoriesMap = new Map<string, CategoryWithParentName[]>();
+
+    filtered.forEach(cat => {
+      if (cat.parent_category_id) {
+        if (!subCategoriesMap.has(cat.parent_category_id)) {
+          subCategoriesMap.set(cat.parent_category_id, []);
+        }
+        subCategoriesMap.get(cat.parent_category_id)?.push(cat);
       }
-      if (!a.parent_category_id && b.parent_category_id) return -1; // Parents before children
-      if (a.parent_category_id && !b.parent_category_id) return 1; // Children after parents
-      return a.name.localeCompare(b.name); // Sort by name if both are subcategories
     });
 
-    return sortedCategories;
+    const sortedHierarchicalCategories: CategoryWithParentName[] = [];
+
+    topLevelCategories.sort((a, b) => a.name.localeCompare(b.name)).forEach(parent => {
+      sortedHierarchicalCategories.push(parent);
+      const children = subCategoriesMap.get(parent.id);
+      if (children) {
+        children.sort((a, b) => a.name.localeCompare(b.name)).forEach(child => {
+          sortedHierarchicalCategories.push(child);
+        });
+      }
+    });
+
+    return sortedHierarchicalCategories;
   };
 
   const renderCategoryName = (category: CategoryWithParentName) => {
