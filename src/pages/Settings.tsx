@@ -10,6 +10,7 @@ import { ChangePasswordForm } from "@/components/settings/ChangePasswordForm";
 import { TransactionImportForm } from "@/components/settings/TransactionImportForm";
 import { DownloadCSVTemplateButton } from "@/components/settings/DownloadCSVTemplateButton";
 import { useModal } from "@/contexts/ModalContext";
+import { DangerZoneSettings } from "@/components/settings/DangerZoneSettings"; // Import the new component
 
 const Settings = () => {
   const { session } = useSession();
@@ -59,6 +60,17 @@ const Settings = () => {
             <DownloadCSVTemplateButton />
             <TransactionImportForm onImportComplete={onTransactionAdded} />
           </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-destructive">Zona de Perigo</h2>
+            <p className="text-sm text-muted-foreground">
+              Ações que podem apagar permanentemente seus dados.
+            </p>
+          </div>
+          <DangerZoneSettings />
         </div>
       </div>
     </div>

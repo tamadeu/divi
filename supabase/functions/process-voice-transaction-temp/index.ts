@@ -26,6 +26,7 @@ interface TransactionData {
 interface PendingAILog {
   user_id: string;
   workspace_id: string;
+  transaction_id?: string | null; // Made optional and nullable
   input_text: string;
   ai_provider: string;
   ai_model?: string;

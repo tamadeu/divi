@@ -7,13 +7,13 @@ export type Enums<T extends keyof Database['public']['Enums']> =
 
 export type Account = Tables<'accounts'>;
 export type Category = Tables<'categories'> & {
-  parent_category_id?: string | null; // Added for subcategories
+  parent_category_id?: string | null; // Added for subcategories, now explicitly nullable
 };
 export type Transaction = Tables<'transactions'> & {
   category?: string; // Joined from categories table
   account?: Account; // Joined from accounts table
-  installment_number?: number; // New: Current installment number
-  total_installments?: number; // New: Total number of installments
+  installment_number?: number | null; // New: Current installment number, explicitly nullable
+  total_installments?: number | null; // New: Total number of installments, explicitly nullable
 };
 export type Company = Tables<'companies'>;
 export type CreditCard = Tables<'credit_cards'>;
