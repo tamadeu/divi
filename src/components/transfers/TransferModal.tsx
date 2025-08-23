@@ -50,7 +50,7 @@ const transferSchema = z.object({
   date: z.date({ required_error: "A data é obrigatória." }),
   from_account_id: z.string({ required_error: "Selecione uma conta de origem."}).uuid("Selecione uma conta de origem válida."),
   to_account_id: z.string({ required_error: "Selecione uma conta de destino."}).uuid("Selecione uma conta de destino válida."),
-  category_id: z.string().uuid("Selecione uma categoria válida.").optional(), // Category is optional for transfers
+  category_id: z.string().uuid("Selecione uma categoria válida.").nullable().optional(), // Updated: allow null for optional category
   description: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.from_account_id === data.to_account_id) {
@@ -93,7 +93,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
       date: new Date(),
       from_account_id: "",
       to_account_id: "",
-      category_id: "",
+      category_id: null, // Updated: default to null
       description: "",
     },
   });
@@ -128,7 +128,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
           date: new Date(),
           from_account_id: initialTransferData?.fromAccountId || "",
           to_account_id: initialTransferData?.toAccountId || "",
-          category_id: "",
+          category_id: null, // Reset to null
           description: "",
         });
       });
@@ -136,8 +136,6 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
   }, [isOpen, initialTransferData, form, fetchData, currentWorkspace]);
 
   const sortedCategories = useMemo(() => {
-    // For transfers, we might want to show all categories or a specific "transfer" category type if it existed.
-    // For now, let's show all categories, but apply the hierarchical display.
     const filtered = categories;
 
     // Group by parent and sort
@@ -184,7 +182,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
         amount: -Math.abs(values.amount), // Expense
         date: values.date.toISOString(),
         account_id: values.from_account_id,
-        category_id: values.category_id || null,
+        category_id: values.category_id || null, // Use null if category_id is empty string or undefined
         status: "Concluído",
         description: values.description || "Transferência de fundos",
         user_id: user.id,
@@ -199,7 +197,7 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
         amount: Math.abs(values.amount), // Income
         date: values.date.toISOString(),
         account_id: values.to_account_id,
-        category_id: values.category_id || null,
+        category_id: values.category_id || null, // Use null if category_id is empty string or undefined
         status: "Concluído",
         description: values.description || "Transferência de fundos",
         user_id: user.id,
@@ -408,14 +406,17 @@ const TransferModal = ({ isOpen, onClose, onTransferCompleted, initialTransferDa
                     <FormItem>
                       <FormLabel>Categoria (Opcional)</FormLabel>
                       <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select 
+                          onValueChange={(value) => field.onChange(value === "null-category" ? null : value)} 
+                          value={field.value || "null-category"} // Set default to "null-category" if field.value is null/undefined
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione uma categoria" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Nenhuma</SelectItem> {/* Option for no category */}
+                            <SelectItem value="null-category">Nenhuma</SelectItem> {/* Updated value */}
                             {sortedCategories.map(cat => (
                               <SelectItem key={cat.id} value={cat.id}>
                                 {cat.name}
