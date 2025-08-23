@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -37,7 +37,8 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useSession } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const resetSchema = z.object({
   transactions: z.boolean().default(false),
@@ -52,8 +53,9 @@ type ResetFormValues = z.infer<typeof resetSchema>;
 export function DangerZoneSettings() {
   const { session } = useSession();
   const { currentWorkspace, refreshWorkspaces, switchWorkspace, workspaces } = useWorkspace();
-  const navigate = useNavigate();
   const [isResetting, setIsResetting] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
 
   const form = useForm<ResetFormValues>({
     resolver: zodResolver(resetSchema),
@@ -66,6 +68,13 @@ export function DangerZoneSettings() {
     },
   });
 
+  // Reset confirmation text when dialog opens/closes
+  useEffect(() => {
+    if (!isAlertDialogOpen) {
+      setConfirmationText("");
+    }
+  }, [isAlertDialogOpen]);
+
   const handleResetAccount = async (values: ResetFormValues) => {
     if (!session?.user || !currentWorkspace) {
       showError("Usuário não autenticado ou núcleo financeiro não selecionado.");
@@ -76,6 +85,11 @@ export function DangerZoneSettings() {
 
     if (selectedOptions.length === 0) {
       showError("Selecione pelo menos um tipo de dado para resetar.");
+      return;
+    }
+
+    if (confirmationText !== "confirmar") {
+      showError("Você deve digitar 'confirmar' para prosseguir.");
       return;
     }
 
@@ -136,17 +150,9 @@ export function DangerZoneSettings() {
 
       showSuccess("Dados selecionados resetados com sucesso!");
       form.reset(); // Reset checkboxes
+      setConfirmationText(""); // Clear confirmation text
+      setIsAlertDialogOpen(false); // Close the dialog
       await refreshWorkspaces(); // Refresh workspace data
-
-      // If accounts were deleted, and the current workspace has no accounts,
-      // it might be good to navigate to a page where they can create one or switch.
-      // For simplicity, just refresh and let the context handle currentWorkspace state.
-      // If the current workspace becomes invalid (e.g., all its data is gone),
-      // the WorkspaceProvider should ideally handle switching to another valid one or null.
-      
-      // If all data types are selected and deleted, it's like starting fresh.
-      // Consider if a full logout/redirect to dashboard is appropriate.
-      // For now, just refresh.
 
     } catch (error: any) {
       console.error("Error resetting account data:", error);
@@ -155,6 +161,8 @@ export function DangerZoneSettings() {
       setIsResetting(false);
     }
   };
+
+  const isAnyCheckboxChecked = form.watch("transactions") || form.watch("categories") || form.watch("accounts") || form.watch("budgets") || form.watch("creditCards");
 
   return (
     <Card className="border-destructive">
@@ -276,13 +284,13 @@ export function DangerZoneSettings() {
               />
             </div>
 
-            <AlertDialog>
+            <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button 
                   type="button" 
                   variant="destructive" 
                   className="mt-6 w-full sm:w-auto"
-                  disabled={!form.formState.isValid || !form.formState.isDirty || isResetting}
+                  disabled={!isAnyCheckboxChecked || isResetting}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Resetar Dados Selecionados
@@ -296,15 +304,25 @@ export function DangerZoneSettings() {
                   </AlertDialogTitle>
                   <AlertDialogDescription>
                     Você está prestes a apagar permanentemente os dados selecionados do seu núcleo financeiro atual.
-                    Esta ação é irreversível. Tem certeza que deseja continuar?
+                    Esta ação é irreversível. Para confirmar, digite "confirmar" no campo abaixo.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="py-4">
+                  <Label htmlFor="confirmation-input" className="sr-only">Digite 'confirmar'</Label>
+                  <Input
+                    id="confirmation-input"
+                    placeholder="Digite 'confirmar'"
+                    value={confirmationText}
+                    onChange={(e) => setConfirmationText(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel disabled={isResetting}>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={form.handleSubmit(handleResetAccount)}
                     className="bg-red-600 hover:bg-red-700"
-                    disabled={isResetting}
+                    disabled={isResetting || confirmationText !== "confirmar"}
                   >
                     {isResetting ? "Resetando..." : "Confirmar Reset"}
                   </AlertDialogAction>
