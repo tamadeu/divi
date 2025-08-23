@@ -140,7 +140,7 @@ const TransactionDetailEditForm = ({ transaction, onClose, onTransactionUpdated,
       subCategories
         .filter(sub => sub.parent_category_id === parent.id)
         .sort((a, b) => a.name.localeCompare(b.name))
-        .forEach(sub => sortedCategories.push(sub));
+        .forEach(sub => sortedCategories.push({ ...sub, name: `- ${sub.name}` })); // Add hyphen for subcategories
     });
 
     return sortedCategories;
@@ -576,7 +576,7 @@ const TransactionDetailEditForm = ({ transaction, onClose, onTransactionUpdated,
                       <SelectContent>
                         {filteredCategories.map(cat => (
                           <SelectItem key={cat.id} value={cat.id}>
-                            {cat.parent_category_id ? `\u00A0\u00A0\u00A0\u00A0${cat.name}` : cat.name}
+                            {cat.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

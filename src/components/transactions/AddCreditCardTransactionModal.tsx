@@ -361,6 +361,29 @@ const AddCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransactio
     setShowCalculator(false);
   };
 
+  const sortedCategories = useMemo(() => {
+    const filtered = categories.filter(c => c.type === 'expense'); // Always expense for credit card transactions
+
+    // Group by parent and sort
+    const categoriesMap = new Map<string, Category>();
+    filtered.forEach(cat => categoriesMap.set(cat.id, cat));
+
+    const topLevelCategories = filtered.filter(cat => !cat.parent_category_id);
+    const subCategories = filtered.filter(cat => cat.parent_category_id);
+
+    const hierarchicalCategories: Category[] = [];
+
+    topLevelCategories.sort((a, b) => a.name.localeCompare(b.name)).forEach(parent => {
+      hierarchicalCategories.push(parent);
+      subCategories
+        .filter(sub => sub.parent_category_id === parent.id)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(sub => hierarchicalCategories.push({ ...sub, name: `- ${sub.name}` })); // Add hyphen for subcategories
+    });
+
+    return hierarchicalCategories;
+  }, [categories]);
+
   if (!currentWorkspace) {
     return null;
   }
@@ -553,7 +576,7 @@ const AddCreditCardTransactionModal = ({ isOpen, onClose, onCreditCardTransactio
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                            {sortedCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
