@@ -35,23 +35,63 @@ interface CategoryWithParentName extends Category {
   parent_name?: string | null;
 }
 
-// Definir categorias sugeridas
-const SUGGESTED_CATEGORIES = [
+// Definir categorias sugeridas com subcategorias
+const SUGGESTED_CATEGORIES_STRUCTURE = [
   // Despesas
-  { name: "Alimentação", type: "expense" },
-  { name: "Transporte", type: "expense" },
-  { name: "Moradia", type: "expense" },
-  { name: "Educação", type: "expense" },
-  { name: "Saúde", type: "expense" },
-  { name: "Lazer", type: "expense" },
-  { name: "Contas de Consumo", type: "expense" },
-  { name: "Compras", type: "expense" },
+  { name: "Alimentação", type: "expense", subcategories: [
+    { name: "Supermercado", type: "expense" },
+    { name: "Restaurantes", type: "expense" },
+    { name: "Cafeterias", type: "expense" },
+    { name: "Delivery", type: "expense" },
+  ]},
+  { name: "Transporte", type: "expense", subcategories: [
+    { name: "Combustível", type: "expense" },
+    { name: "Transporte Público", type: "expense" },
+    { name: "Manutenção Veicular", type: "expense" },
+    { name: "Aplicativos (Uber/99)", type: "expense" },
+  ]},
+  { name: "Moradia", type: "expense", subcategories: [
+    { name: "Aluguel/Financiamento", type: "expense" },
+    { name: "Condomínio", type: "expense" },
+    { name: "IPTU", type: "expense" },
+    { name: "Manutenção Residencial", type: "expense" },
+  ]},
+  { name: "Contas de Consumo", type: "expense", subcategories: [
+    { name: "Água", type: "expense" },
+    { name: "Luz", type: "expense" },
+    { name: "Gás", type: "expense" },
+    { name: "Internet", type: "expense" },
+    { name: "Telefone", type: "expense" },
+  ]},
+  { name: "Educação", type: "expense", subcategories: [
+    { name: "Mensalidades", type: "expense" },
+    { name: "Cursos", type: "expense" },
+    { name: "Material Escolar", type: "expense" },
+  ]},
+  { name: "Saúde", type: "expense", subcategories: [
+    { name: "Plano de Saúde", type: "expense" },
+    { name: "Consultas", type: "expense" },
+    { name: "Medicamentos", type: "expense" },
+  ]},
+  { name: "Lazer", type: "expense", subcategories: [
+    { name: "Cinema/Teatro", type: "expense" },
+    { name: "Viagens", type: "expense" },
+    { name: "Hobbies", type: "expense" },
+  ]},
+  { name: "Compras", type: "expense", subcategories: [
+    { name: "Roupas", type: "expense" },
+    { name: "Eletrônicos", type: "expense" },
+    { name: "Presentes", type: "expense" },
+  ]},
   { name: "Investimentos", type: "expense" }, // Pode ser despesa se for aporte
   { name: "Outras Despesas", type: "expense" },
   // Receitas
   { name: "Salário", type: "income" },
   { name: "Freelance", type: "income" },
-  { name: "Rendimentos", type: "income" },
+  { name: "Rendimentos", type: "income", subcategories: [
+    { name: "Aluguéis Recebidos", type: "income" },
+    { name: "Dividendos", type: "income" },
+  ]},
   { name: "Presentes", type: "income" },
   { name: "Outras Receitas", type: "income" },
 ];
@@ -128,19 +168,66 @@ const Categories = () => {
 
     setIsCreatingSuggested(true);
     try {
-      const categoriesToInsert = SUGGESTED_CATEGORIES.map(cat => ({
-        user_id: session.user.id,
-        workspace_id: currentWorkspace.id,
-        name: cat.name,
-        type: cat.type,
-      }));
+      const parentCategoryMap = new Map<string, string>(); // Map to store parent category name -> id
 
-      const { error } = await supabase
-        .from("categories")
-        .insert(categoriesToInsert);
+      // First, insert all top-level categories
+      for (const cat of SUGGESTED_CATEGORIES_STRUCTURE) {
+        if (!cat.subcategories) { // Only insert if it's a top-level category without explicit subcategories
+          const { data, error } = await supabase
+            .from("categories")
+            .insert({
+              user_id: session.user.id,
+              workspace_id: currentWorkspace.id,
+              name: cat.name,
+              type: cat.type,
+              parent_category_id: null,
+            })
+            .select('id')
+            .single();
+          
+          if (error) throw error;
+          if (data) {
+            parentCategoryMap.set(cat.name, data.id);
+          }
+        } else { // If it has subcategories, it's also a top-level category
+          const { data, error } = await supabase
+            .from("categories")
+            .insert({
+              user_id: session.user.id,
+              workspace_id: currentWorkspace.id,
+              name: cat.name,
+              type: cat.type,
+              parent_category_id: null,
+            })
+            .select('id')
+            .single();
+          
+          if (error) throw error;
+          if (data) {
+            parentCategoryMap.set(cat.name, data.id);
+          }
+        }
+      }
 
-      if (error) {
-        throw error;
+      // Then, insert subcategories, referencing their parents
+      for (const cat of SUGGESTED_CATEGORIES_STRUCTURE) {
+        if (cat.subcategories && cat.subcategories.length > 0) {
+          const parentId = parentCategoryMap.get(cat.name);
+          if (parentId) {
+            for (const subCat of cat.subcategories) {
+              const { error } = await supabase
+                .from("categories")
+                .insert({
+                  user_id: session.user.id,
+                  workspace_id: currentWorkspace.id,
+                  name: subCat.name,
+                  type: subCat.type,
+                  parent_category_id: parentId,
+                });
+              if (error) throw error;
+            }
+          }
+        }
       }
 
       showSuccess("Categorias sugeridas criadas com sucesso!");
