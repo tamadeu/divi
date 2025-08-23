@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -20,6 +20,9 @@ import {
 import { Filter } from "lucide-react";
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client"; // Import supabase
+import { useWorkspace } from "@/contexts/WorkspaceContext"; // Import useWorkspace
+import { Category } from "@/types/database"; // Import Category type
 
 interface TransactionFiltersSheetProps {
   isOpen: boolean;
@@ -32,7 +35,7 @@ interface TransactionFiltersSheetProps {
   setCategoryFilter: (value: string) => void;
   accountTypeFilter: string;
   setAccountTypeFilter: (value: string) => void;
-  uniqueCategories: string[];
+  uniqueCategories: string[]; // This will now be a flat list of display names
   onApplyFilters: () => void;
 }
 
@@ -60,7 +63,7 @@ const TransactionFiltersSheet = ({
   setCategoryFilter,
   accountTypeFilter,
   setAccountTypeFilter,
-  uniqueCategories,
+  uniqueCategories, // This will be used as is, assuming it's already formatted
   onApplyFilters,
 }: TransactionFiltersSheetProps) => {
   // Internal state for filters to allow "Apply" button
@@ -68,6 +71,8 @@ const TransactionFiltersSheet = ({
   const [tempStatusFilter, setTempStatusFilter] = useState(statusFilter);
   const [tempCategoryFilter, setTempCategoryFilter] = useState(categoryFilter);
   const [tempAccountTypeFilter, setTempAccountTypeFilter] = useState(accountTypeFilter);
+  const [allCategories, setAllCategories] = useState<Category[]>([]); // To fetch all categories for display
+  const { currentWorkspace } = useWorkspace();
 
   const availableMonths = generateMonths();
 
@@ -79,6 +84,47 @@ const TransactionFiltersSheet = ({
       setTempAccountTypeFilter(accountTypeFilter);
     }
   }, [isOpen, monthFilter, statusFilter, categoryFilter, accountTypeFilter]);
+
+  // Fetch all categories to build hierarchical display names for the filter
+  useEffect(() => {
+    const fetchAllCategories = async () => {
+      if (!currentWorkspace) return;
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, type, parent_category_id, parent_category:parent_category_id(name)')
+        .eq('workspace_id', currentWorkspace.id)
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching all categories for filter:", error);
+      } else {
+        setAllCategories(data || []);
+      }
+    };
+    if (isOpen && currentWorkspace) {
+      fetchAllCategories();
+    }
+  }, [isOpen, currentWorkspace]);
+
+  const hierarchicalCategories = useMemo(() => {
+    const categoriesMap = new Map<string, Category>();
+    allCategories.forEach(cat => categoriesMap.set(cat.id, cat));
+
+    const formattedNames: { value: string; label: string }[] = [];
+
+    const topLevelCategories = allCategories.filter(cat => !cat.parent_category_id);
+    
+    topLevelCategories.sort((a, b) => a.name.localeCompare(b.name)).forEach(parent => {
+      formattedNames.push({ value: parent.name, label: parent.name }); // Add parent
+      allCategories
+        .filter(sub => sub.parent_category_id === parent.id)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(sub => {
+          formattedNames.push({ value: sub.name, label: `\u00A0\u00A0\u00A0\u00A0${sub.name}` }); // Add indented sub
+        });
+    });
+    return formattedNames;
+  }, [allCategories]);
 
   const handleApply = () => {
     setMonthFilter(tempMonthFilter); // Aplicar o novo filtro
@@ -156,9 +202,9 @@ const TransactionFiltersSheet = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas Categorias</SelectItem>
-                {uniqueCategories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
+                {hierarchicalCategories.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -35,6 +35,13 @@ const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableP
     navigate(`/transactions/${transaction.id}`);
   };
 
+  const getCategoryDisplayName = (transaction: TransactionWithDetails) => {
+    if (transaction.parent_category_name && transaction.category_name) {
+      return `${transaction.parent_category_name} > ${transaction.category_name}`;
+    }
+    return transaction.category_name;
+  };
+
   // Renderizar cards no mobile
   if (isMobile) {
     return <TransactionCardList transactions={transactions} companies={companies} loading={false} />;
@@ -67,7 +74,7 @@ const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableP
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground sm:hidden">
-                    {transaction.category_name}
+                    {getCategoryDisplayName(transaction)}
                   </div>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
@@ -92,7 +99,7 @@ const AllTransactionsTable = ({ transactions, companies }: AllTransactionsTableP
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">{transaction.category_name}</TableCell>
+                <TableCell className="hidden sm:table-cell">{getCategoryDisplayName(transaction)}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   <Badge variant={statusVariant[transaction.status]}>
                     {transaction.status}

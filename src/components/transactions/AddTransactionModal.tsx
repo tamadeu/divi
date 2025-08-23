@@ -133,7 +133,26 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
 
   const filteredCategories = useMemo(() => {
     if (!transactionType) return [];
-    return categories.filter(c => c.type === transactionType);
+    const filtered = categories.filter(c => c.type === (transactionType === 'income' ? 'Receita' : 'Despesa') || c.type === transactionType);
+
+    // Group by parent and sort
+    const categoriesMap = new Map<string, Category>();
+    filtered.forEach(cat => categoriesMap.set(cat.id, cat));
+
+    const topLevelCategories = filtered.filter(cat => !cat.parent_category_id);
+    const subCategories = filtered.filter(cat => cat.parent_category_id);
+
+    const sortedCategories: Category[] = [];
+
+    topLevelCategories.sort((a, b) => a.name.localeCompare(b.name)).forEach(parent => {
+      sortedCategories.push(parent);
+      subCategories
+        .filter(sub => sub.parent_category_id === parent.id)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(sub => sortedCategories.push(sub));
+    });
+
+    return sortedCategories;
   }, [categories, transactionType]);
 
   const fetchData = useCallback(async () => {
@@ -610,7 +629,11 @@ const AddTransactionModal = ({ isOpen, onClose, onTransactionAdded, initialData 
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {filteredCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                            {filteredCategories.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.parent_category_id ? `\u00A0\u00A0\u00A0\u00A0${cat.name}` : cat.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>

@@ -12,6 +12,7 @@ export type TransactionWithDetails = Database['public']['Tables']['transactions'
   // Category details (if category_id is present)
   category_name?: string | null;
   category_type?: string | null;
+  parent_category_name?: string | null; // Added for subcategories
 
   // Credit Card Bill details (if credit_card_bill_id is present)
   cc_bill_reference_month?: string | null; // Date string 'YYYY-MM-DD'

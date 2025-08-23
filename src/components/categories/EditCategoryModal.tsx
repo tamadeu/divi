@@ -19,12 +19,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-
-interface Category {
-  id: string;
-  name: string;
-  type: string;
-}
+import { Category } from "@/types/database"; // Import Category type
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface EditCategoryModalProps {
   isOpen: boolean;
@@ -37,8 +33,11 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
   const [formData, setFormData] = useState({
     name: "",
     type: "",
+    parent_category_id: "" // New state for parent category
   });
   const [loading, setLoading] = useState(false);
+  const [parentCategories, setParentCategories] = useState<Category[]>([]); // State for parent categories
+  const { currentWorkspace } = useWorkspace();
 
   // Helper function to map database types to display types
   const mapCategoryTypeForDisplay = (dbType: string) => {
@@ -57,22 +56,53 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
       setFormData({
         name: category.name,
         type: mapCategoryTypeForDisplay(category.type), // Map type for the Select component
+        parent_category_id: category.parent_category_id || "" // Set initial parent
       });
     }
   }, [category]); // Depend on 'category' to re-initialize when a new category is selected
+
+  // Fetch parent categories when modal opens or category type changes
+  useEffect(() => {
+    const fetchParentCategories = async () => {
+      if (!currentWorkspace || !formData.type || !category) return;
+
+      const typeToFilter = formData.type === 'Receita' ? 'income' : 'expense';
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, type')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('type', typeToFilter)
+        .is('parent_category_id', null) // Only top-level categories
+        .neq('id', category.id) // Exclude the current category itself
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching parent categories:", error);
+        showError("Erro ao carregar categorias pai.");
+      } else {
+        setParentCategories(data || []);
+      }
+    };
+
+    if (isOpen) {
+      fetchParentCategories();
+    }
+  }, [isOpen, formData.type, currentWorkspace, category]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Map display type back to database type if necessary, though current DB seems to accept "Receita"/"Despesa"
-    const typeToSave = formData.type; 
+    // Map display type back to database type
+    const typeToSave = formData.type === 'Receita' ? 'income' : 'expense'; 
 
     const { error } = await supabase
       .from("categories")
       .update({
         name: formData.name,
         type: typeToSave,
+        parent_category_id: formData.parent_category_id || null, // Update parent_category_id
       })
       .eq("id", category.id);
 
@@ -118,7 +148,7 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
               <Label htmlFor="type">Tipo</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
+                onValueChange={(value) => setFormData({ ...formData, type: value, parent_category_id: "" })} // Reset parent when type changes
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
@@ -127,6 +157,26 @@ const EditCategoryModal = ({ isOpen, onClose, category, onCategoryUpdated }: Edi
                   {categoryTypes.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="parent-category">Categoria Pai (Opcional)</Label>
+              <Select
+                value={formData.parent_category_id || ""}
+                onValueChange={(value) => setFormData({ ...formData, parent_category_id: value || null })}
+                disabled={!formData.type} // Disable if no type is selected
+              >
+                <SelectTrigger id="parent-category">
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {parentCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

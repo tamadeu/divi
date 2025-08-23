@@ -6,7 +6,9 @@ export type Enums<T extends keyof Database['public']['Enums']> =
   Database['public']['Enums'][T];
 
 export type Account = Tables<'accounts'>;
-export type Category = Tables<'categories'>;
+export type Category = Tables<'categories'> & {
+  parent_category_id?: string | null; // Added for subcategories
+};
 export type Transaction = Tables<'transactions'> & {
   category?: string; // Joined from categories table
   account?: Account; // Joined from accounts table

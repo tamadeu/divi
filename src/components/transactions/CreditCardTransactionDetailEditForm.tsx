@@ -438,6 +438,29 @@ const CreditCardTransactionDetailEditForm = ({ transaction, onClose, onCreditCar
     }
   };
 
+  const filteredCategories = useMemo(() => {
+    const filtered = categories.filter(c => c.type === 'expense'); // Always expense for credit card transactions
+
+    // Group by parent and sort
+    const categoriesMap = new Map<string, Category>();
+    filtered.forEach(cat => categoriesMap.set(cat.id, cat));
+
+    const topLevelCategories = filtered.filter(cat => !cat.parent_category_id);
+    const subCategories = filtered.filter(cat => cat.parent_category_id);
+
+    const sortedCategories: Category[] = [];
+
+    topLevelCategories.sort((a, b) => a.name.localeCompare(b.name)).forEach(parent => {
+      sortedCategories.push(parent);
+      subCategories
+        .filter(sub => sub.parent_category_id === parent.id)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(sub => sortedCategories.push(sub));
+    });
+
+    return sortedCategories;
+  }, [categories]);
+
   if (!currentWorkspace) {
     return null;
   }
@@ -612,7 +635,11 @@ const CreditCardTransactionDetailEditForm = ({ transaction, onClose, onCreditCar
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                        {filteredCategories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.parent_category_id ? `\u00A0\u00A0\u00A0\u00A0${cat.name}` : cat.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Button type="button" variant="outline" size="icon" onClick={() => setIsAddCategoryModalOpen(true)}>
@@ -723,7 +750,7 @@ const CreditCardTransactionDetailEditForm = ({ transaction, onClose, onCreditCar
       </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowCalculator}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>

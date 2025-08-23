@@ -26,6 +26,10 @@ const TransactionCard = ({ transaction, companyLogo }: TransactionCardProps) => 
         : '';
       return `${cardName}${installmentInfo}`;
     }
+    // Display hierarchical category name
+    if (transaction.parent_category_name && transaction.category_name) {
+      return `${transaction.parent_category_name} > ${transaction.category_name}`;
+    }
     return transaction.category_name || "Sem categoria"; // Use category_name
   };
 

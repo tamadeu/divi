@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,15 +28,14 @@ import { showError, showSuccess } from "@/utils/toast";
 import { useModal } from "@/contexts/ModalContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import EditCategoryModal from "@/components/categories/EditCategoryModal";
+import { Category } from "@/types/database"; // Import Category type
 
-interface Category {
-  id: string;
-  name: string;
-  type: string;
+interface CategoryWithParentName extends Category {
+  parent_name?: string | null;
 }
 
 const Categories = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryWithParentName[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -55,7 +54,7 @@ const Categories = () => {
 
     const { data, error } = await supabase
       .from("categories")
-      .select("*")
+      .select("*, parent_category:parent_category_id(name)") // Fetch parent category name
       .eq("workspace_id", currentWorkspace.id)
       .order("name");
 
@@ -63,7 +62,11 @@ const Categories = () => {
       showError("Erro ao carregar categorias");
       console.error("Error fetching categories:", error);
     } else {
-      setCategories(data || []);
+      const formattedCategories: CategoryWithParentName[] = (data || []).map(cat => ({
+        ...cat,
+        parent_name: cat.parent_category ? (cat.parent_category as { name: string }).name : null,
+      }));
+      setCategories(formattedCategories);
     }
     setLoading(false);
   };
@@ -93,7 +96,6 @@ const Categories = () => {
     setEditingCategory(null);
   };
 
-  // Ajustado para ser insensível a maiúsculas/minúsculas e reconhecer 'income'/'expense'
   const getTypeColor = (type: string) => {
     const normalizedType = type.trim().toLowerCase();
     if (normalizedType === "receita" || normalizedType === "income") {
@@ -104,7 +106,6 @@ const Categories = () => {
     return "bg-gray-100 text-gray-800"; // Default
   };
 
-  // Ajustado para retornar o rótulo correto, insensível a maiúsculas/minúsculas e reconhecer 'income'/'expense'
   const getTypeLabel = (type: string) => {
     const normalizedType = type.trim().toLowerCase();
     if (normalizedType === "receita" || normalizedType === "income") {
@@ -115,12 +116,10 @@ const Categories = () => {
     return type; // Fallback
   };
 
-  // Ajustado para mapear e filtrar de forma insensível a maiúsculas/minúsculas,
-  // considerando tanto os valores do banco de dados ('expense', 'income') quanto os do formulário ('Despesa', 'Receita')
   const getFilteredCategories = (tabType: string) => {
-    const targetType = tabType.trim().toLowerCase(); // 'expense' or 'income'
+    const targetType = tabType.trim().toLowerCase();
 
-    return categories.filter(category => {
+    const filtered = categories.filter(category => {
       const normalizedCategoryType = category.type.trim().toLowerCase();
       if (targetType === "expense") {
         return normalizedCategoryType === "despesa" || normalizedCategoryType === "expense";
@@ -129,16 +128,40 @@ const Categories = () => {
       }
       return false;
     });
+
+    // Sort to display parent categories first, then subcategories indented
+    const sortedCategories = [...filtered].sort((a, b) => {
+      if (a.parent_category_id === b.parent_category_id) {
+        return a.name.localeCompare(b.name);
+      }
+      if (!a.parent_category_id && b.parent_category_id) return -1; // Parents before children
+      if (a.parent_category_id && !b.parent_category_id) return 1; // Children after parents
+      return a.name.localeCompare(b.name); // Sort by name if both are subcategories
+    });
+
+    return sortedCategories;
   };
 
-  const renderCategoryCards = (categoryList: Category[]) => (
+  const renderCategoryName = (category: CategoryWithParentName) => {
+    if (category.parent_name) {
+      return (
+        <span className="ml-4">
+          <span className="text-muted-foreground">{category.parent_name} &gt; </span>
+          {category.name}
+        </span>
+      );
+    }
+    return category.name;
+  };
+
+  const renderCategoryCards = (categoryList: CategoryWithParentName[]) => (
     <div className="grid gap-4 md:hidden">
       {categoryList.map((category) => (
         <Card key={category.id}>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-lg">{category.name}</CardTitle>
+                <CardTitle className="text-lg">{renderCategoryName(category)}</CardTitle>
               </div>
               <Badge className={getTypeColor(category.type)}>
                 {getTypeLabel(category.type)}
@@ -189,7 +212,7 @@ const Categories = () => {
     </div>
   );
 
-  const renderCategoryTable = (categoryList: Category[]) => (
+  const renderCategoryTable = (categoryList: CategoryWithParentName[]) => (
     <Card className="hidden md:block">
       <CardHeader>
         <CardTitle>Categorias de {activeTab === "expense" ? "Despesa" : "Receita"}</CardTitle>
@@ -209,7 +232,9 @@ const Categories = () => {
           <TableBody>
             {categoryList.map((category) => (
               <TableRow key={category.id}>
-                <TableCell className="font-medium">{category.name}</TableCell>
+                <TableCell className="font-medium">
+                  {renderCategoryName(category)}
+                </TableCell>
                 <TableCell>
                   <Badge className={getTypeColor(category.type)}>
                     {getTypeLabel(category.type)}

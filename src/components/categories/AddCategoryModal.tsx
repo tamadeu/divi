@@ -34,9 +34,39 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
   const [formData, setFormData] = useState({
     name: defaultName || "", // Initialize with defaultName
     type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''), // Initialize with defaultType
+    parent_category_id: "" // New state for parent category
   });
   const [loading, setLoading] = useState(false);
+  const [parentCategories, setParentCategories] = useState<Category[]>([]); // State for parent categories
   const { currentWorkspace } = useWorkspace();
+
+  // Fetch parent categories when modal opens or defaultType changes
+  useEffect(() => {
+    const fetchParentCategories = async () => {
+      if (!currentWorkspace || !formData.type) return;
+
+      const typeToFilter = formData.type === 'Receita' ? 'income' : 'expense';
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, type')
+        .eq('workspace_id', currentWorkspace.id)
+        .eq('type', typeToFilter)
+        .is('parent_category_id', null) // Only top-level categories
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching parent categories:", error);
+        showError("Erro ao carregar categorias pai.");
+      } else {
+        setParentCategories(data || []);
+      }
+    };
+
+    if (isOpen) {
+      fetchParentCategories();
+    }
+  }, [isOpen, formData.type, currentWorkspace]);
 
   // Reset form when modal opens, considering defaultType and defaultName
   useEffect(() => {
@@ -44,6 +74,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
       setFormData({
         name: defaultName || "",
         type: defaultType === 'income' ? 'Receita' : (defaultType === 'expense' ? 'Despesa' : ''),
+        parent_category_id: ""
       });
     }
   }, [isOpen, defaultType, defaultName]); // Added defaultName to dependencies
@@ -52,7 +83,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
     e.preventDefault();
     
     if (!currentWorkspace) {
-      showError("Nenhum workspace selecionado");
+      showError("Nenhum núcleo financeiro selecionado");
       onCategoryAdded(null); // Indicate failure
       return;
     }
@@ -73,7 +104,8 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
         user_id: user.id,
         workspace_id: currentWorkspace.id,
         name: formData.name,
-        type: formData.type,
+        type: formData.type === 'Receita' ? 'income' : 'expense', // Store as 'income' or 'expense' in DB
+        parent_category_id: formData.parent_category_id || null, // Include parent_category_id
       })
       .select() // Select the inserted data
       .single(); // Get a single object
@@ -122,7 +154,7 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
               <Label htmlFor="type">Tipo</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
+                onValueChange={(value) => setFormData({ ...formData, type: value, parent_category_id: "" })} // Reset parent when type changes
                 disabled={!!defaultType} // Disable type selection if defaultType is provided
               >
                 <SelectTrigger>
@@ -132,6 +164,26 @@ const AddCategoryModal = ({ isOpen, onClose, onCategoryAdded, defaultType, defau
                   {categoryTypes.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="parent-category">Categoria Pai (Opcional)</Label>
+              <Select
+                value={formData.parent_category_id || ""}
+                onValueChange={(value) => setFormData({ ...formData, parent_category_id: value || null })}
+                disabled={!formData.type} // Disable if no type is selected
+              >
+                <SelectTrigger id="parent-category">
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {parentCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
