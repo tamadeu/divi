@@ -283,8 +283,8 @@ const TransactionDetailEditForm = ({ transaction, onClose, onTransactionUpdated,
       }
     }
 
-    onTransactionUpdated();
-    setIsSubmitting(false);
+    setIsSubmitting(false); // Reset loading state
+    onTransactionUpdated(); // Call the success callback
   };
 
   const handleCalculatorValue = (value: string) => {
@@ -302,6 +302,7 @@ const TransactionDetailEditForm = ({ transaction, onClose, onTransactionUpdated,
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         showError("Você precisa estar logado.");
+        setIsDeleting(false); // Reset loading state
         return;
       }
 
@@ -330,15 +331,16 @@ const TransactionDetailEditForm = ({ transaction, onClose, onTransactionUpdated,
 
       if (error) {
         showError("Erro ao excluir transação: " + error.message);
+        setIsDeleting(false); // Reset loading state
         return;
       }
 
-      onTransactionDeleted();
-      setShowDeleteDialog(false);
+      setIsDeleting(false); // Reset loading state
+      setShowDeleteDialog(false); // Close dialog
+      onTransactionDeleted(); // Call the success callback
     } catch (error) {
       showError("Erro inesperado ao excluir transação.");
-    } finally {
-      setIsDeleting(false);
+      setIsDeleting(false); // Reset loading state
     }
   };
 

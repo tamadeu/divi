@@ -383,7 +383,8 @@ const CreditCardTransactionDetailEditForm = ({ transaction, onClose, onCreditCar
         }
       }
 
-      onCreditCardTransactionUpdated();
+      setIsSubmitting(false); // Reset loading state
+      onCreditCardTransactionUpdated(); // Call the success callback
     } catch (error: any) {
       console.error("Erro ao processar transação de cartão de crédito:", error);
       showError("Erro inesperado ao atualizar transação de cartão de crédito.");
@@ -408,6 +409,7 @@ const CreditCardTransactionDetailEditForm = ({ transaction, onClose, onCreditCar
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         showError("Você precisa estar logado.");
+        setIsDeleting(false); // Reset loading state
         return;
       }
 
@@ -423,15 +425,16 @@ const CreditCardTransactionDetailEditForm = ({ transaction, onClose, onCreditCar
 
       if (error) {
         showError("Erro ao excluir transação(ões) de cartão de crédito: " + error.message);
+        setIsDeleting(false); // Reset loading state
         return;
       }
 
-      onCreditCardTransactionDeleted();
-      setShowDeleteDialog(false);
+      setIsDeleting(false); // Reset loading state
+      setShowDeleteDialog(false); // Close dialog
+      onCreditCardTransactionDeleted(); // Call the success callback
     } catch (error) {
       showError("Erro inesperado ao excluir transação de cartão de crédito.");
-    } finally {
-      setIsDeleting(false);
+      setIsDeleting(false); // Reset loading state
     }
   };
 
